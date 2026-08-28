@@ -1,0 +1,13 @@
+# deps
+node_modules/
+
+# playwright-cli 会话残留
+.playwright-cli/
+
+# 过程产物:验证截图集中 screenshots/(重拍即弃,不入库)
+screenshots/
+
+# 系统杂项
+Thumbs.db
+Desktop.ini
+.DS_Store

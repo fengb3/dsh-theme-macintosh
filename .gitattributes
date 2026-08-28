@@ -1,0 +1,16 @@
+# 统一换行符:仓库内与检出均为 LF(Windows 脚本除外)
+* text=auto eol=lf
+# 常见文本类型显式声明
+*.md        text
+*.html      text
+*.css       text
+*.js        text
+*.json      text
+*.yml       text
+*.yaml      text
+*.sh        text eol=lf
+# 二进制保护
+*.woff      binary
+*.woff2     binary
+*.ttf       binary
+*.otf       binary

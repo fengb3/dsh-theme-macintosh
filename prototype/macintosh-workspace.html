@@ -1,0 +1,1832 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+<!--
+THEME:     经典麦金塔(Classic Macintosh)· MACINTOSH
+PREFIX:    mc-
+STYLE:     System 7 像素复古 · 白窗黑线硬阴影 · 点阵桌面 · 条纹标题栏
+FORM:      骨架实况优先 — 原型第一屏即完整工作区(桌面/菜单栏/侧栏窗/主窗),
+           其余状态帧以检视带(KIT-CHROME)挂在骨架下方补齐十分区
+SECTIONS:  1–10(§8 瀑布图整节跳过,见该分节注释)
+PORT-NOTE: 67 处(grep PORT-NOTE: 可盘点;不含本行与附录引用;其中 58 处为描边逐处标注 — 本主题为描边驱动风格,规范 transparent 默认的整体例外;
+           图标/背景取自 Figma 声明组件(见 body 头 FIGMA-ASSETS sprite),单色位 currentColor 化随双主题)
+SELECTORS: 见文件尾附录 A
+-->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>DeepSeek Harness — 经典麦金塔 · MACINTOSH 主题原型</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Noto+Sans+SC:wght@400;500;700;900&family=Noto+Serif+SC:wght@400;700&display=swap" rel="stylesheet">
+<style>
+/* [KIT-CHROME begin]
+   PORT-NOTE: 检视带家具样式(分带标题/画框/色板/字体样本),仅服务于本原型页的
+   组件陈列与微调,不随主题 CSS 移植 —— 移植时删除 [KIT-CHROME begin/end] 区间。 */
+.kit-band{padding-top:46px;max-width:1180px;margin:0 auto;padding-left:24px;padding-right:24px;padding-bottom:8px}
+.kit-band-head{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
+.kit-no{font:700 13px/1 var(--font-mono);letter-spacing:.06em;color:var(--accent)}
+.kit-band-head h2{font:600 30px/1.1 var(--font-display);letter-spacing:.01em;color:var(--fg)}
+.kit-band-head p{flex-basis:100%;margin-top:8px;font:400 13px/1.7 var(--font-ui);color:var(--muted);max-width:760px}
+.kit-frames{display:grid;gap:16px;grid-template-columns:1fr;margin-top:20px}
+.kit-frame{border-radius:var(--r-window);overflow:hidden;background:var(--surface);
+  box-shadow:var(--shadow-panel);border:1px solid var(--border)} /* PORT-NOTE: 描边 */
+.kit-frame-tag{display:flex;justify-content:space-between;gap:12px;align-items:center;
+  padding:7px 12px;font:700 11px/1.3 var(--font-mono);letter-spacing:.08em;color:var(--faint);
+  text-transform:uppercase;background:var(--surface-2);border-bottom:1px solid var(--border)} /* PORT-NOTE: 描边 */
+.kit-frame-tag em{font-style:normal;color:var(--accent)}
+.kit-frame-body{padding:16px}
+.kit-frame-body.tight{padding:0}
+.kit-row{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.kit-row + .kit-row{margin-top:16px}
+.kit-row-label{flex-basis:100%;font:700 11px/1 var(--font-mono);letter-spacing:.08em;color:var(--faint)}
+.kit-note{margin-top:20px;padding:11px 14px;border-radius:var(--r-card);
+  background:var(--sel-bg);border:1px solid var(--border-soft);
+  font:400 13px/1.8 var(--font-ui);color:var(--muted)} /* PORT-NOTE: 描边 */
+.kit-note b{color:var(--fg)}
+.sw-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:12px}
+.sw{border-radius:var(--r-card);overflow:hidden;background:var(--surface);
+  border:1px solid var(--border)} /* PORT-NOTE: 描边 */
+.sw i{display:block;height:42px}
+.sw span{display:block;padding:8px 10px 2px;font:700 11px/1.5 var(--font-mono);letter-spacing:.03em;color:var(--fg)}
+.sw small{display:block;padding:0 10px 8px;font:400 11px/1.4 var(--font-ui);color:var(--faint)}
+.spec-hero{font:700 44px/1.1 var(--font-display);color:var(--fg)}
+.spec-hero em{font-style:normal;color:var(--accent)}
+.spec-body{font:400 14px/1.9 var(--font-ui);color:var(--muted)}
+.spec-mono{font:400 13px/1.8 var(--font-mono);color:var(--fg)}
+.spec-label{font:600 12px/1 var(--font-display);letter-spacing:.14em;color:var(--accent-strong)}
+.scroll-demo{height:140px;overflow-y:auto;background:var(--surface);border:1px solid var(--border)} /* PORT-NOTE: 描边 */
+.scroll-demo p{font:400 12px/1.9 var(--font-mono);color:var(--muted);padding:0 12px}
+@media (max-width:640px){
+  .kit-band{padding-left:16px;padding-right:16px}
+  .kit-band-head h2{font-size:24px}
+}
+
+/* ============================================================
+   1 · 令牌 + 画布 — 双主题变量组 / 桌面纹理 / 滚动条 / selection / focus ring
+   (深色 = 夜间单色 Mac:暗窗亮线;浅色 = 正统 System 7:白窗黑线)
+   ============================================================ */
+:root{
+  /* 画布 */
+  --bg:#2b2b2b;            /* 桌面底 */
+  --bg-deep:#1f1f1f;       /* 最深层(代码块/井底) */
+  --dot:rgba(255,255,255,.13);  /* 备用纹理键(桌面已用 desktop-7 pattern) */
+  --desktop-pattern:url("data:image/svg+xml,%3Csvg%20width%3D%2216%22%20height%3D%2216%22%20viewBox%3D%220%200%2016%2016%22%20fill%3D%22none%22%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%3E%0A%3Cg%20id%3D%22Union%22%3E%0A%3Cpath%20d%3D%22M6%2010V12H8V10H10V12H12V10H10V8H12V6H10V8H8V10H6Z%22%20fill%3D%22%25234f4f4f%22/%3E%0A%3Cpath%20d%3D%22M6%2010H4V8H6V10Z%22%20fill%3D%22%25234f4f4f%22/%3E%0A%3Cpath%20fill-rule%3D%22evenodd%22%20clip-rule%3D%22evenodd%22%20d%3D%22M2%200H0V2H2V4H0V6H2V8H0V10H2V12H0V14H2V16H4V14H6V16H8V14H10V16H12V14H14V16H16V14H14V12H16V10H14V8H16V6H14V4H16V2H14V0H12V2H10V0H8V2H6V0H4V2H2V0ZM4%204V2H6V4H4ZM4%206V4H2V6H4ZM6%206V4H8V6H6ZM6%208V6H4V8H2V10H4V12H2V14H4V12H6V14H8V12H10V14H12V12H14V10H12V8H14V6H12V4H14V2H12V4H10V2H8V4H10V6H8V8H6Z%22%20fill%3D%22%25234f4f4f%22/%3E%0A%3C/g%3E%0A%3C/svg%3E");  /* Figma Pattterns/desktop-7(16×16 编织纹) */
+  --box-line:#9d9dcf; --box-face:#31314f;  /* titlebar close/zoom box 多色位 */
+  /* 表面 */
+  --surface:#3d3d3d;       /* 窗面 */
+  --surface-2:#4a4a4a;     /* 标题栏/工具条 */
+  --surface-3:#575757;     /* 悬浮面 */
+  /* 栏面 */
+  --rail-1:#383838;        /* 侧栏窗面 */
+  --rail-2:#414141;
+  --rail-raised:#4d4d4d;   /* 抬升栏条(激活标题栏面) */
+  /* 文字 */
+  --fg:#f2f2f2; --muted:#bdbdbd; --faint:#949494;
+  /* 描边 — 本主题为描边驱动风格,全族不透明(规范推荐 transparent 的例外,逐处 PORT-NOTE) */
+  --border:#e9e9e9;        /* 主线:窗/卡/按钮外线 */
+  --border-soft:rgba(233,233,233,.5);
+  /* 主强调 — 经典 Mac lavender 紫蓝 */
+  --accent:#b3b3ff; --accent-strong:#d7d7ff;
+  --accent-dim:rgba(179,179,255,.42); --accent-ink:#171731;
+  /* 次强调 — 琥珀(运行与活动语义,对应 classic 警示三角) */
+  --spark:#e8b64c; --spark-dim:rgba(232,182,76,.42); --spark-ink:#221a08;
+  /* 选中行底(Finder 选中高亮) */
+  --sel-bg:rgba(179,179,255,.26);
+  /* 状态 */
+  --success:#7ed07e; --danger:#ff7a74; --danger-strong:#ff9d97; --danger-ink:#2a0c0a; --warn:#e8b64c;
+  /* 阴影 — 经典 Mac 硬投影(无模糊单偏移) */
+  --shadow-panel:3px 3px 0 0 rgba(0,0,0,.55);
+  --shadow-pop:3px 3px 0 0 rgba(0,0,0,.7);
+  /* 标题栏条纹色 */
+  --title-stripe:rgba(255,255,255,.26);
+  /* 滚动条 */
+  --scroll-track:#4a4a4a; --scroll-box:#717171; --scroll-arrow:#e9e9e9;
+  /* 字体四族(display/UI/mono 须含 CJK 回退) */
+  --font-display:'Pixelify Sans','Noto Sans SC',sans-serif;
+  --font-serif:'Noto Serif SC','Noto Sans SC',serif;
+  --font-ui:'Noto Sans SC',sans-serif;
+  --font-mono:'JetBrains Mono','Noto Sans SC',monospace;
+  /* 几何 */
+  --rail-w:264px;          /* 侧栏宽(SPEC §3) */
+  --menubar-h:20px;        /* 顶部菜单栏高(经典 19px 圆整) */
+  --titlebar-h:20px;       /* 窗标题栏高(经典 18px+边) */
+  --r-window:5px; --r-card:4px; --r-btn:4px; --r-tag:2px;
+  --bw:1px;                /* 主描边宽 */
+  /* 动效 */
+  --t-fast:.12s; --t-mid:.22s; --ease:cubic-bezier(.2,.7,.3,1);
+}
+html[data-theme="light"]{
+  --bg:#8f8f8f;            /* System 7 桌面灰 */
+  --bg-deep:#7c7c7c;
+  --dot:rgba(0,0,0,.22);   /* 浅色桌面 = 16px 方格纹(Figma 桌面格纹) */
+  --surface:#ffffff;       /* 白窗 */
+  --surface-2:#f3f3f3;     /* grey-1:标题栏/工具条 */
+  --surface-3:#e7e7e7;     /* grey-2 */
+  --rail-1:#f3f3f3; --rail-2:#ffffff; --rail-raised:#ffffff;
+  --fg:#0a0a0a; --muted:#4f4f4f; --faint:#757575;
+  --border:#0a0a0a;        /* 正统黑线 */
+  --border-soft:rgba(10,10,10,.5);
+  --accent:#6f6fa8; --accent-strong:#57578f;
+  --accent-dim:rgba(111,111,168,.42); --accent-ink:#ffffff;
+  --spark:#a8720e; --spark-dim:rgba(168,114,14,.4); --spark-ink:#fff8ec;
+  --sel-bg:#dadaff;        /* Finder 选中 lavender(黑字,对比 ≈ 12:1) */
+  --success:#2e7d32; --danger:#c23a34; --danger-strong:#a32c27; --danger-ink:#ffffff; --warn:#a8720e;
+  --shadow-panel:3px 3px 0 0 rgba(0,0,0,.85);
+  --shadow-pop:3px 3px 0 0 #000;
+  --title-stripe:rgba(0,0,0,.5);
+  --scroll-track:#e0e0e0; --scroll-box:#c0c0c0; --scroll-arrow:#0a0a0a;
+  --desktop-pattern:url("data:image/svg+xml,%3Csvg%20width%3D%2216%22%20height%3D%2216%22%20viewBox%3D%220%200%2016%2016%22%20fill%3D%22none%22%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%3E%0A%3Cg%20id%3D%22Union%22%3E%0A%3Cpath%20d%3D%22M6%2010V12H8V10H10V12H12V10H10V8H12V6H10V8H8V10H6Z%22%20fill%3D%22%2523777777%22/%3E%0A%3Cpath%20d%3D%22M6%2010H4V8H6V10Z%22%20fill%3D%22%2523777777%22/%3E%0A%3Cpath%20fill-rule%3D%22evenodd%22%20clip-rule%3D%22evenodd%22%20d%3D%22M2%200H0V2H2V4H0V6H2V8H0V10H2V12H0V14H2V16H4V14H6V16H8V14H10V16H12V14H14V16H16V14H14V12H16V10H14V8H16V6H14V4H16V2H14V0H12V2H10V0H8V2H6V0H4V2H2V0ZM4%204V2H6V4H4ZM4%206V4H2V6H4ZM6%206V4H8V6H6ZM6%208V6H4V8H2V10H4V12H2V14H4V12H6V14H8V12H10V14H12V12H14V10H12V8H14V6H12V4H14V2H12V4H10V2H8V4H10V6H8V8H6Z%22%20fill%3D%22%2523777777%22/%3E%0A%3C/g%3E%0A%3C/svg%3E");  /* desktop-7 原版 #777 */
+  --box-line:#545487; --box-face:#dadaff;
+}
+/* 画布:body 即桌面 */
+body{margin:0;min-height:100vh;background-color:var(--bg);
+  background-image:var(--desktop-pattern);
+  background-size:16px 16px;background-position:0 0;
+  font:400 14px/1.7 var(--font-ui);color:var(--fg);
+  -webkit-font-smoothing:none;font-smooth:never} /* 像素风关闭平滑(渲染提示,无几何影响) */
+::selection{background:var(--accent);color:var(--accent-ink)}
+html[data-theme="light"] ::selection{background:var(--sel-bg);color:var(--fg)}
+/* 焦点环 — 经典 Mac 虚线环(向外偏移 2px) */
+:focus-visible{outline:1px dashed var(--border);outline-offset:2px}
+:focus:not(:focus-visible){outline:none}
+/* 滚动条 — 经典 Mac 15px 宽,上下按钮 + 条纹槽 + 带 grip 滑块 */
+*{scrollbar-width:thin;scrollbar-color:var(--scroll-box) var(--scroll-track)}
+::-webkit-scrollbar{width:15px;height:15px}
+::-webkit-scrollbar-track{background:var(--scroll-track);
+  border-left:1px solid var(--border)} /* PORT-NOTE: 描边 */
+::-webkit-scrollbar-thumb{background:var(--scroll-box);border:1px solid var(--border)} /* PORT-NOTE: 描边 */
+::-webkit-scrollbar-corner{background:var(--scroll-track)}
+::-webkit-scrollbar-button:single-button{
+  background-color:var(--surface-2);background-repeat:no-repeat;
+  border:1px solid var(--border)} /* PORT-NOTE: 描边 */
+::-webkit-scrollbar-button:single-button:vertical:decrement{
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='10'%3E%3Cpath d='M5 1 L9 7 L1 7 Z' fill='%23e9e9e9'/%3E%3C/svg%3E");
+  background-position:center 3px}
+::-webkit-scrollbar-button:single-button:vertical:increment{
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='10'%3E%3Cpath d='M1 3 L9 3 L5 9 Z' fill='%23e9e9e9'/%3E%3C/svg%3E");
+  background-position:center 3px}
+::-webkit-scrollbar-button:single-button:horizontal:decrement{
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='10'%3E%3Cpath d='M7 1 L7 9 L1 5 Z' fill='%23e9e9e9'/%3E%3C/svg%3E");
+  background-position:3px center}
+::-webkit-scrollbar-button:single-button:horizontal:increment{
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='10'%3E%3Cpath d='M3 1 L3 9 L9 5 Z' fill='%23e9e9e9'/%3E%3C/svg%3E");
+  background-position:3px center}
+html[data-theme="light"] ::-webkit-scrollbar-button:single-button:vertical:decrement{
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='10'%3E%3Cpath d='M5 1 L9 7 L1 7 Z' fill='%230a0a0a'/%3E%3C/svg%3E")}
+html[data-theme="light"] ::-webkit-scrollbar-button:single-button:vertical:increment{
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='10'%3E%3Cpath d='M1 3 L9 3 L5 9 Z' fill='%230a0a0a'/%3E%3C/svg%3E")}
+html[data-theme="light"] ::-webkit-scrollbar-button:single-button:horizontal:decrement{
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='10'%3E%3Cpath d='M7 1 L7 9 L1 5 Z' fill='%230a0a0a'/%3E%3C/svg%3E")}
+html[data-theme="light"] ::-webkit-scrollbar-button:single-button:horizontal:increment{
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='10'%3E%3Cpath d='M3 1 L3 9 L9 5 Z' fill='%230a0a0a'/%3E%3C/svg%3E")}
+
+/* ============================================================
+   2 · 基础 — 字体重置 / 通用基元:btn 双线按钮 · icon-btn · pill · field 输入框 · tri 折叠三角
+   ============================================================ */
+h1,h2,h3,h4,p{margin:0}
+a{color:var(--accent)}
+svg{display:block}
+button{font:inherit;color:inherit}
+/* 双线按钮 — 经典 System 7 push button:外 1px 线 + 2px 面缝 + 内 1px 线(box-shadow 双内环) */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;
+  height:28px;padding:0 16px;min-width:72px;
+  border-radius:var(--r-btn);border:1px solid var(--border);  /* PORT-NOTE: 描边 */
+  box-shadow:inset 0 0 0 1px var(--surface),inset 0 0 0 2px var(--border);
+  background:var(--surface-2);color:var(--fg);
+  font:600 13px/1 var(--font-display);letter-spacing:.04em;white-space:nowrap;cursor:pointer;
+  transition:background var(--t-fast) var(--ease),color var(--t-fast) var(--ease)}
+.btn:hover{background:var(--surface-3)}
+.btn:active{ /* 经典按下 = 内外圈反色实底 */
+  background:var(--border);color:var(--surface);
+  box-shadow:inset 0 0 0 1px var(--border),inset 0 0 0 2px var(--surface)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);
+  box-shadow:inset 0 0 0 1px var(--accent),inset 0 0 0 2px var(--border)}
+.btn.primary:hover{background:var(--accent-strong)}
+.btn.primary:active{background:var(--border);color:var(--surface);
+  box-shadow:inset 0 0 0 1px var(--border),inset 0 0 0 2px var(--surface)}
+.btn.danger{background:var(--danger);color:var(--danger-ink);
+  box-shadow:inset 0 0 0 1px var(--danger),inset 0 0 0 2px var(--border)}
+.btn.danger:hover{background:var(--danger-strong)}
+.btn:disabled{opacity:.4;cursor:not-allowed;transform:none;
+  box-shadow:inset 0 0 0 1px var(--surface),inset 0 0 0 2px var(--border)}
+.btn.sm{height:22px;padding:0 10px;min-width:0;font-size:12px}
+.btn.lg{height:32px;padding:0 20px;font-size:14px}
+.btn svg{width:14px;height:14px;flex:none}
+/* 图标钮 — close/zoom box 语汇:13px 黑边小方块 */
+.icon-btn{display:grid;place-items:center;width:26px;height:26px;flex:none;
+  border-radius:var(--r-tag);border:1px solid var(--border);   /* PORT-NOTE: 描边 */
+  background:var(--surface-2);color:var(--fg);cursor:pointer;
+  transition:background var(--t-fast) var(--ease)}
+.icon-btn:hover{background:var(--surface-3)}
+.icon-btn:active{background:var(--border);color:var(--surface)}
+.icon-btn:disabled{opacity:.4;cursor:not-allowed}
+.icon-btn svg{width:13px;height:13px}
+.icon-btn.sm{width:20px;height:20px}
+.icon-btn.sm svg{width:11px;height:11px}
+/* 状态胶囊 — 方角小标签 + 圆点 */
+.pill{display:inline-flex;align-items:center;gap:5px;height:20px;padding:0 8px;
+  border-radius:var(--r-tag);border:1px solid var(--border-soft);  /* PORT-NOTE: 描边 */
+  font:600 11px/1 var(--font-display);letter-spacing:.05em;
+  color:var(--muted);background:var(--surface)}
+.pill::before{content:'';width:6px;height:6px;border-radius:50%;background:currentColor;flex:none}
+.pill.run{color:var(--spark)}
+.pill.run::before{animation:mc-pulse 1.6s var(--ease) infinite}
+.pill.done{color:var(--success)}
+.pill.fail{color:var(--danger)}
+.pill.wait{color:var(--faint)}
+.pill.accent{color:var(--accent)}
+/* 输入框 — 白底黑边直角(Figma Styled Text Input) */
+.field{display:flex;align-items:center;gap:8px;width:100%;
+  height:31px;padding:0 8px;background:var(--surface);
+  border:1px solid var(--border);border-radius:0;            /* PORT-NOTE: 描边 */
+  color:var(--fg);font:400 13px/1 var(--font-ui)}
+.field::placeholder{color:var(--faint)}
+.field input:disabled,.field textarea:disabled{opacity:.45}
+.field:focus-within{box-shadow:0 0 0 1px var(--accent-dim)}
+.field textarea{flex:1;background:transparent;border:none;resize:none;outline:none;
+  color:inherit;font:inherit;line-height:1.6}
+.field input{flex:1;background:transparent;border:none;outline:none;color:inherit;font:inherit}
+.field .lead{width:14px;height:14px;flex:none;color:var(--faint)}
+/* 折叠三角 — Finder outline triangle(实心直角边三角,open 旋 90°) */
+.tri{width:11px;height:11px;flex:none;color:var(--fg);overflow:visible;
+  transition:transform var(--t-mid) var(--ease)}
+.tri.open{transform:rotate(90deg)}
+.tri.dim{color:var(--faint)}
+/* keyframes — 全部 mc- 前缀 */
+@keyframes mc-pulse{0%,100%{opacity:1}50%{opacity:.25}}
+@keyframes mc-blink{0%,49%{opacity:1}50%,100%{opacity:0}}
+@keyframes mc-sweep{from{background-position:0 0}to{background-position:12px 0}}
+@keyframes mc-in{from{opacity:0}to{opacity:1}}
+/* 动画豁免 */
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;
+    transition-duration:.01ms!important}
+}
+
+/* ============================================================
+   3 · 应用骨架 — 桌面画布 + 菜单栏 + 三栏 grid(侧栏 264 / 主区 / 详情列 0)
+   + 浮层层级表:抽屉 60 · 菜单 70 · 移动遮罩 75 · 移动顶栏 76 · mask 80 · 弹窗 84 · toast 90 · scrim 95
+   ============================================================ */
+.app{min-height:100vh;display:flex;flex-direction:column}
+/* 菜单栏 — 顶部 20px,经典 Mac 白底黑字(深色态亮线暗面) */
+.menubar{position:sticky;top:0;z-index:76;display:flex;align-items:center;gap:2px;
+  height:var(--menubar-h);padding:0 8px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;
+  background:var(--surface);color:var(--fg);
+  border-bottom:1px solid var(--border);                     /* PORT-NOTE: 描边 */
+  font:600 12px/1 var(--font-display);letter-spacing:.02em}
+.menubar::-webkit-scrollbar{display:none}
+.menubar .m-brand{display:flex;align-items:center;gap:7px;padding:0 8px 0 2px;flex:none}
+.menubar .m-brand svg{width:14px;height:14px;color:var(--fg)}
+.menubar .m-item{padding:2px 9px;white-space:nowrap;cursor:default;color:var(--muted)}
+.menubar .m-item:hover{background:var(--sel-bg);color:var(--fg)}
+.menubar .m-item.on{background:var(--accent);color:var(--accent-ink)}
+.menubar .m-right{margin-left:auto;display:flex;align-items:center;gap:4px;flex:none}
+.menubar .m-clock{padding:0 9px;color:var(--muted);font-size:11px;white-space:nowrap}
+/* 桌面区 — 侧栏窗 + 主窗(详情列 = 0,即两栏;实现侧如需详情列,在 minmax 右侧插列) */
+.desk{position:relative;flex:1;display:grid;grid-template-columns:var(--rail-w) minmax(0,1fr);
+  gap:20px;align-items:stretch;
+  padding:20px 24px 24px;max-width:1440px;width:100%;margin:0 auto;
+  min-height:calc(100vh - var(--menubar-h))}
+/* 窗基类 — 白面 + 1px 黑边 + 4px 圆角 + 3px 硬阴影(Figma Window Container) */
+.win{display:flex;flex-direction:column;min-width:0;min-height:0;
+  background:var(--surface);border-radius:var(--r-window);
+  border:1px solid var(--border);                            /* PORT-NOTE: 描边 */
+  box-shadow:var(--shadow-panel);overflow:hidden}
+/* 窗标题栏 — 20px 高,pinstripe 条纹面,左右 close/zoom box,标题居中 */
+.titlebar{position:relative;display:flex;align-items:center;justify-content:center;
+  height:var(--titlebar-h);flex:none;
+  background:repeating-linear-gradient(180deg,var(--title-stripe) 0 1px,transparent 1px 3px),
+    var(--surface-2);
+  border-bottom:1px solid var(--border);                      /* PORT-NOTE: 描边 */
+  padding:0 26px}
+.titlebar::before{ /* 激活窗高亮:左/上 1px accent 线(经典 active 窗暗示) */
+  content:'';position:absolute;left:0;top:0;right:0;height:1px;background:var(--accent)}
+.titlebar .t-title{max-width:60%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  padding:0 8px;background:var(--surface-2);color:var(--fg);
+  font:600 12px/1 var(--font-display);letter-spacing:.03em}
+.titlebar .t-box{position:absolute;width:13px;height:13px;top:50%;transform:translateY(-50%);cursor:pointer}
+.titlebar .t-box svg{width:13px;height:13px;display:block}
+.titlebar .t-close{left:5px}
+.titlebar .t-zoom{right:5px}
+.win-body{flex:1;display:flex;flex-direction:column;min-height:0;min-width:0}
+/* 窗信息条 — Finder info bar(条目数/磁盘量) */
+.infobar{display:flex;align-items:center;justify-content:space-between;gap:10px;flex:none;
+  height:20px;padding:0 10px;background:var(--surface);
+  border-bottom:1px solid var(--border);                      /* PORT-NOTE: 描边 */
+  font:600 11px/1 var(--font-display);color:var(--muted)}
+.infobar span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* 窗状态条 — 底部 grey-2 面(Figma Window Status Bar) */
+.statusbar{display:flex;align-items:center;justify-content:space-between;gap:10px;flex:none;
+  height:24px;padding:0 12px;background:var(--surface-3);
+  border-top:1px solid var(--border);                         /* PORT-NOTE: 描边 */
+  font:600 11px/1 var(--font-display);color:var(--muted);white-space:nowrap;overflow:hidden}
+.statusbar span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* 桌面图标 — 右上角 Macintosh HD / Trash(32px 图标 + 白底黑边标签) */
+.desk-icons{position:absolute;right:24px;top:calc(var(--menubar-h) + 36px);
+  display:flex;flex-direction:column;gap:18px;z-index:1;pointer-events:none}
+.dicon{display:flex;flex-direction:column;align-items:center;gap:5px;width:92px;pointer-events:auto}
+.dicon svg{width:32px;height:32px;color:var(--fg);filter:drop-shadow(1px 1px 0 rgba(0,0,0,.4))}
+html[data-theme="light"] .dicon svg{filter:none}
+.dicon .d-label{max-width:100%;padding:1px 5px;background:var(--surface);
+  border:1px solid var(--border);border-radius:var(--r-tag);  /* PORT-NOTE: 描边 */
+  font:600 11px/1.3 var(--font-display);color:var(--fg);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* ============================================================
+   4 · 侧栏 — Finder 窗:品牌行 / 新建钮 / 搜索 / 目录分组折叠 / 会话行(状态槽+悬停操作)
+   / 添加工作区行 / 底部设置+主题钮;折叠细条 56px 形态(§10 检视带另帧)
+   ============================================================ */
+.sidebar{background:var(--rail-1)}
+.sb-head{display:flex;align-items:center;gap:9px;flex:none;
+  padding:10px 12px 8px;border-bottom:1px solid var(--border-soft)}  /* PORT-NOTE: 描边 */
+.sb-head svg{width:24px;height:24px;flex:none;color:var(--fg)}
+.sb-name{font:600 14px/1.2 var(--font-display);letter-spacing:.02em;color:var(--fg)}
+.sb-sub{display:block;font:400 10px/1.4 var(--font-ui);color:var(--faint)}
+.sb-actions{display:flex;gap:8px;flex:none;padding:8px 10px;
+  border-bottom:1px solid var(--border-soft)}                  /* PORT-NOTE: 描边 */
+.sb-actions .btn{flex:1}
+/* 展开式搜索 */
+.sb-search{padding:8px 10px;flex:none}
+.sb-search .field{height:27px;font-size:12px}
+/* 会话树 */
+.sb-tree{flex:1;overflow-y:auto;min-height:0;padding:8px}
+.group + .group{margin-top:6px}
+.group-head{display:flex;align-items:center;gap:5px;width:100%;
+  padding:4px 4px 4px 0;background:none;border:none;cursor:pointer;text-align:left}
+.group-head svg{width:15px;height:15px;flex:none;color:var(--fg)}
+.group-head .g-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  font:600 12px/1.3 var(--font-display);letter-spacing:.02em;color:var(--fg)}
+.group-head .g-count{font:500 10px/1.3 var(--font-mono);color:var(--faint)}
+.group-body{overflow:hidden;height:auto;
+  transition:height var(--t-mid) var(--ease)}
+.group:not(.open) .group-body{height:0}
+/* 会话行 — 文档小图标 + 标题 + 状态槽 + 悬停操作 */
+.sess{display:flex;align-items:center;gap:6px;width:100%;
+  padding:3px 4px;margin-top:2px;background:none;border:none;cursor:pointer;text-align:left;
+  border-radius:var(--r-tag)}
+.sess .s-ic{width:15px;height:15px;flex:none;color:var(--muted)}
+.sess .s-tt{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  font:400 13px/1.5 var(--font-ui);color:var(--fg)}
+.sess .s-slot{display:none;align-items:center;gap:4px;flex:none}
+.sess:hover .s-slot{display:flex}
+.sess:hover{background:color-mix(in oklab,var(--fg) 7%,transparent)}
+.sess.on{background:var(--sel-bg);
+  box-shadow:inset 0 0 0 1px var(--accent-dim)}                /* PORT-NOTE: 描边(选中行 accent 内环) */
+.sess.on .s-ic{color:var(--fg)}
+/* 状态槽三态:运行(脉冲点)/等待(空心点)/完成(✓) */
+.s-dot{width:7px;height:7px;border-radius:50%;background:var(--spark);flex:none}
+.sess.run .s-dot{animation:mc-pulse 1.6s var(--ease) infinite}
+.sess.wait .s-dot{background:transparent;border:1px solid var(--faint)}
+.s-ok{width:11px;height:11px;flex:none;color:var(--success)}
+.sess .s-act{display:none;flex:none;width:16px;height:16px;color:var(--faint)}
+.sess:hover .s-act{display:block}
+.sess .s-act:hover{color:var(--fg)}
+/* 行内重命名态 — 交互密集区 */
+.sess.editing .field{height:24px}
+/* 拖拽落点金线 */
+.sess.drop-into{box-shadow:inset 0 2px 0 var(--accent)}
+/* 添加工作区行 */
+.sb-add{display:flex;align-items:center;gap:6px;width:100%;margin-top:2px;
+  padding:4px;border:none;background:none;cursor:pointer;text-align:left;
+  color:var(--faint);font:400 12px/1.5 var(--font-ui);border-radius:var(--r-tag)}
+.sb-add svg{width:14px;height:14px;flex:none}
+.sb-add:hover{background:color-mix(in oklab,var(--fg) 7%,transparent);color:var(--fg)}
+/* 侧栏页脚 — Preferences... + 主题钮 */
+.sb-foot{display:flex;align-items:center;gap:8px;flex:none;
+  padding:9px 12px;background:var(--rail-2);
+  border-top:1px solid var(--border-soft)}                      /* PORT-NOTE: 描边 */
+.sb-foot svg{width:15px;height:15px;flex:none;color:var(--muted)}
+.sb-foot .sb-pref{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  text-align:left;background:none;border:none;cursor:pointer;
+  font:600 12px/1.4 var(--font-display);letter-spacing:.02em;color:var(--fg)}
+/* 折叠细条 56px 形态 */
+.app.rail-mini .desk{grid-template-columns:56px minmax(0,1fr);gap:12px}
+.app.rail-mini .sidebar{overflow:hidden}
+.app.rail-mini .sb-head{justify-content:center;padding:10px 0 8px}
+.app.rail-mini .sb-name,.app.rail-mini .sb-sub,.app.rail-mini .sb-actions,
+.app.rail-mini .sb-search,.app.rail-mini .group-body,.app.rail-mini .group-head .g-name,
+.app.rail-mini .group-head .g-count,.app.rail-mini .sb-add,.app.rail-mini .sb-pref,
+.app.rail-mini .sess .s-tt,.app.rail-mini .sess .s-slot,
+.app.rail-mini .titlebar,.app.rail-mini .infobar{display:none}
+.app.rail-mini .group-head{justify-content:center;padding:6px 0}
+.app.rail-mini .sess{justify-content:center;padding:5px 0}
+.app.rail-mini .sb-foot{flex-direction:column;justify-content:center;padding:8px 0;gap:8px}
+
+/* ============================================================
+   5 · 会话流 — 用户气泡 / assistant md 正文 / 推理卡(think) / 上下文注入卡
+   / 尾部节点(操作+统计) / 自动重试行 / 错误行 / 上限行
+   ============================================================ */
+.flow{flex:1;overflow-y:auto;min-height:0;
+  display:flex;flex-direction:column;gap:14px;padding:16px}
+.flow .md{font:400 14px/1.8 var(--font-ui);color:var(--fg);word-break:break-word}
+.flow .md h1,.flow .md h2,.flow .md h3{font:600 17px/1.4 var(--font-display);letter-spacing:.01em;margin:14px 0 6px}
+.flow .md h2{font-size:15px}
+.flow .md h3{font-size:14px}
+.flow .md p + p{margin-top:8px}
+.flow .md ul,.flow .md ol{margin:6px 0;padding-left:22px}
+.flow .md li{margin:3px 0}
+.flow .md code{font:500 12px/1.5 var(--font-mono);
+  padding:1px 5px;background:var(--sel-bg);border-radius:var(--r-tag);color:var(--fg)}
+.flow .md pre{margin:8px 0;padding:10px 12px;overflow-x:auto;
+  background:var(--bg-deep);border:1px solid var(--border-soft);border-radius:var(--r-card)} /* PORT-NOTE: 描边 */
+.flow .md pre code{padding:0;background:none;font:400 12.5px/1.7 var(--font-mono)}
+.flow .md table{border-collapse:collapse;margin:8px 0;font:400 12.5px/1.6 var(--font-ui)}
+.flow .md th,.flow .md td{padding:4px 10px;text-align:left;
+  border:1px solid var(--border-soft)}                          /* PORT-NOTE: 描边 */
+.flow .md th{font:600 12px/1.4 var(--font-display);background:var(--surface-2)}
+.flow .md blockquote{margin:8px 0;padding:2px 12px;color:var(--muted);
+  border-left:2px solid var(--accent-dim)}                      /* PORT-NOTE: 描边 */
+/* 用户气泡 — accent 实底反白,右对齐,可带附图 */
+.msg{display:flex;flex-direction:column;gap:6px}
+.msg.user{align-items:flex-end}
+.msg.user .bubble{max-width:520px;padding:7px 12px;
+  background:var(--accent);color:var(--accent-ink);
+  border:1px solid var(--border);border-radius:8px;             /* PORT-NOTE: 描边 */
+  font:400 14px/1.7 var(--font-ui)}
+.msg.user .attach{max-width:360px;display:flex;gap:8px;align-items:flex-end}
+.msg.user .attach .ph{width:132px;height:92px;flex:none;position:relative;
+  background:var(--surface-3);
+  border:1px solid var(--border);border-radius:var(--r-card)}   /* PORT-NOTE: 描边 */
+.msg.user .attach .ph::after{content:'IMG';position:absolute;right:5px;bottom:5px;
+  padding:1px 5px;background:var(--surface);color:var(--muted);
+  border:1px solid var(--border-soft);border-radius:var(--r-tag);  /* PORT-NOTE: 描边 */
+  font:600 9px/1.4 var(--font-mono)}
+.msg.user .attach .cap{font:400 12px/1.6 var(--font-ui);color:var(--muted);max-width:180px}
+/* 上下文注入卡 — 虚线边灰底(Figma System Reminder) */
+.inject{display:flex;align-items:flex-start;gap:7px;padding:7px 9px;
+  background:var(--surface-2);
+  border:1px dashed var(--border-soft);border-radius:var(--r-card)} /* PORT-NOTE: 描边 */
+.inject svg{width:15px;height:15px;flex:none;margin-top:1px;color:var(--faint)}
+.inject .i-tt{flex:1;min-width:0;font:400 12px/1.7 var(--font-ui);color:var(--muted);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* 推理卡 think — grey-2 面 + 黑实线边 + tri 开合(Figma Think Widget) */
+.reasoning{background:var(--surface-3);
+  border:1px solid var(--border);border-radius:var(--r-card);   /* PORT-NOTE: 描边 */
+  overflow:hidden}
+.reasoning.run{background:color-mix(in oklab,var(--spark) 9%,var(--surface-3))}
+.reasoning-head{display:flex;align-items:center;gap:6px;width:100%;
+  padding:6px 9px;background:none;border:none;cursor:pointer;text-align:left}
+.reasoning-head .r-tag{font:600 12px/1.3 var(--font-display);letter-spacing:.03em;color:var(--fg)}
+.reasoning-head .r-sum{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  font:400 12px/1.5 var(--font-ui);color:var(--faint)}
+.reasoning-head .r-dur{font:500 10px/1.5 var(--font-mono);color:var(--faint);flex:none}
+.reasoning.run .reasoning-head .r-tag{color:var(--spark)}
+.reasoning-body{overflow:hidden;height:auto;
+  transition:height var(--t-mid) var(--ease)}
+.reasoning:not(.open) .reasoning-body{height:0}
+.reasoning-body .r-txt{padding:2px 9px 9px 26px;
+  font:400 12px/1.8 var(--font-ui);color:var(--muted);white-space:pre-wrap}
+.reasoning.run .r-txt::after{ /* 流式光标 */
+  content:'▮';margin-left:2px;color:var(--spark);
+  animation:mc-blink 1s steps(1) infinite}
+/* 尾部节点 — 操作 + 绵计 */
+.turn-tail{display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+  padding-top:2px}
+.turn-tail .t-stats{margin-left:auto;font:500 11px/1.6 var(--font-mono);color:var(--faint);
+  white-space:nowrap}
+/* 自动重试行 / 错误行 / 上限行 */
+.retry-row{display:flex;align-items:center;gap:8px;padding:6px 9px;
+  background:var(--surface-2);
+  border:1px solid var(--border-soft);border-radius:var(--r-card);  /* PORT-NOTE: 描边 */
+  font:400 12px/1.6 var(--font-ui);color:var(--muted)}
+.retry-row .s-dot{animation:mc-pulse 1.6s var(--ease) infinite}
+.err-row{display:flex;align-items:flex-start;gap:8px;padding:7px 9px;
+  background:color-mix(in oklab,var(--danger) 10%,var(--surface));
+  border:1px solid var(--danger);border-radius:var(--r-card);   /* PORT-NOTE: 描边 */
+  font:400 12px/1.7 var(--font-ui);color:var(--fg)}
+.err-row svg{width:14px;height:14px;flex:none;margin-top:2px;color:var(--danger)}
+.err-row .e-tt{flex:1;min-width:0}
+.err-row .e-tt b{font-weight:700}
+.cap-row{display:flex;align-items:center;gap:8px;padding:6px 9px;
+  background:var(--surface-2);
+  border:1px solid var(--border-soft);border-radius:var(--r-card);  /* PORT-NOTE: 描边 */
+  font:400 12px/1.6 var(--font-ui);color:var(--muted)}
+.cap-row .tri{border-left-color:var(--faint)}
+
+/* ============================================================
+   6 · 输入坞 — todo 进度 / goal 条 / queue 条(输入卡上方) / 输入卡
+   / 命令钮 / 发送钮 / mode+model 钮 / ctx 圆环 / 统计行
+   ============================================================ */
+.dock{flex:none;display:flex;flex-direction:column;gap:8px;
+  padding:10px 12px;background:var(--rail-2);
+  border-top:1px solid var(--border)}                           /* PORT-NOTE: 描边 */
+/* queue / goal 条 */
+.queue-row{display:flex;align-items:center;gap:8px;padding:5px 9px;
+  background:var(--surface);
+  border:1px solid var(--border);border-radius:var(--r-card);   /* PORT-NOTE: 描边 */
+  font:400 12px/1.6 var(--font-ui);color:var(--muted)}
+.queue-row svg{width:13px;height:13px;flex:none;color:var(--spark)}
+.goal-row{display:flex;align-items:center;gap:8px;padding:5px 9px;
+  background:color-mix(in oklab,var(--accent) 8%,var(--surface));
+  border:1px solid var(--border);border-radius:var(--r-card);   /* PORT-NOTE: 描边 */
+  font:400 12px/1.6 var(--font-ui);color:var(--muted)}
+.goal-row svg{width:13px;height:13px;flex:none;color:var(--accent)}
+.goal-row .g-acts{margin-left:auto;display:flex;gap:6px}
+/* todo 进度 */
+.todo-row{display:flex;align-items:center;gap:8px}
+.todo-bar{flex:1;height:8px;background:var(--surface-3);
+  border:1px solid var(--border);                               /* PORT-NOTE: 描边 */
+  padding:1px;display:flex;gap:1px}
+.todo-bar i{flex:1;background:var(--surface-2)}
+.todo-bar i.done{background:var(--success)}
+.todo-bar i.now{background:var(--spark)}
+.todo-meta{font:500 10px/1.6 var(--font-mono);color:var(--faint);white-space:nowrap}
+/* 输入卡 */
+.composer{display:flex;flex-direction:column;gap:8px;
+  background:var(--surface);
+  border:1px solid var(--border);border-radius:var(--r-card);   /* PORT-NOTE: 描边 */
+  padding:8px}
+.composer .field{height:auto;min-height:44px;padding:6px 8px}
+.composer.busy .field{background:color-mix(in oklab,var(--fg) 4%,var(--surface))}
+/* 输入下沿功能条 */
+.composer-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.cb-btn{display:inline-flex;align-items:center;gap:6px;height:24px;padding:0 9px;
+  background:var(--surface-2);
+  border:1px solid var(--border);border-radius:var(--r-btn);    /* PORT-NOTE: 描边 */
+  font:500 11px/1 var(--font-ui);color:var(--muted);cursor:pointer;white-space:nowrap}
+.cb-btn svg{width:12px;height:12px;flex:none}
+.cb-btn:hover{background:var(--surface-3);color:var(--fg)}
+.cb-btn.model{font-family:var(--font-mono);font-size:11px}
+/* ctx 圆环 — 占用率 74% 静态示意 */
+.ctx-ring{position:relative;width:22px;height:22px;flex:none;cursor:pointer}
+.ctx-ring svg{width:22px;height:22px}
+.ctx-ring .cr-track{stroke:var(--surface-3)}
+.ctx-ring .cr-arc{stroke:var(--accent)}
+.ctx-ring[data-hot] .cr-arc{stroke:var(--danger)}
+.ctx-ring .cr-txt{position:absolute;inset:0;display:grid;place-items:center;
+  font:700 8px/1 var(--font-mono);color:var(--muted)}
+/* ctx 构成面板(圆环点击展开;display 切换 + 淡入,不参与高度窗口) */
+.ctx-pop{display:none;flex-direction:column;gap:6px;padding:9px 11px;margin-top:6px;
+  background:var(--surface);
+  border:1px solid var(--border);border-radius:var(--r-card);   /* PORT-NOTE: 描边 */
+  font:400 11.5px/1.7 var(--font-ui);color:var(--muted)}
+.ctx-pop.open{display:flex;animation:mc-in var(--t-fast) var(--ease)}
+.ctx-pop b{color:var(--fg);font-family:var(--font-mono);font-weight:500}
+.ctx-line{display:flex;align-items:center;gap:7px}
+.ctx-line i{width:8px;height:8px;flex:none;border-radius:50%}
+.ctx-line .cl-bar{flex:1;height:5px;background:var(--surface-3);
+  border:1px solid var(--border-soft)}                          /* PORT-NOTE: 描边 */
+.ctx-line .cl-bar i{display:block;height:100%;border-radius:0}
+/* 统计行 */
+.composer-stats{display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+  font:500 10.5px/1.6 var(--font-mono);color:var(--faint)}
+.composer-stats .st-r{margin-left:auto;white-space:nowrap}
+
+/* ============================================================
+   7 · 工具卡 — 卡壳(图标/名/参数摘要/状态胶囊/chevron)+ 展开体;
+   已知工具特判 + 未知工具兜底;子调用缩进列表
+   ============================================================ */
+.tool{background:var(--surface);
+  border:1px solid var(--border);border-radius:var(--r-card);   /* PORT-NOTE: 描边 */
+  overflow:hidden}
+.tool-head{display:flex;align-items:center;gap:8px;width:100%;
+  padding:7px 9px;background:none;border:none;cursor:pointer;text-align:left}
+.tool-head .t-ic{width:26px;height:26px;flex:none;display:grid;place-items:center;
+  background:var(--surface-2);
+  border:1px solid var(--border);border-radius:var(--r-tag);    /* PORT-NOTE: 描边 */
+  color:var(--fg)}
+.tool-head .t-ic svg{width:15px;height:15px}
+.tool-head .t-meta{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+.tool-head .t-name{font:600 12px/1.3 var(--font-display);letter-spacing:.02em;color:var(--fg);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tool-head .t-args{font:400 11px/1.5 var(--font-mono);color:var(--faint);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tool-head .chev{flex:none;transition:transform var(--t-mid) var(--ease)}
+.tool.open .tool-head .chev{transform:rotate(90deg)}
+.tool-body{overflow:hidden;height:auto;
+  transition:height var(--t-mid) var(--ease)}
+.tool:not(.open) .tool-body{height:0}
+.tool-body .tb-in{padding:8px 9px 9px;
+  border-top:1px solid var(--border-soft);                      /* PORT-NOTE: 描边 */
+  font:400 12px/1.8 var(--font-mono);color:var(--muted)}
+.tool-body .tb-in b{color:var(--fg);font-weight:500}
+/* 运行态 — 标题条条纹扫掠(经典 Mac watch 光标语的条纹带) */
+.tool[data-state=running]{border-color:var(--spark)}            /* PORT-NOTE: 描边 */
+.tool[data-state=running] .tool-head{background:
+  repeating-linear-gradient(90deg,color-mix(in oklab,var(--spark) 26%,transparent) 0 4px,transparent 4px 8px);
+  background-size:12px 100%;animation:mc-sweep .9s linear infinite}
+.tool[data-state=fail]{border-color:var(--danger)}              /* PORT-NOTE: 描边 */
+.tool[data-state=fail] .tool-head .t-ic{color:var(--danger);border-color:var(--danger)} /* PORT-NOTE: 描边 */
+/* diff 展开体 */
+.diff{display:flex;flex-direction:column;font:400 12px/1.7 var(--font-mono)}
+.diff .d-line{display:flex;gap:0;white-space:pre}
+.diff .d-line i{flex:none;width:18px;text-align:center;color:var(--faint);font-style:normal;
+  background:var(--surface-2);user-select:none}
+.diff .d-line .d-txt{flex:1;padding:0 8px;min-width:0;overflow-x:auto}
+.diff .d-add{background:color-mix(in oklab,var(--success) 14%,transparent)}
+.diff .d-add i{background:color-mix(in oklab,var(--success) 22%,var(--surface-2))}
+.diff .d-del{background:color-mix(in oklab,var(--danger) 12%,transparent)}
+.diff .d-del i{background:color-mix(in oklab,var(--danger) 20%,var(--surface-2))}
+.diff .d-hunk{padding:2px 8px;background:var(--sel-bg);color:var(--muted);
+  font:600 10.5px/1.7 var(--font-mono)}
+/* 子调用缩进列表 */
+.subcalls{display:flex;flex-direction:column;gap:4px;margin-top:6px;
+  padding-left:14px;
+  border-left:2px solid var(--border-soft)}                      /* PORT-NOTE: 描边 */
+.subcalls .sc-row{display:flex;align-items:center;gap:7px;
+  font:400 11.5px/1.6 var(--font-mono);color:var(--muted)}
+.subcalls .sc-row svg{width:11px;height:11px;flex:none;color:var(--faint)}
+.subcalls .sc-row.ok svg{color:var(--success)}
+.subcalls .sc-row.run svg{color:var(--spark)}
+/* ============================================================
+   8 · 瀑布图 — PORT-NOTE: 整节跳过,记实现侧残差(轨迹可视化不阻塞现有 selector)
+   ============================================================ */
+
+/* ============================================================
+   9 · 全局浮层 — hero 空态 / 通用菜单 / 设置弹窗 / toast / scrim
+   (层级表见 §3 注释:菜单 70 · mask 80 · 弹窗 84 · toast 90 · scrim 95)
+   ============================================================ */
+/* hero 空态 — 大像素标题 + badge + 工作区芯片 */
+.hero{display:flex;flex-direction:column;align-items:center;gap:14px;
+  padding:52px 24px 40px;text-align:center}
+.hero .h-mark{width:48px;height:48px;color:var(--fg);
+  filter:drop-shadow(2px 2px 0 rgba(0,0,0,.4))}
+html[data-theme="light"] .hero .h-mark{filter:none}
+.hero .h-title{font:700 34px/1.15 var(--font-display);letter-spacing:.01em;color:var(--fg)}
+.hero .h-title em{font-style:normal;color:var(--accent)}
+.hero .h-badge{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;
+  background:var(--sel-bg);
+  border:1px solid var(--border-soft);border-radius:var(--r-tag);  /* PORT-NOTE: 描边 */
+  font:600 11px/1.6 var(--font-display);letter-spacing:.05em;color:var(--fg)}
+.hero .h-sub{max-width:420px;font:400 13px/1.8 var(--font-ui);color:var(--muted)}
+.hero .h-chips{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+.hero .h-chip{display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 11px;
+  background:var(--surface);
+  border:1px solid var(--border);border-radius:var(--r-tag);    /* PORT-NOTE: 描边 */
+  font:500 12px/1 var(--font-ui);color:var(--muted);cursor:pointer}
+.hero .h-chip svg{width:13px;height:13px;color:var(--accent)}
+.hero .h-chip:hover{background:var(--surface-2);color:var(--fg)}
+/* 通用菜单 — 白面黑边硬阴影,分组头/快捷键/danger 项 */
+.menu{position:relative;display:inline-flex;flex-direction:column;min-width:210px;
+  padding:4px;background:var(--surface);
+  border:1px solid var(--border);border-radius:var(--r-card);   /* PORT-NOTE: 描边 */
+  box-shadow:var(--shadow-pop);z-index:70}
+.menu .m-group{padding:5px 9px 3px;
+  font:600 10px/1.6 var(--font-display);letter-spacing:.1em;color:var(--faint);
+  text-transform:uppercase}
+.menu .m-opt{display:flex;align-items:center;gap:10px;padding:5px 9px;cursor:pointer;
+  border-radius:var(--r-tag);font:400 13px/1.5 var(--font-ui);color:var(--fg)}
+.menu .m-opt:hover{background:var(--sel-bg)}
+.menu .m-opt.on{background:var(--accent);color:var(--accent-ink)}
+.menu .m-opt .mo-ic{width:14px;height:14px;flex:none;color:var(--muted)}
+.menu .m-opt.on .mo-ic{color:var(--accent-ink)}
+.menu .m-opt .mo-key{margin-left:auto;font:500 11px/1.5 var(--font-mono);color:var(--faint)}
+.menu .m-opt.danger{color:var(--danger)}
+.menu .m-opt.danger:hover{background:var(--danger);color:var(--danger-ink)}
+.menu .m-opt.danger .mo-ic{color:inherit}
+.menu .m-sep{height:1px;margin:4px 5px;background:var(--border-soft)} /* PORT-NOTE: 描边 */
+/* 设置弹窗 — mask + 窗口(标题栏 + 左导航双栏 + 内容行 + 关闭叉) */
+.dialog-mask{position:fixed;inset:0;z-index:80;display:grid;place-items:center;
+  background:color-mix(in oklab,var(--bg-deep) 55%,transparent)}
+.dialog-mask[hidden]{display:none}
+.dialog{display:flex;flex-direction:column;width:min(720px,92vw);max-height:min(520px,86vh);
+  animation:mc-in var(--t-mid) var(--ease)}
+.dialog-nav{width:172px;flex:none;overflow-y:auto;padding:10px 8px;
+  background:var(--rail-1);
+  border-right:1px solid var(--border-soft)}                     /* PORT-NOTE: 描边 */
+.dialog-nav .dn-item{display:flex;align-items:center;gap:8px;width:100%;
+  padding:6px 9px;margin-bottom:2px;background:none;border:none;border-radius:var(--r-tag);
+  cursor:pointer;text-align:left;font:500 12.5px/1.5 var(--font-ui);color:var(--muted)}
+.dialog-nav .dn-item svg{width:14px;height:14px;flex:none}
+.dialog-nav .dn-item:hover{background:color-mix(in oklab,var(--fg) 7%,transparent);color:var(--fg)}
+.dialog-nav .dn-item.on{background:var(--sel-bg);color:var(--fg)}
+.dialog-main{flex:1;min-width:0;overflow-y:auto;padding:16px 18px}
+.dialog-main h3{font:600 15px/1.4 var(--font-display);letter-spacing:.01em;color:var(--fg);margin-bottom:12px}
+.set-row{display:flex;align-items:center;gap:12px;padding:10px 0;
+  border-bottom:1px solid var(--border-soft)}                    /* PORT-NOTE: 描边 */
+.set-row:last-child{border-bottom:none}
+.set-row .sr-meta{flex:1;min-width:0}
+.set-row .sr-tt{font:500 13px/1.5 var(--font-ui);color:var(--fg)}
+.set-row .sr-sub{font:400 11.5px/1.6 var(--font-ui);color:var(--faint)}
+.set-row .sr-val{font:500 11px/1.6 var(--font-mono);color:var(--muted);white-space:nowrap}
+/* 开关 — 经典 checkbox 方块 */
+.switch{position:relative;width:34px;height:18px;flex:none;cursor:pointer}
+.switch input{position:absolute;opacity:0;inset:0;cursor:pointer}
+.switch .sw-track{position:absolute;inset:0;background:var(--surface-2);
+  border:1px solid var(--border);border-radius:var(--r-tag)}     /* PORT-NOTE: 描边 */
+.switch .sw-knob{position:absolute;left:2px;top:2px;width:12px;height:12px;
+  background:var(--surface);
+  border:1px solid var(--border);                                /* PORT-NOTE: 描边 */
+  transition:left var(--t-fast) var(--ease)}
+.switch input:checked ~ .sw-track{background:var(--sel-bg)}
+.switch input:checked ~ .sw-knob{left:18px;background:var(--accent)}
+.switch input:focus-visible ~ .sw-track{outline:1px dashed var(--border);outline-offset:2px}
+/* toast — 小窗弹条 */
+.toast{display:flex;align-items:center;gap:9px;min-width:260px;max-width:360px;
+  padding:9px 12px;background:var(--surface);
+  border:1px solid var(--border);border-radius:var(--r-card);   /* PORT-NOTE: 描边 */
+  box-shadow:var(--shadow-pop);
+  font:400 12.5px/1.6 var(--font-ui);color:var(--fg);
+  animation:mc-in var(--t-mid) var(--ease)}
+.toast svg{width:15px;height:15px;flex:none}
+.toast.ok svg{color:var(--success)}
+.toast.err svg{color:var(--danger)}
+/* scrim — 点阵半透全局幕 */
+.scrim{position:fixed;inset:0;z-index:95;
+  background:radial-gradient(rgba(0,0,0,.5) 1px,transparent 1.5px);
+  background-size:8px 8px;animation:mc-in var(--t-mid) var(--ease)}
+.scrim[hidden]{display:none}
+
+/* ============================================================
+   10 · 响应式 — 断点 820 / 640 / 480(SPEC 固定档位)
+   ≤820 移动形态 = 48px 顶栏 + 左侧抽屉 + 遮罩(结构由实现侧组件接管,
+   原型给样式基准:PORT-NOTE 见检视带 §10 帧)
+   ============================================================ */
+.m-mask{display:none;position:fixed;inset:0;z-index:75;
+  background:color-mix(in oklab,var(--bg-deep) 45%,transparent)}
+.app-bar{display:none}
+@media (max-width:820px){
+  .app.has-bar{padding-top:48px}
+  .app-bar{display:flex;align-items:center;gap:8px;position:fixed;top:0;left:0;right:0;
+    height:48px;padding:0 14px;z-index:76;
+    background:var(--surface);color:var(--fg);
+    border-bottom:1px solid var(--border);                      /* PORT-NOTE: 描边 */
+    box-shadow:0 2px 0 rgba(0,0,0,.35)}
+  .app-bar .ab-title{font:600 14px/1 var(--font-display);letter-spacing:.02em}
+  .app-bar .ab-actions{margin-left:auto;display:flex;gap:8px}
+  .app.has-bar .desk{display:block;padding:12px;overflow:visible}
+  .app.has-bar .sidebar{position:fixed;left:0;top:48px;bottom:0;width:min(300px,84vw);
+    z-index:60;transform:translateX(-102%);
+    transition:transform var(--t-mid) var(--ease);
+    border-radius:0;border-left:none}
+  .app.has-bar.drawer-open .sidebar{transform:none}
+  .app.has-bar.drawer-open .m-mask{display:block}
+  .app.has-bar .main-win{height:calc(100vh - 48px - 24px)}
+  .desk-icons{display:none}
+}
+@media (max-width:640px){
+  .flow{padding:12px}
+  .msg.user .bubble{max-width:100%}
+  .composer-bar .cb-btn.mode{display:none}
+  .hero .h-title{font-size:26px}
+}
+@media (max-width:480px){
+  .dock{padding:8px}
+  .composer-stats .st-mid{display:none}
+  .dialog-nav{width:52px}
+  .dialog-nav .dn-item span{display:none}
+  .dialog-nav .dn-item{justify-content:center}
+}
+</style>
+</head>
+<body>
+
+<!-- FIGMA-ASSETS sprite — Classic Macintosh UI Kit 声明组件矢量内联
+     (Small icon/* · Symbols/* · Base elements/Close|Zoom box · Finder icons/Mac:HD·Trash · Outline triangle)
+     PORT-NOTE: 固定色已改 currentColor/var() 随双主题换装;white 面位挂 var(--surface);
+     close/zoom box 多色位挂 --box-line/--box-face;Mac:HD 屏幕部按 Kit 像素语汇补绘(导出仅含底座);
+     Symbols/Dash 按组件矢量核心提取(导出含页面背景)。实现侧常用图标可映射官方图标组件,特异者保留。 -->
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true">
+  <symbol id="i-doc" viewBox="0 0 8 10"><path fill-rule="evenodd" clip-rule="evenodd" d="M0 0H6V1H8V10H0V0ZM7 3H5V1H1V9H7V3Z" fill="currentColor"/><path d="M5 1H1V9H7V3H5V1Z" fill="var(--surface)"/></symbol>
+  <symbol id="i-folder" viewBox="0 0 11 9"><path d="M5 1H1V8H10V2H5V1Z" fill="var(--surface)"/><path d="M1 0H5V1H1V0Z" fill="currentColor"/><path d="M1 1V8H10V2H5V1H11V9H0V1H1Z" fill="currentColor"/></symbol>
+  <symbol id="i-suitcase" viewBox="0 0 12 10"><rect x="1" y="3" width="9" height="6" fill="var(--surface)"/><path fill-rule="evenodd" clip-rule="evenodd" d="M8 0H4V1H1V2H0V10H11V9H12V1H8V0ZM10 3H1V9H10V3Z" fill="currentColor"/></symbol>
+  <symbol id="i-finder" viewBox="0 0 11 13"><path fill-rule="evenodd" clip-rule="evenodd" d="M9 2H2V7H9V2ZM8 3H3V6H8V3Z" fill="currentColor"/><path d="M10 0H1V1H0V10H1V1H10V10H11V1H10V0Z" fill="currentColor"/><path fill-rule="evenodd" clip-rule="evenodd" d="M10 10H1V13H10V10ZM9 11H2V12H9V11Z" fill="currentColor"/><rect x="5" y="8" width="4" height="1" fill="currentColor"/></symbol>
+  <symbol id="i-check" viewBox="0 0 9 8"><path d="M9 0H8V1H7V2H6V3H5V4H4V5H3V6H2V5H1V4H0V6H1V7H2V8H3V7H4V6H5V5H6V4H7V3H8V2H9V0Z" fill="currentColor"/></symbol>
+  <symbol id="i-caretright" viewBox="0 0 6 11"><path d="M1 0H0V11H1V10H2V9H3V8H4V7H5V6H6V5H5V4H4V3H3V2H2V1H1V0Z" fill="currentColor"/></symbol>
+  <symbol id="i-caretdown" viewBox="0 0 11 6"><path d="M11 0H0V1H1V2H2V3H3V4H4V5H5V6H6V5H7V4H8V3H9V2H10V1H11V0Z" fill="currentColor"/></symbol>
+  <symbol id="i-sparkle" viewBox="0 0 9 9"><path d="M5 0H4V3H5V0Z" fill="currentColor"/><path d="M2 1H1V2H2V3H3V2H2V1Z" fill="currentColor"/><path d="M8 1H7V2H6V3H7V2H8V1Z" fill="currentColor"/><path d="M1 7H2V8H1V7Z" fill="currentColor"/><path d="M2 7H3V6H2V7Z" fill="currentColor"/><path d="M8 7H7V6H6V7H7V8H8V7Z" fill="currentColor"/><path d="M4 6H5V9H4V6Z" fill="currentColor"/><path d="M3 4H0V5H3V4Z" fill="currentColor"/><path d="M6 4H9V5H6V4Z" fill="currentColor"/></symbol>
+  <symbol id="i-command" viewBox="0 0 9 9"><path fill-rule="evenodd" clip-rule="evenodd" d="M3 0H1V1H0V3H1V4H3V5H1V6H0V8H1V9H3V8H4V6H5V8H6V9H8V8H9V6H8V5H6V4H8V3H9V1H8V0H6V1H5V3H4V1H3V0ZM6 1H8V3H6V1ZM8 6V8H6V6H8ZM3 8H1V6H3V8ZM3 1V3H1V1H3ZM4 4V5H5V4H4Z" fill="currentColor"/></symbol>
+  <symbol id="i-floppy" viewBox="0 0 13 12"><path d="M11 1H1V11H12V2H11V1Z" fill="var(--surface)"/><path fill-rule="evenodd" clip-rule="evenodd" d="M11 0H1V1H0V11H1V12H13V2H12V1H11V0ZM9 4H10V1H11V2H12V11H10V8H9V7H4V8H3V11H1V1H3V4H4V5H9V4ZM9 4H4V1H7V3H8V1H9V4ZM9 11H4V8H9V11Z" fill="currentColor"/></symbol>
+  <symbol id="i-close" viewBox="0 0 11 11"><rect x="2" y="2" width="7" height="7" fill="var(--surface-3)"/><path d="M11 0H0V11H1V1H11V0Z" fill="var(--box-line)"/><path d="M10 2H9V9H2V10H10V2Z" fill="var(--box-line)"/><path fill-rule="evenodd" clip-rule="evenodd" d="M11 1H1V11H11V1ZM10 2H2V10H10V2Z" fill="var(--box-face)"/></symbol>
+  <symbol id="i-zoom" viewBox="0 0 11 11"><rect x="2" y="2" width="7" height="7" fill="var(--surface-3)"/><path d="M11 0H0V11H1V1H11V0Z" fill="var(--box-line)"/><path fill-rule="evenodd" clip-rule="evenodd" d="M11 1H1V11H11V1ZM2 10H10V2H2V10Z" fill="var(--box-face)"/><path d="M10 2H9V9H2V10H10V2Z" fill="var(--box-line)"/><rect x="6" y="2" width="1" height="5" fill="var(--box-line)"/><rect x="2" y="6" width="5" height="1" fill="var(--box-line)"/></symbol>
+  <symbol id="i-machd" viewBox="0 0 32 32"><rect x="5" y="1" width="22" height="16" fill="currentColor"/><rect x="6" y="2" width="20" height="14" fill="var(--surface)"/><rect x="8" y="4" width="16" height="10" fill="var(--sel-bg)"/><rect x="1" y="20" width="30" height="8" fill="var(--surface)"/><path fill-rule="evenodd" clip-rule="evenodd" d="M31 19H1V20H0V28H1V29H31V28H32V20H31V19ZM31 20V28H1V20H31Z" fill="currentColor"/><path fill-rule="evenodd" clip-rule="evenodd" d="M31 19H1V20H0V28H1V29H31V28H32V20H31V19ZM31 20V28H1V20H31Z" fill="currentColor" fill-opacity="0.2"/><rect x="4" y="25" width="2" height="1" fill="currentColor"/></symbol>
+  <symbol id="i-trash" viewBox="0 0 32 32">
+<g id="Path">
+<path d="M13 1H19V2H13V1Z" fill="var(--surface)"/>
+<path d="M6 3H26V4H6V3Z" fill="var(--surface)"/>
+<path d="M25 5H7V31H25V5Z" fill="var(--surface)"/>
+</g>
+<rect id="Path_2" x="13" y="6" width="5" height="25" fill="var(--surface-3)"/>
+<g id="Path_3">
+<path d="M14 1H16V2H14V1Z" fill="var(--surface-3)"/>
+<path d="M13 5H10V6H13V5Z" fill="var(--surface-3)"/>
+<path d="M11 8H10V7H9V8H10V28H9V29H10V28H11V8Z" fill="var(--surface-3)"/>
+<path d="M10 30H9V31H10V30Z" fill="var(--surface-3)"/>
+<path d="M12 3H11V4H12V3Z" fill="var(--surface-3)"/>
+<path d="M15 3V4H13V3H15Z" fill="var(--surface-3)"/>
+</g>
+<g id="Path_4">
+<path d="M16 5H13V6H16V5Z" fill="#CDCDCD"/>
+<path d="M10 29H9V30H10V29Z" fill="#CDCDCD"/>
+<path d="M9 5H10V7H9V5Z" fill="#CDCDCD"/>
+<path d="M17 31V30H15V31H17Z" fill="#CDCDCD"/>
+</g>
+<g id="Path_5">
+<path d="M17 1H16V2H17V1Z" fill="#C0C0C0"/>
+<path d="M8 5H9V8H10V28H9V31H8V5Z" fill="#C0C0C0"/>
+<path d="M9 3H11V4H9V3Z" fill="#C0C0C0"/>
+<path d="M17 4V3H15V4H17Z" fill="#C0C0C0"/>
+<path d="M16 5H20V6H22V7H21V30H19V31H17V30H18V29H19V28H20V8H19V7H18V8H17V6H16V5Z" fill="#C0C0C0"/>
+<path d="M18 29H17V28H18V29Z" fill="#C0C0C0"/>
+<path d="M15 8H13V28H15V8Z" fill="#C0C0C0"/>
+</g>
+<rect id="Path_6" x="17" y="3" width="2" height="1" fill="#A5A5A5"/>
+<g id="Path_7">
+<path d="M14 1H13V2H14V1Z" fill="#969696"/>
+<path d="M9 3H7V4H9V3Z" fill="#969696"/>
+<path d="M7 5H8V31H7V5Z" fill="#969696"/>
+<path d="M22 3H19V4H22V3Z" fill="#969696"/>
+<path d="M20 5H22V6H20V5Z" fill="#969696"/>
+<path fill-rule="evenodd" clip-rule="evenodd" d="M23 8V6H22V7H21V30H19V31H22V30H23V29H24V28H23V29H22V8H23ZM23 8H24V9H23V8Z" fill="#969696"/>
+<path d="M20 28V8H18V28H20Z" fill="#969696"/>
+<path d="M17 1H18V2H17V1Z" fill="#969696"/>
+<path d="M13 8H12V28H13V29H14V28H13V8Z" fill="#969696"/>
+<path d="M13 8V7H14V8H13Z" fill="#969696"/>
+</g>
+<g id="Path_8">
+<path d="M22 3H24V4H22V3Z" fill="#777777"/>
+<path d="M17 8H18V28H17V8Z" fill="#777777"/>
+<path d="M18 28H19V29H18V28Z" fill="#777777"/>
+<path d="M18 8H19V7H18V8Z" fill="#777777"/>
+<path fill-rule="evenodd" clip-rule="evenodd" d="M25 5H22V6H23V8H24V9H23V28H22V29H23V30H22V31H25V5ZM23 29H24V28H23V29Z" fill="#777777"/>
+</g>
+<g id="Path_9">
+<path d="M18 1H19V2H18V1Z" fill="#666666"/>
+<path d="M24 3H26V4H24V3Z" fill="#666666"/>
+<path d="M7 3H6V4H7V3Z" fill="#666666"/>
+</g>
+<rect id="Path_10" x="22" y="8" width="1" height="20" fill="#3F3F3F"/>
+<path id="Path_11" fill-rule="evenodd" clip-rule="evenodd" d="M19 0H13V1H12V2H6V3H5V5H6V31H7V32H25V31H26V5H27V3H26V2H20V1H19V0ZM26 3V4H6V3H26ZM25 31V5H7V31H25ZM19 1V2H13V1H19Z" fill="currentColor"/>
+</symbol>
+  <symbol id="i-tri" viewBox="0 0 6 11"><path d="M0 0H1V1H2V2H1V9H2V10H1V11H0V0Z" fill="currentColor"/><path d="M3 8H2V9H3V8Z" fill="currentColor"/><path d="M4 7V8H3V7H4Z" fill="currentColor"/><path d="M5 6V7H4V6H5Z" fill="currentColor"/><path d="M5 5H6V6H5V5Z" fill="currentColor"/><path d="M4 4H5V5H4V4Z" fill="currentColor"/><path d="M3 3H4V4H3V3Z" fill="currentColor"/><path d="M3 3V2H2V3H3Z" fill="currentColor"/></symbol>
+  <symbol id="i-dash" viewBox="0 0 9 9"><rect x="2" y="4" width="5" height="1" fill="currentColor"/></symbol>
+</svg>
+
+<!-- ============================================================
+     骨架实况 — §3 应用骨架 + §4 侧栏 + §5 会话流 + §6 输入坞 的真实工作区画面
+     (对应 Figma classic-mac-agent-chat 设计稿;本节 HTML 即移植主体)
+     ============================================================ -->
+<div class="app has-bar" id="app">
+  <!-- 顶部菜单栏(桌面粘顶;z-index 76) -->
+  <div class="menubar" role="banner">
+    <span class="m-brand">
+      <svg aria-hidden="true"><use href="#i-finder"/></svg>
+      <span class="sb-name">DeepSeek Harness</span>
+    </span>
+    <span class="m-item">File</span>
+    <span class="m-item">Edit</span>
+    <span class="m-item on">View</span>
+    <span class="m-item">Special</span>
+    <span class="m-right">
+      <button class="btn sm" data-action="theme" id="kit-theme">☀ Light</button>
+    </span>
+  </div>
+
+  <!-- 桌面区:侧栏窗(264) / 主窗(详情列 = 0) -->
+  <div class="desk">
+
+    <!-- 桌面图标(Macintosh HD / Trash) -->
+    <div class="desk-icons" aria-hidden="true">
+      <div class="dicon">
+        <svg aria-hidden="true"><use href="#i-machd"/></svg>
+        <span class="d-label">Macintosh HD</span>
+      </div>
+      <div class="dicon">
+        <svg aria-hidden="true"><use href="#i-trash"/></svg>
+        <span class="d-label">Trash</span>
+      </div>
+    </div>
+
+    <!-- ============ 侧栏 Finder 窗 ============ -->
+    <aside class="sidebar win">
+      <div class="titlebar">
+        <span class="t-box t-close" title="close"><svg aria-hidden="true"><use href="#i-close"/></svg></span>
+        <span class="t-title">Sessions</span>
+        <span class="t-box t-zoom" title="zoom"><svg aria-hidden="true"><use href="#i-zoom"/></svg></span>
+      </div>
+      <div class="sb-head">
+        <svg aria-hidden="true"><use href="#i-finder"/></svg>
+        <span>
+          <span class="sb-name">DeepSeek Harness</span>
+          <span class="sb-sub">工作区 · algae</span>
+        </span>
+      </div>
+      <div class="sb-actions">
+        <button class="btn primary">
+          <svg viewBox="0 0 14 14" aria-hidden="true"><path d="M7 1 v12 M1 7 h12" stroke="currentColor" stroke-width="2"/></svg>
+          New Session
+        </button>
+      </div>
+      <div class="sb-search">
+        <label class="field">
+          <svg class="lead" viewBox="0 0 14 14" aria-hidden="true"><circle cx="6" cy="6" r="4.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M9.5 9.5 L13 13" stroke="currentColor" stroke-width="1.5"/></svg>
+          <input placeholder="搜索会话…" />
+        </label>
+      </div>
+      <nav class="sb-tree">
+        <div class="group open">
+          <button class="group-head" data-toggle="#g-aurum">
+            <svg class="tri open" aria-hidden="true"><use href="#i-tri"/></svg>
+            <svg aria-hidden="true"><use href="#i-folder"/></svg>
+            <span class="g-name">dsh-theme-aurum</span>
+            <span class="g-count">4</span>
+          </button>
+          <div class="group-body" id="g-aurum">
+            <button class="sess on">
+              <svg class="s-ic" aria-hidden="true"><use href="#i-doc"/></svg>
+              <span class="s-tt">分步思考计算9x8</span>
+              <span class="s-slot"><i class="s-dot"></i></span>
+            </button>
+            <button class="sess run">
+              <svg class="s-ic" aria-hidden="true"><use href="#i-doc"/></svg>
+              <span class="s-tt">金-token 色板对比度复核</span>
+              <span class="s-slot"><i class="s-dot"></i></span>
+            </button>
+            <button class="sess">
+              <svg class="s-ic" aria-hidden="true"><use href="#i-doc"/></svg>
+              <span class="s-tt">一句话回复好</span>
+              <span class="s-slot"><svg class="s-ok" aria-hidden="true"><use href="#i-check"/></svg></span>
+            </button>
+            <button class="sess wait">
+              <svg class="s-ic" aria-hidden="true"><use href="#i-doc"/></svg>
+              <span class="s-tt">要求只回复收到两字测试</span>
+              <span class="s-slot"><i class="s-dot"></i></span>
+            </button>
+          </div>
+        </div>
+        <div class="group open">
+          <button class="group-head" data-toggle="#g-plugins">
+            <svg class="tri open" aria-hidden="true"><use href="#i-tri"/></svg>
+            <svg aria-hidden="true"><use href="#i-folder"/></svg>
+            <span class="g-name">dsh-plugins</span>
+            <span class="g-count">2</span>
+          </button>
+          <div class="group-body" id="g-plugins">
+            <button class="sess">
+              <svg class="s-ic" aria-hidden="true"><use href="#i-doc"/></svg>
+              <span class="s-tt">搜索主题皮肤商店相关</span>
+              <span class="s-slot"><i class="s-dot"></i></span>
+            </button>
+            <button class="sess">
+              <svg class="s-ic" aria-hidden="true"><use href="#i-doc"/></svg>
+              <span class="s-tt">查找Agent跨会话记忆插件</span>
+              <span class="s-slot"><svg class="s-ok" aria-hidden="true"><use href="#i-check"/></svg></span>
+            </button>
+          </div>
+        </div>
+        <div class="group">
+          <button class="group-head" data-toggle="#g-algae">
+            <svg class="tri" aria-hidden="true"><use href="#i-tri"/></svg>
+            <svg aria-hidden="true"><use href="#i-folder"/></svg>
+            <span class="g-name">algae</span>
+            <span class="g-count">3</span>
+          </button>
+          <div class="group-body" id="g-algae">
+            <button class="sess">
+              <svg class="s-ic" aria-hidden="true"><use href="#i-doc"/></svg>
+              <span class="s-tt">简历因子拆解与重写</span>
+              <span class="s-slot"><i class="s-dot"></i></span>
+            </button>
+          </div>
+        </div>
+        <button class="sb-add">
+          <svg viewBox="0 0 14 14" aria-hidden="true"><path d="M7 1 v12 M1 7 h12" stroke="currentColor" stroke-width="1.6"/></svg>
+          添加工作区…
+        </button>
+      </nav>
+      <div class="sb-foot">
+        <svg aria-hidden="true"><use href="#i-suitcase"/></svg>
+        <button class="sb-pref" data-action="open-settings">Preferences…</button>
+        <button class="icon-btn sm" data-action="theme" title="切换主题">
+          <svg viewBox="0 0 12 12" aria-hidden="true"><path d="M6 1 a5 5 0 1 0 5 5 a4 4 0 0 1 -5 -5 z" fill="currentColor"/></svg>
+        </button>
+      </div>
+    </aside>
+
+    <!-- ============ 主窗 ============ -->
+    <section class="main-win win">
+      <div class="titlebar">
+        <span class="t-box t-close" title="close"><svg aria-hidden="true"><use href="#i-close"/></svg></span>
+        <span class="t-title">分步思考计算9x8 — DeepSeek Harness</span>
+        <span class="t-box t-zoom" title="zoom"><svg aria-hidden="true"><use href="#i-zoom"/></svg></span>
+      </div>
+
+      <!-- 会话流 -->
+      <div class="flow">
+        <div class="msg user">
+          <div class="bubble">先认真思考再回答，分三步：9x8 等于多少？为什么？</div>
+        </div>
+
+        <div class="inject">
+          <svg aria-hidden="true"><use href="#i-doc"/></svg>
+          <span class="i-tt">上下文注入 &lt;system-reminder&gt;</span>
+        </div>
+        <div class="inject">
+          <svg aria-hidden="true"><use href="#i-doc"/></svg>
+          <span class="i-tt">上下文注入 Current runtime context. The DeepSeek Harness implementation checkout is at…</span>
+        </div>
+
+        <div class="reasoning open" id="rsn-main">
+          <button class="reasoning-head" data-toggle="#rsn-main">
+            <svg class="tri open" aria-hidden="true"><use href="#i-tri"/></svg>
+            <span class="r-tag">Think</span>
+            <span class="r-sum">识别核心问题为乘法,拆 8 = 10 − 2 后用分配律三步推演…</span>
+            <span class="r-dur">2.3s</span>
+          </button>
+          <div class="reasoning-body">
+            <div class="r-txt">- 识别核心问题:「9x8 等于多少? 为什么?」
+- 约束要求: 先认真思考,分三步作答
+- 步骤规划: 拆数 → 分配律分开算 → 合并;9 × (10 − 2) = 90 − 18 = 72</div>
+          </div>
+        </div>
+
+        <div class="msg agent">
+          <div class="md">
+            <h2>三步推演</h2>
+            <p>好哒,认真想了想,分三步汇报:</p>
+            <ol>
+              <li><strong>拆数</strong>:把 8 看成最好算的 <code>10 − 2</code></li>
+              <li><strong>分开算</strong>:乘法对加减法有分配律,拆开各自算 <code>9 × 10 = 90</code>,<code>9 × 2 = 18</code></li>
+              <li><strong>合并</strong>:<code>90 − 18 = 72</code></li>
+            </ol>
+            <p>所以 9 × 8 = 72。伪代码表达:</p>
+            <pre><code>function mul9(x) {
+  return 9 * (x - 2) + 18; // 拆数还原
+}
+mul9(8); // =&gt; 72</code></pre>
+            <table>
+              <thead><tr><th>拆法</th><th>算式</th><th>结果</th></tr></thead>
+              <tbody>
+                <tr><td>10 − 2</td><td>9×10 − 9×2</td><td>72</td></tr>
+                <tr><td>3 × 8 × 3</td><td>(9×8)×1</td><td>72</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="turn-tail">
+          <button class="icon-btn sm" title="复制">
+            <svg viewBox="0 0 11 11" aria-hidden="true"><rect x="1" y="1" width="6" height="6" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M4 4 h6 v6 h-6 z" fill="none" stroke="currentColor" stroke-width="1.3"/></svg>
+          </button>
+          <button class="icon-btn sm" title="重发">
+            <svg viewBox="0 0 11 11" aria-hidden="true"><path d="M9 5 a3.5 3.5 0 1 1 -1-2.5" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M9 1 v2.5 h-2.5" fill="none" stroke="currentColor" stroke-width="1.3"/></svg>
+          </button>
+          <span class="t-stats">8.9s · token 1.9s · 83 tok/s</span>
+        </div>
+      </div>
+
+      <!-- 输入坞 -->
+      <div class="dock">
+        <div class="queue-row">
+          <svg aria-hidden="true"><use href="#i-dash"/></svg>
+          队列中还有 2 条消息 — 第一条:继续验证 7×6 的拆数过程
+        </div>
+        <div class="composer" id="cmp-main">
+          <label class="field">
+            <svg class="lead" viewBox="0 0 14 14" aria-hidden="true"><path d="M7 1 v12 M1 7 h12" stroke="currentColor" stroke-width="1.6"/></svg>
+            <textarea rows="1" placeholder="Message the agent…">那再验一下 7×6 吧,同样分三步。</textarea>
+          </label>
+          <div class="composer-bar">
+            <button class="cb-btn">
+              <svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2 10 l1-4 5-5 3 3 -5 5 z" fill="none" stroke="currentColor" stroke-width="1.3"/></svg>
+              附件
+            </button>
+            <button class="cb-btn">
+              <svg viewBox="0 0 12 12" aria-hidden="true"><rect x="2" y="4" width="8" height="6" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M4 4 a2 2 0 0 1 4 0" fill="none" stroke="currentColor" stroke-width="1.3"/></svg>
+              Full access
+              <svg viewBox="0 0 8 8" aria-hidden="true"><path d="M1 2.5 l3 3 3-3" fill="none" stroke="currentColor" stroke-width="1.2"/></svg>
+            </button>
+            <button class="cb-btn model">
+              deepseek-chat
+              <svg viewBox="0 0 8 8" aria-hidden="true"><path d="M1 2.5 l3 3 3-3" fill="none" stroke="currentColor" stroke-width="1.2"/></svg>
+            </button>
+            <span style="margin-left:auto;display:flex;align-items:center;gap:8px">
+              <!-- PORT-NOTE: ctx 圆环占用率 74% 为静态示意值 — 运行时数据,CSS 不可达,不适用 -->
+              <span class="ctx-ring" data-toggle="#ctx-pop" title="上下文占用 74% · 96.2k / 130k tok">
+                <svg viewBox="0 0 22 22" aria-hidden="true">
+                  <circle class="cr-track" cx="11" cy="11" r="8.5" fill="none" stroke-width="3"/>
+                  <circle class="cr-arc" cx="11" cy="11" r="8.5" fill="none" stroke-width="3"
+                    stroke-dasharray="39.6 53.4" transform="rotate(-90 11 11)"/>
+                </svg>
+              </span>
+              <button class="btn sm primary">
+                <svg viewBox="0 0 14 14" aria-hidden="true"><path d="M1 7 h11 M8 2.5 L12.5 7 L8 11.5" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>
+                Send
+              </button>
+            </span>
+          </div>
+          <div class="ctx-pop" id="ctx-pop">
+            <div><b>96.2k / 130k tok</b> · 上下文占用 74%</div>
+            <div class="ctx-line"><i style="background:var(--accent)"></i>会话历史<span class="cl-bar"><i style="width:52%;background:var(--accent)"></i></span>62%</div>
+            <div class="ctx-line"><i style="background:var(--spark)"></i>系统提示<span class="cl-bar"><i style="width:18%;background:var(--spark)"></i></span>21%</div>
+            <div class="ctx-line"><i style="background:var(--muted)"></i>工具产物<span class="cl-bar"><i style="width:8%;background:var(--muted)"></i></span>17%</div>
+          </div>
+        </div>
+        <div class="composer-stats">
+          <span>1 turns · 1 steps</span>
+          <span class="st-mid">LLM 8.8s · tools 0.1s</span>
+          <span class="st-mid">first token 1.9s · 83 tok/s</span>
+          <span class="st-r">Cache hit 86%</span>
+        </div>
+      </div>
+
+      <div class="statusbar">
+        <span>1 turns · 1 steps | LLM 8.8s</span>
+        <span>Cache hit 86%</span>
+      </div>
+    </section>
+  </div>
+
+  <!-- ≤820 移动形态:48px 顶栏 + 左抽屉 + 遮罩(PORT-NOTE: 结构由实现侧组件接管,原型给样式基准) -->
+  <div class="app-bar">
+    <button class="icon-btn" data-action="drawer">
+      <svg viewBox="0 0 13 13" aria-hidden="true"><path d="M1 2.5 h11 M1 6.5 h11 M1 10.5 h11" stroke="currentColor" stroke-width="1.5"/></svg>
+    </button>
+    <span class="ab-title">分步思考计算9x8</span>
+    <span class="ab-actions">
+      <button class="btn sm" data-action="theme">☀</button>
+    </span>
+  </div>
+  <div class="m-mask" data-action="drawer"></div>
+</div>
+<!-- ============================================================
+     检视带(KIT-CHROME 家具承载) — §1–§10 状态帧陈列
+     家具样式不移植;带内组件即移植片段
+     ============================================================ -->
+<main class="kit-wrap">
+
+  <!-- ======== §1 令牌 + 画布 ======== -->
+  <section class="kit-band" id="kit-1">
+    <div class="kit-band-head">
+      <span class="kit-no">§1</span><h2>令牌 + 画布</h2>
+      <p>双主题变量组(深 = 夜间单色 Mac / 浅 = 正统 System 7);桌面点阵/格纹、像素虚线焦点环、经典 15px 滚动条。点右上角 ☀ 按钮切主题目检双态。</p>
+    </div>
+    <div class="kit-frames">
+      <div class="kit-frame">
+        <div class="kit-frame-tag"><span>色板 · 颜色仅存于 :root 与 light 覆盖两处</span><em>token</em></div>
+        <div class="kit-frame-body">
+          <div class="sw-grid">
+            <div class="sw"><i style="background:var(--bg)"></i><span>--bg</span><small>桌面底</small></div>
+            <div class="sw"><i style="background:var(--bg-deep)"></i><span>--bg-deep</span><small>最深层/代码块</small></div>
+            <div class="sw"><i style="background:var(--surface);border-bottom:1px solid var(--border-soft)"></i><span>--surface</span><small>窗面</small></div>
+            <div class="sw"><i style="background:var(--surface-2)"></i><span>--surface-2</span><small>标题栏/工具条</small></div>
+            <div class="sw"><i style="background:var(--surface-3)"></i><span>--surface-3</span><small>抬升面</small></div>
+            <div class="sw"><i style="background:var(--rail-1)"></i><span>--rail-1</span><small>侧栏面</small></div>
+            <div class="sw"><i style="background:var(--fg)"></i><span>--fg</span><small>主文字</small></div>
+            <div class="sw"><i style="background:var(--muted)"></i><span>--muted</span><small>次文字</small></div>
+            <div class="sw"><i style="background:var(--faint)"></i><span>--faint</span><small>弱文字</small></div>
+            <div class="sw"><i style="background:var(--border)"></i><span>--border</span><small>描边(本主题不透明)</small></div>
+            <div class="sw"><i style="background:var(--accent)"></i><span>--accent</span><small>lavender 主强调</small></div>
+            <div class="sw"><i style="background:var(--accent-strong)"></i><span>--accent-strong</span><small>hover 强调</small></div>
+            <div class="sw"><i style="background:var(--sel-bg)"></i><span>--sel-bg</span><small>Finder 选中底</small></div>
+            <div class="sw"><i style="background:var(--spark)"></i><span>--spark</span><small>琥珀 · 运行活动</small></div>
+            <div class="sw"><i style="background:var(--success)"></i><span>--success</span><small>成功</small></div>
+            <div class="sw"><i style="background:var(--danger)"></i><span>--danger</span><small>危险</small></div>
+            <div class="sw"><i style="background:var(--warn)"></i><span>--warn</span><small>警告</small></div>
+          </div>
+        </div>
+      </div>
+      <div class="kit-frame">
+        <div class="kit-frame-tag"><span>字体四族 · CJK 回退齐备</span><em>type</em></div>
+        <div class="kit-frame-body">
+          <div class="kit-row"><span class="kit-row-label">display — Pixelify Sans / Noto Sans SC</span></div>
+          <div class="kit-row"><div class="spec-hero">Think <em>Different</em>,回答严谨。</div></div>
+          <div class="kit-row"><span class="kit-row-label">ui — Noto Sans SC(正文可读族)</span></div>
+          <div class="kit-row"><p class="spec-body">经典麦金塔主题以可读性优先:正文用现代无衬线,展示位用像素字体;边框、阴影、条纹承担全部复古气质。</p></div>
+          <div class="kit-row"><span class="kit-row-label">mono — JetBrains Mono / Noto Sans SC</span></div>
+          <div class="kit-row"><p class="spec-mono">9 * (10 - 2) == 72 // 拆数、分配律、合并</p></div>
+          <div class="kit-row"><span class="kit-row-label">serif — Noto Serif SC(四族完整性)</span></div>
+          <div class="kit-row"><p style="font:400 14px/1.9 var(--font-serif);color:var(--muted)">衬线族本主题正文不用,仅保族完备。</p></div>
+          <div class="kit-row"><span class="kit-row-label">label 样式 · display 600 + 字距</span></div>
+          <div class="kit-row"><span class="spec-label">SESSIONS · 4</span></div>
+        </div>
+      </div>
+      <div class="kit-frame">
+        <div class="kit-frame-tag"><span>滚动条 · 经典 15px(上下按钮 + grip 滑块)/ selection / focus</span><em>canvas</em></div>
+        <div class="kit-frame-body">
+          <div class="scroll-demo">
+            <p>System 7 滚动条:15px 宽、上下箭头按钮、条纹槽、带 grip 滑块。鼠标悬停可试。</p>
+            <p>::selection = lavender 实底反色(浅色态为 Finder 选中底)。</p>
+            <p>试试选中这段文字,再 Tab 到下面任意按钮看像素虚线焦点环。</p>
+            <p>focus ring — 1px dashed + offset 2px,经典 Mac 焦点语汇。</p>
+            <p>深色态箭头与 grip 自动换亮色(light 覆盖块管理)。</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======== §2 基础 ======== -->
+  <section class="kit-band" id="kit-2">
+    <div class="kit-band-head">
+      <span class="kit-no">§2</span><h2>基础</h2>
+      <p>双线按钮(按下 = 内外圈反色)、close/zoom box 图标钮、方角状态胶囊、白底黑边输入框、Finder 折叠三角。hover / active / disabled / focus-visible 四态齐备(Tab 键可达)。</p>
+    </div>
+    <div class="kit-frames">
+      <div class="kit-frame">
+        <div class="kit-frame-tag"><span>btn 双线按钮 · :hover 面 / :active 反色 / :disabled</span><em>btn</em></div>
+        <div class="kit-frame-body">
+          <div class="kit-row">
+            <button class="btn">Default</button>
+            <button class="btn primary">Send</button>
+            <button class="btn danger">Delete</button>
+            <button class="btn" disabled>Disabled</button>
+            <button class="btn primary" disabled>Send ·dis</button>
+          </div>
+          <div class="kit-row">
+            <button class="btn sm">Small 22px</button>
+            <button class="btn">Default 28px</button>
+            <button class="btn lg">Large 32px</button>
+          </div>
+          <div class="kit-row"><span class="kit-row-label">按下态演示:鼠标按住任意按钮观察内外圈反色(经典 System 7 反馈)</span></div>
+        </div>
+      </div>
+      <div class="kit-frame">
+        <div class="kit-frame-tag"><span>icon-btn · pill 状态胶囊 · tri 折叠三角</span><em>base</em></div>
+        <div class="kit-frame-body">
+          <div class="kit-row">
+            <button class="icon-btn"><svg viewBox="0 0 11 11" aria-hidden="true"><path d="M1 5.5 h9 M5.5 1 v9" stroke="currentColor" stroke-width="1.5"/></svg></button>
+            <button class="icon-btn"><svg viewBox="0 0 11 11" aria-hidden="true"><path d="M1 5.5 h9" stroke="currentColor" stroke-width="1.5"/></svg></button>
+            <button class="icon-btn sm"><svg aria-hidden="true"><use href="#i-check"/></svg></button>
+            <button class="icon-btn sm" disabled><svg viewBox="0 0 11 11" aria-hidden="true"><path d="M2 2 l7 7 M9 2 l-7 7" stroke="currentColor" stroke-width="1.5"/></svg></button>
+          </div>
+          <div class="kit-row">
+            <span class="pill run">Running</span>
+            <span class="pill done">Done</span>
+            <span class="pill fail">Failed</span>
+            <span class="pill wait">Queued</span>
+            <span class="pill accent">DeepSeek</span>
+            <span class="pill">Default</span>
+          </div>
+          <div class="kit-row" style="gap:24px;padding-left:4px">
+            <svg class="tri" aria-hidden="true"><use href="#i-tri"/></svg><svg class="tri open" aria-hidden="true"><use href="#i-tri"/></svg><svg class="tri dim" aria-hidden="true"><use href="#i-tri"/></svg>
+          </div>
+        </div>
+      </div>
+      <div class="kit-frame">
+        <div class="kit-frame-tag"><span>field 输入框 · 空 / 有值 / 禁用</span><em>field</em></div>
+        <div class="kit-frame-body">
+          <div class="kit-row">
+            <label class="field" style="max-width:280px"><input placeholder="搜索会话…" /></label>
+          </div>
+          <div class="kit-row">
+            <label class="field" style="max-width:280px"><input value="分步思考计算9x8" /></label>
+          </div>
+          <div class="kit-row">
+            <label class="field" style="max-width:280px"><input value="禁用态输入" disabled /></label>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======== §3 应用骨架(实况即陈列) ======== -->
+  <section class="kit-band" id="kit-3">
+    <div class="kit-band-head">
+      <span class="kit-no">§3</span><h2>应用骨架</h2>
+      <p>本原型第一屏即骨架实况(菜单栏 20px + 桌面 + 侧栏窗 264px + 主窗 + 详情列 0)。层级表:抽屉 60 · 菜单 70 · 移动遮罩 75 · 移动顶栏 76 · mask 80 · 弹窗 84 · toast 90 · scrim 95。下方为侧栏折叠细条 56px 形态。</p>
+    </div>
+    <div class="kit-frames">
+      <div class="kit-frame">
+        <div class="kit-frame-tag"><span>rail-mini 折叠细条 56px · 点按钮切换</span><em>skeleton</em></div>
+        <div class="kit-frame-body">
+          <button class="btn sm" data-action="rail-mini">⇤ 切换 56px 细条形态</button>
+          <p style="font:400 12px/1.8 var(--font-ui);color:var(--faint);margin-top:10px">作用于顶部骨架实况的 .app(类钩子 rail-mini,样式基准;移动端抽屉见 §10)。</p>
+        </div>
+      </div>
+    </div>
+  </section>
+  <!-- ======== §4 侧栏(实况 + 补充状态帧) ======== -->
+  <section class="kit-band" id="kit-4">
+    <div class="kit-band-head">
+      <span class="kit-no">§4</span><h2>侧栏</h2>
+      <p>完整 Finder 窗见顶部骨架实况。此处陈列行级特殊态:分组开合、行内重命名、拖拽落点金线。<!-- PORT-NOTE: 拖拽排序与行内改名状态机结构照写组件,原型仅样式基准 --></p>
+    </div>
+    <div class="kit-frames">
+      <div class="kit-frame" style="max-width:340px">
+        <div class="kit-frame-tag"><span>会话行状态帧 · 重命名 / 拖入落点</span><em>sidebar</em></div>
+        <div class="kit-frame-body" style="padding:8px">
+          <div class="sess editing" style="pointer-events:none">
+            <svg class="s-ic" aria-hidden="true"><use href="#i-doc"/></svg>
+            <label class="field"><input value="分步思考计算9x8" /></label>
+          </div>
+          <div class="sess drop-into" style="pointer-events:none;margin-top:6px">
+            <svg class="s-ic" aria-hidden="true"><use href="#i-doc"/></svg>
+            <span class="s-tt">拖拽落点(顶部金线)</span>
+          </div>
+          <div class="group" style="margin-top:8px">
+            <span class="group-head" style="cursor:default">
+              <svg class="tri" aria-hidden="true"><use href="#i-tri"/></svg>
+              <svg aria-hidden="true"><use href="#i-folder"/></svg>
+              <span class="g-name">分组折叠(closed)</span>
+              <span class="g-count">3</span>
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======== §5 会话流(实况回合 + 补充状态帧) ======== -->
+  <section class="kit-band" id="kit-5">
+    <div class="kit-band-head">
+      <span class="kit-no">§5</span><h2>会话流</h2>
+      <p>完整回合见顶部主窗(md 全要素 + 推理卡 + 注入卡 + 尾部节点)。此处陈列:带图用户消息、推理运行中(流式光标)、错误行、自动重试行、上限行。</p>
+    </div>
+    <div class="kit-frames">
+      <div class="kit-frame">
+        <div class="kit-frame-tag"><span>用户消息 · 含图片附件</span><em>msg-user</em></div>
+        <div class="kit-frame-body">
+          <div class="msg user">
+            <div class="attach">
+              <span class="ph"></span>
+              <span class="cap">截图:Finder 里手动验证 9×8 = 72 的便签一张,很长的说明文本用来验证多行换行形态。</span>
+            </div>
+            <div class="bubble">顺便把这张桌面截图也存进会话记录里喵。</div>
+          </div>
+        </div>
+      </div>
+      <div class="kit-frame">
+        <div class="kit-frame-tag"><span>推理卡 · 运行中(流式) vs 完成</span><em>reasoning</em></div>
+        <div class="kit-frame-body" style="display:flex;flex-direction:column;gap:12px">
+          <div class="reasoning run open" id="rsn-run">
+            <button class="reasoning-head" data-toggle="#rsn-run">
+              <svg class="tri open" aria-hidden="true"><use href="#i-tri"/></svg>
+              <span class="r-tag">Think</span>
+              <span class="r-sum">正在拆解 7×6 的两步策略…</span>
+              <span class="r-dur">streaming</span>
+            </button>
+            <div class="reasoning-body">
+              <div class="r-txt">- 7×6 可以拆成 7 × (5 + 1) = 35 + 7
+- 或复用 6 = 10 − 4:70 − 28 = 42</div>
+            </div>
+          </div>
+          <div class="reasoning" id="rsn-done">
+            <button class="reasoning-head" data-toggle="#rsn-done">
+              <svg class="tri" aria-hidden="true"><use href="#i-tri"/></svg>
+              <span class="r-tag">Think</span>
+              <span class="r-sum">已收敛:两种拆法互相验证 42。收合态。</span>
+              <span class="r-dur">1.8s</span>
+            </button>
+            <div class="reasoning-body">
+              <div class="r-txt">收合态正文(窗口高度过渡露出)。</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="kit-frame">
+        <div class="kit-frame-tag"><span>错误行 / 自动重试行 / 上限行</span><em>rows</em></div>
+        <div class="kit-frame-body" style="display:flex;flex-direction:column;gap:10px">
+          <div class="err-row">
+            <svg viewBox="0 0 14 14" aria-hidden="true"><path d="M7 1 L13 12 H1 Z" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M7 5 v4 M7 10.6 v.4" stroke="currentColor" stroke-width="1.4"/></svg>
+            <span class="e-tt"><b>web_search 失败</b> · upstream 504 — 已重试 1 次,可手动重试或跳过</span>
+            <button class="btn sm">Retry</button>
+          </div>
+          <div class="retry-row">
+            <i class="s-dot"></i>
+            <span>自动重试第 2/3 次 · 等待上游恢复(5s 后发起)</span>
+          </div>
+          <div class="cap-row">
+            <svg class="tri" aria-hidden="true"><use href="#i-tri"/></svg>
+            <span>已到单回合步数上限(50 steps)— 继续请发送「继续」</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======== §6 输入坞(骨架常态 + 四态) ======== -->
+  <section class="kit-band" id="kit-6">
+    <div class="kit-band-head">
+      <span class="kit-no">§6</span><h2>输入坞</h2>
+      <p>骨架主窗底部为常态(有值)。此处陈列输入卡四态与 todo 进度 / goal 条。ctx 圆环与构成面板见骨架实况(点击圆环展开)。</p>
+    </div>
+    <div class="kit-frames">
+      <div class="kit-frame">
+        <div class="kit-frame-tag"><span>输入卡四态 · 空 / 有值 / 发送禁用 / 回合运行中</span><em>composer</em></div>
+        <div class="kit-frame-body" style="display:grid;gap:14px;max-width:640px">
+          <div class="composer">
+            <label class="field"><textarea rows="1" placeholder="Message the agent…"></textarea></label>
+            <div class="composer-bar">
+              <button class="cb-btn">附件</button>
+              <button class="cb-btn">Full access</button>
+              <span style="margin-left:auto"><button class="btn sm" disabled>Send</button></span>
+            </div>
+          </div>
+          <div class="composer">
+            <label class="field"><textarea rows="1">有值态:发送钮激活。</textarea></label>
+            <div class="composer-bar">
+              <button class="cb-btn">附件</button>
+              <span style="margin-left:auto"><button class="btn sm primary">Send</button></span>
+            </div>
+          </div>
+          <div class="composer">
+            <label class="field"><textarea rows="1" placeholder="回合运行中,输入禁用…"></textarea></label>
+            <div class="composer-bar">
+              <button class="cb-btn">附件</button>
+              <span style="margin-left:auto"><button class="btn sm danger">
+                <svg viewBox="0 0 10 10" aria-hidden="true"><rect x="1" y="1" width="8" height="8" fill="currentColor"/></svg>
+                Stop</button></span>
+            </div>
+          </div>
+          <div class="todo-row">
+            <svg width="13" height="13" viewBox="0 0 13 13" aria-hidden="true" style="flex:none;color:var(--muted)"><rect x="1" y="1" width="11" height="13" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M1 4 h11 M4 7 h5 M4 10 h3" stroke="currentColor" stroke-width="1.2"/></svg>
+            <div class="todo-bar"><i class="done"></i><i class="done"></i><i class="done"></i><i class="now"></i><i></i><i></i></div>
+            <span class="todo-meta">4/6 · 实现侧边栏折叠态</span>
+          </div>
+          <div class="goal-row">
+            <svg aria-hidden="true"><use href="#i-sparkle"/></svg>
+            <span>目标:完成 MACINTOSH 主题原型十分区 · round 2/6</span>
+            <span class="g-acts"><button class="btn sm">Pause</button><button class="btn sm danger">Stop</button></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======== §7 工具卡 ======== -->
+  <section class="kit-band" id="kit-7">
+    <div class="kit-band-head">
+      <span class="kit-no">§7</span><h2>工具卡</h2>
+      <p>已知工具特判各一帧(搜索/读取/编辑/清单/联网/终端/diff)+ 未知工具兜底卡;展开体含 diff 双色行与子调用缩进列表;运行态 = 琥珀条纹扫掠标题条。</p>
+    </div>
+    <div class="kit-frames">
+      <div class="kit-frame">
+        <div class="kit-frame-tag"><span>已知工具特判 · 7 帧兜底 1 帧</span><em>tool</em></div>
+        <div class="kit-frame-body" style="display:grid;gap:12px;max-width:680px">
+
+          <div class="tool open" id="tl-search">
+            <button class="tool-head" data-toggle="#tl-search">
+              <span class="t-ic"><svg aria-hidden="true"><use href="#i-sparkle"/></svg></span>
+              <span class="t-meta"><span class="t-name">web_search</span><span class="t-args">query="Classic Macintosh System 7 UI 设计规范"</span></span>
+              <span class="pill done">done</span>
+              <svg class="tri chev open" aria-hidden="true"><use href="#i-caretright"/></svg>
+            </button>
+            <div class="tool-body"><div class="tb-in">
+              <b>4 results</b> — developer.apple.com · gui.guide · wikipedia · umich.edu<br>
+              System 7(1991):窗口 1px 黑边、4px 圆角、标题栏 6 条 pinstripe、按钮双圈线、Finder 选中 = lavender 高亮。
+            </div></div>
+          </div>
+
+          <div class="tool" data-state="running" id="tl-read">
+            <button class="tool-head" data-toggle="#tl-read">
+              <span class="t-ic"><svg aria-hidden="true"><use href="#i-doc"/></svg></span>
+              <span class="t-meta"><span class="t-name">read</span><span class="t-args">prototype/macintosh-workspace.html · L1-260</span></span>
+              <span class="pill run">running</span>
+              <svg class="tri chev" aria-hidden="true"><use href="#i-caretright"/></svg>
+            </button>
+            <div class="tool-body"><div class="tb-in">运行态:标题条琥珀条纹扫掠(mc-sweep)。</div></div>
+          </div>
+
+          <div class="tool open" id="tl-edit">
+            <button class="tool-head" data-toggle="#tl-edit">
+              <span class="t-ic"><svg viewBox="0 0 15 15" aria-hidden="true"><path d="M2 13 l1-4 7-7 3 3 -7 7 z" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M9 3 l3 3" stroke="currentColor" stroke-width="1.2"/></svg></span>
+              <span class="t-meta"><span class="t-name">edit</span><span class="t-args">prototype/macintosh-workspace.html · +2 −1</span></span>
+              <span class="pill done">done</span>
+              <svg class="tri chev open" aria-hidden="true"><use href="#i-caretright"/></svg>
+            </button>
+            <div class="tool-body"><div class="tb-in">
+              <div class="diff">
+                <span class="d-hunk">@@ .titlebar .t-title @@</span>
+                <span class="d-line"><i>-</i><span class="d-txt d-del">font:600 12px/1 var(--font-ui)</span></span>
+                <span class="d-line"><i>+</i><span class="d-txt d-add">font:600 12px/1 var(--font-display)</span></span>
+              </div>
+            </div></div>
+          </div>
+
+          <div class="tool" id="tl-todo">
+            <button class="tool-head" data-toggle="#tl-todo">
+              <span class="t-ic"><svg aria-hidden="true"><use href="#i-check"/></svg></span>
+              <span class="t-meta"><span class="t-name">todo_write</span><span class="t-args">6 items · 4 done</span></span>
+              <span class="pill done">done</span>
+              <svg class="tri chev" aria-hidden="true"><use href="#i-caretright"/></svg>
+            </button>
+            <div class="tool-body"><div class="tb-in">清单工具展开体(分段进度示例,见 §6 todo-row)。</div></div>
+          </div>
+
+          <div class="tool open" id="tl-web">
+            <button class="tool-head" data-toggle="#tl-web">
+              <span class="t-ic"><svg aria-hidden="true"><use href="#i-floppy"/></svg></span>
+              <span class="t-meta"><span class="t-name">web_fetch</span><span class="t-args">developer.apple.com/design/hig/about …</span></span>
+              <span class="pill done">done</span>
+              <svg class="tri chev open" aria-hidden="true"><use href="#i-caretright"/></svg>
+            </button>
+            <div class="tool-body"><div class="tb-in">抓取 18.4k 文本 · 12 outbound links · 3 图像占位。</div></div>
+          </div>
+
+          <div class="tool open" id="tl-bash">
+            <button class="tool-head" data-toggle="#tl-bash">
+              <span class="t-ic"><svg aria-hidden="true"><use href="#i-command"/></svg></span>
+              <span class="t-meta"><span class="t-name">bash</span><span class="t-args">node verify-run.mjs verify/verify-proto-diff.js</span></span>
+              <span class="pill fail">exit 1</span>
+              <svg class="tri chev open" aria-hidden="true"><use href="#i-caretright"/></svg>
+            </button>
+            <div class="tool-body"><div class="tb-in">
+              $ node verify-run.mjs<br>
+              ✖ flow.tool .tool — rect dy +2.4px 超差(±1.5px)<br>
+              <b>exit code: 1</b> · 148ms
+              <div class="subcalls">
+                <span class="sc-row ok"><svg viewBox="0 0 11 11" aria-hidden="true"><path d="M1 6 l3 3 l6-7" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>job-1 geometry diff · ok</span>
+                <span class="sc-row run"><svg viewBox="0 0 11 11" aria-hidden="true"><circle cx="5.5" cy="5.5" r="4" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>job-2 re-run pending</span>
+              </div>
+            </div></div>
+          </div>
+
+          <div class="tool" id="tl-diff">
+            <button class="tool-head" data-toggle="#tl-diff">
+              <span class="t-ic"><svg viewBox="0 0 15 15" aria-hidden="true"><rect x="1.5" y="1.5" width="5" height="12" fill="none" stroke="currentColor" stroke-width="1.3"/><rect x="8.5" y="1.5" width="5" height="12" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M4 5 h0.01 M11 10 h0.01" stroke="currentColor" stroke-width="2"/></svg></span>
+              <span class="t-meta"><span class="t-name">diff</span><span class="t-args">3 files · +41 −12</span></span>
+              <span class="pill done">done</span>
+              <svg class="tri chev" aria-hidden="true"><use href="#i-caretright"/></svg>
+            </button>
+            <div class="tool-body"><div class="tb-in">diff 工具卡(展开体样式同 edit 卡 .diff)。</div></div>
+          </div>
+
+          <div class="tool" data-state="fail" id="tl-unknown">
+            <button class="tool-head" data-toggle="#tl-unknown">
+              <span class="t-ic"><svg viewBox="0 0 15 15" aria-hidden="true"><path d="M7.5 1 L14 13 H1 Z" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M7.5 5.5 v3.5 M7.5 11 v.01" stroke="currentColor" stroke-width="1.4"/></svg></span>
+              <span class="t-meta"><span class="t-name">cast_glyph_v9</span><span class="t-args">未知工具 · 兜底卡(icon 占位 + 原始参数摘要)</span></span>
+              <span class="pill fail">fail</span>
+              <svg class="tri chev" aria-hidden="true"><use href="#i-caretright"/></svg>
+            </button>
+            <div class="tool-body"><div class="tb-in">unknown tool fallback — 卡壳兜底,参数以原始字符串陈列。</div></div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </section>
+  <!-- ======== §8 瀑布图 ======== -->
+  <!-- PORT-NOTE: §8 瀑布图整节跳过,记实现侧残差(不影响现有 selector,补帧无需返修) -->
+
+  <!-- ======== §9 全局浮层 ======== -->
+  <section class="kit-band" id="kit-9">
+    <div class="kit-band-head">
+      <span class="kit-no">§9</span><h2>全局浮层</h2>
+      <p>hero 空态 / 通用菜单(分组头·快捷键·danger)/ 设置弹窗(mask + 左导航双栏 + 开关行 + 关闭叉)/ toast / scrim。点下方按钮演示。</p>
+    </div>
+    <div class="kit-frames">
+      <div class="kit-frame tight">
+        <div class="kit-frame-tag"><span>hero 空态 · 大像素标题 + badge + 工作区芯片</span><em>hero</em></div>
+        <div class="kit-frame-body">
+          <div class="hero">
+            <svg class="h-mark" aria-hidden="true"><use href="#i-machd"/></svg>
+            <div class="h-title">Think <em>Classic</em>,跑点什么。</div>
+            <span class="h-badge">MACINTOSH · System 7 复古主题</span>
+            <p class="h-sub">经典麦金塔工作区:白窗黑线、条纹标题栏、Finder 会话树。选一个芯片开始,或直接输入。</p>
+            <div class="h-chips">
+              <button class="h-chip"><svg aria-hidden="true"><use href="#i-check"/></svg>继续「分步思考计算9x8」</button>
+              <button class="h-chip"><svg viewBox="0 0 13 13" aria-hidden="true"><path d="M7 1 v12 M1 7 h12" stroke="currentColor" stroke-width="1.5"/></svg>新建会话</button>
+              <button class="h-chip"><svg viewBox="0 0 13 13" aria-hidden="true"><rect x="1" y="1" width="11" height="11" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M4 4 h5 v5 h-5 z" fill="currentColor" opacity=".4"/></svg>打开工作区 algae</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="kit-frame">
+        <div class="kit-frame-tag"><span>通用菜单 · 分组头 / 快捷键 / danger / 选中项</span><em>menu</em></div>
+        <div class="kit-frame-body">
+          <div class="menu" style="max-width:280px">
+            <span class="m-group">会话</span>
+            <span class="m-opt"><svg class="mo-ic" viewBox="0 0 14 14" aria-hidden="true"><path d="M7 1 v12 M1 7 h12" stroke="currentColor" stroke-width="1.5"/></svg>新建会话<span class="mo-key">⌘N</span></span>
+            <span class="m-opt"><svg class="mo-ic" viewBox="0 0 14 14" aria-hidden="true"><path d="M2 10 l1-4 5-5 3 3 -5 5 z" fill="none" stroke="currentColor" stroke-width="1.3"/></svg>重命名<span class="mo-key">F2</span></span>
+            <span class="m-sep"></span>
+            <span class="m-group">视图</span>
+            <span class="m-opt on"><svg class="mo-ic" viewBox="0 0 14 14" aria-hidden="true"><path d="M1 3 h5 l2 2 h5 v7 h-12 z" fill="none" stroke="currentColor" stroke-width="1.3"/></svg>按工作区分组<span class="mo-key">⌘G</span></span>
+            <span class="m-opt"><svg class="mo-ic" viewBox="0 0 14 14" aria-hidden="true"><path d="M1 12 h3 v-3 h3 v-3 h3 v-3 h3" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>按时间排序</span>
+            <span class="m-sep"></span>
+            <span class="m-opt danger"><svg class="mo-ic" viewBox="0 0 14 14" aria-hidden="true"><path d="M2 3 h10 M4 3 v-1 h6 v1 M5 3 l1 9 h2 l1-9" fill="none" stroke="currentColor" stroke-width="1.3"/></svg>删除会话<span class="mo-key">⌫</span></span>
+          </div>
+        </div>
+      </div>
+      <div class="kit-frame">
+        <div class="kit-frame-tag"><span>toast(ok / err)· scrim · 弹窗演示按钮</span><em>overlay</em></div>
+        <div class="kit-frame-body" style="display:flex;gap:12px;flex-wrap:wrap">
+          <button class="btn sm" data-action="toast-ok">toast · ok</button>
+          <button class="btn sm" data-action="toast-err">toast · err</button>
+          <button class="btn sm" data-action="open-settings">设置弹窗</button>
+          <button class="btn sm" data-action="scrim">scrim</button>
+          <div style="display:flex;flex-direction:column;gap:10px;margin-top:6px">
+            <div class="toast ok">
+              <svg viewBox="0 0 15 15" aria-hidden="true"><circle cx="7.5" cy="7.5" r="6.5" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M4.5 7.5 l2.2 2.2 l4-4.4" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
+              已复制 1 条消息
+            </div>
+            <div class="toast err">
+              <svg viewBox="0 0 15 15" aria-hidden="true"><circle cx="7.5" cy="7.5" r="6.5" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M5 5 l5 5 M10 5 l-5 5" stroke="currentColor" stroke-width="1.5"/></svg>
+              发送失败 · 上游 504
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======== §10 响应式 ======== -->
+  <section class="kit-band" id="kit-10">
+    <div class="kit-band-head">
+      <span class="kit-no">§10</span><h2>响应式</h2>
+      <p>断点 820 / 640 / 480。缩窗逐档目检:≤820 = 48px 顶栏 + 左抽屉 + 遮罩;≤640 降密度;≤480 弹窗导航收成图标列。</p>
+    </div>
+    <div class="kit-frames">
+      <div class="kit-frame">
+        <div class="kit-frame-tag"><span>断点行为表(缩窗验证)</span><em>resp</em></div>
+        <div class="kit-frame-body">
+          <table style="border-collapse:collapse;font:400 12.5px/1.7 var(--font-ui);color:var(--muted)">
+            <thead><tr>
+              <th style="border:1px solid var(--border-soft);padding:4px 12px;text-align:left;color:var(--fg)">断点</th>
+              <th style="border:1px solid var(--border-soft);padding:4px 12px;text-align:left;color:var(--fg)">行为</th>
+            </tr></thead>
+            <tbody>
+              <tr><td style="border:1px solid var(--border-soft);padding:4px 12px;white-space:nowrap">≤ 820</td><td style="border:1px solid var(--border-soft);padding:4px 12px">48px 移动顶栏 + 左侧抽屉(完整侧栏滑入,.drawer-open)+ 遮罩 .m-mask;桌面图标隐藏</td></tr>
+              <tr><td style="border:1px solid var(--border-soft);padding:4px 12px;white-space:nowrap">≤ 640</td><td style="border:1px solid var(--border-soft);padding:4px 12px">会话流 padding 收窄、用户气泡全宽、mode 钮隐藏、hero 降字号</td></tr>
+              <tr><td style="border:1px solid var(--border-soft);padding:4px 12px;white-space:nowrap">≤ 480</td><td style="border:1px solid var(--border-soft);padding:4px 12px">输入坞再收、统计条中段隐藏、弹窗左导航收成 52px 图标列</td></tr>
+            </tbody>
+          </table>
+          <!-- PORT-NOTE: ≤820 移动形态结构由实现侧组件接管(顶栏/抽屉/遮罩为组件职责),原型给样式基准 -->
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div style="max-width:1180px;margin:0 auto;padding:0 24px 40px">
+    <div class="kit-note"><b>自检提示</b> — file:// 直开可用;主题切换 = 菜单栏 ☀ 按钮或 Preferences 旁小钮;双主题逐带目检;缩窗 820/640/480 验证 §10。</div>
+  </div>
+</main>
+
+<!-- 设置弹窗(§9 演示,data-open 控制显隐) -->
+<div class="dialog-mask" id="dlg-settings" hidden>
+  <div class="dialog win" role="dialog" aria-label="Preferences">
+    <div class="titlebar">
+      <span class="t-box t-close" data-action="close-settings" title="close"><svg aria-hidden="true"><use href="#i-close"/></svg></span>
+      <span class="t-title">Preferences</span>
+      <span class="t-box t-zoom" title="zoom"><svg aria-hidden="true"><use href="#i-zoom"/></svg></span>
+    </div>
+    <div style="display:flex;flex:1;min-height:0">
+      <nav class="dialog-nav">
+        <button class="dn-item on"><svg viewBox="0 0 14 14" aria-hidden="true"><circle cx="7" cy="7" r="5.5" fill="none" stroke="currentColor" stroke-width="1.4"/><circle cx="7" cy="7" r="2" fill="currentColor"/></svg><span>通用</span></button>
+        <button class="dn-item"><svg aria-hidden="true"><use href="#i-dash"/></svg><span>外观</span></button>
+        <button class="dn-item"><svg aria-hidden="true"><use href="#i-folder"/></svg><span>会话</span></button>
+        <button class="dn-item"><svg aria-hidden="true"><use href="#i-suitcase"/></svg><span>工具</span></button>
+      </nav>
+      <div class="dialog-main">
+        <h3>通用</h3>
+        <div class="set-row">
+          <span class="sr-meta"><span class="sr-tt">像素字体渲染</span><span class="sr-sub">关闭字体平滑,保持点阵锐利(仅渲染提示)</span></span>
+          <label class="switch"><input type="checkbox" checked /><span class="sw-track"></span><span class="sw-knob"></span></label>
+        </div>
+        <div class="set-row">
+          <span class="sr-meta"><span class="sr-tt">条纹标题栏动画</span><span class="sr-sub">运行中工具卡的条纹扫掠</span></span>
+          <label class="switch"><input type="checkbox" checked /><span class="sw-track"></span><span class="sw-knob"></span></label>
+        </div>
+        <div class="set-row">
+          <span class="sr-meta"><span class="sr-tt">默认模型</span><span class="sr-sub">会话内可临时切换</span></span>
+          <span class="sr-val">deepseek-chat</span>
+        </div>
+        <div class="set-row">
+          <span class="sr-meta"><span class="sr-tt">reduced-motion</span><span class="sr-sub">系统偏好时自动豁免全部动画</span></span>
+          <span class="sr-val">auto</span>
+        </div>
+      </div>
+    </div>
+    <div class="statusbar"><span>Preferences</span><span>MACINTOSH v1</span></div>
+  </div>
+</div>
+
+<!-- toast 容器(fixed 右下;z-index 90) -->
+<div id="toast-host" style="position:fixed;right:18px;bottom:18px;z-index:90;display:flex;flex-direction:column;gap:8px"></div>
+
+<!-- scrim(§9 演示) -->
+<div class="scrim" id="scrim" hidden data-action="scrim"></div>
+
+<!-- APPENDIX-A SELECTORS v1(门禁比对清单;改动须 PORT-NOTE: BREAKING)
+canvas.dot-grid       body
+menubar.bar           .menubar
+skeleton.desk         .desk
+sidebar.win           .sidebar
+sidebar.group-head    .group-head
+sidebar.sess          .sess
+sidebar.sess.on       .sess.on
+sidebar.sess.run      .sess.run
+sidebar.foot          .sb-foot
+flow.msg-user         .msg.user .bubble
+flow.msg-agent-md     .msg.agent .md
+flow.inject           .inject
+flow.reasoning        .reasoning
+flow.reasoning.run    .reasoning.run
+flow.tool             .tool
+flow.tool-running     .tool[data-state=running]
+flow.tool-diff        .tool .diff
+flow.turn-tail        .turn-tail
+flow.err-row          .err-row
+flow.retry-row        .retry-row
+flow.cap-row          .cap-row
+composer.dock         .dock
+composer.card         .composer
+composer.bar          .composer-bar
+composer.ctx-ring     .ctx-ring
+composer.stats        .composer-stats
+overlay.hero          .hero
+overlay.menu          .menu
+overlay.dialog-mask   .dialog-mask
+overlay.dialog        .dialog
+overlay.set-row       .set-row
+overlay.switch        .switch
+overlay.toast         .toast
+overlay.scrim         .scrim
+resp.app-bar          .app-bar
+resp.drawer           .app.has-bar .sidebar
+resp.mask             .m-mask
+(标签稳定,selector 变更走 BREAKING)
+-->
+
+<script>
+/* 演示脚本 — 仅做主题切换 / 开合演示态,不作为移植依据;无定时器、无随机数。 */
+(function(){
+  var root = document.documentElement;
+  var themeBtn = document.getElementById('kit-theme');
+  function flipTheme(){
+    root.dataset.theme = root.dataset.theme === 'dark' ? 'light' : 'dark';
+    if(themeBtn) themeBtn.textContent = root.dataset.theme === 'dark' ? '☀ Light' : '☾ Dark';
+  }
+  document.querySelectorAll('[data-action="theme"]').forEach(function(el){
+    el.addEventListener('click', flipTheme);
+  });
+
+  /* 展开/收合高度窗口驱动:开合瞬间量 scrollHeight 写内联像素(全引擎通吃);
+     .open 挂在父卡上,窗口取其后代;收合 .18s / 展开 .22s 双档曲线(CSS 变量即移植值)。 */
+  var WIN = '.reasoning-body,.tool-body,.group-body';
+  function onEnd(t, fn){
+    function done(e){
+      if(e.propertyName !== 'height') return;
+      t.removeEventListener('transitionend', done);
+      fn();
+    }
+    t.addEventListener('transitionend', done);
+  }
+  function openWin(t){
+    t.style.height = '0px';
+    t.getBoundingClientRect();
+    t.style.height = t.scrollHeight + 'px';
+    onEnd(t, function(){ t.style.height = 'auto'; });
+  }
+  function closeWin(t){
+    t.style.height = t.scrollHeight + 'px';
+    t.getBoundingClientRect();
+    t.style.height = '0px';
+    onEnd(t, function(){ t.style.height = ''; });
+  }
+  document.querySelectorAll('[data-toggle]').forEach(function(el){
+    el.addEventListener('click', function(e){
+      e.stopPropagation();
+      var t = document.querySelector(el.getAttribute('data-toggle'));
+      if(!t) return;
+      var cls = el.getAttribute('data-toggle-class') || 'open';
+      var opening = !t.classList.contains(cls);
+      t.classList.toggle(cls);
+      var wins = [];
+      if(t.matches(WIN)) wins.push(t);
+      Array.prototype.push.apply(wins, t.querySelectorAll(WIN));
+      wins.forEach(opening ? openWin : closeWin);
+      var tri = el.querySelector('.tri') || (t.classList.contains('group') ? el.querySelector('.tri') : null);
+      if(tri) tri.classList.toggle('open', opening);
+    });
+  });
+
+  /* rail-mini 56px 细条形态切换 */
+  document.querySelectorAll('[data-action="rail-mini"]').forEach(function(el){
+    el.addEventListener('click', function(){
+      document.getElementById('app').classList.toggle('rail-mini');
+    });
+  });
+
+  /* ≤820 抽屉 */
+  document.querySelectorAll('[data-action="drawer"]').forEach(function(el){
+    el.addEventListener('click', function(){
+      document.getElementById('app').classList.toggle('drawer-open');
+    });
+  });
+
+  /* 设置弹窗 */
+  var dlg = document.getElementById('dlg-settings');
+  document.querySelectorAll('[data-action="open-settings"]').forEach(function(el){
+    el.addEventListener('click', function(){ dlg.hidden = false; });
+  });
+  document.querySelectorAll('[data-action="close-settings"]').forEach(function(el){
+    el.addEventListener('click', function(){ dlg.hidden = true; });
+  });
+
+  /* toast 演示(无定时器:点击自身关闭) */
+  var host = document.getElementById('toast-host');
+  function toast(ok){
+    var el = document.createElement('div');
+    el.className = 'toast ' + (ok ? 'ok' : 'err');
+    el.innerHTML = ok
+      ? '<svg viewBox="0 0 15 15"><circle cx="7.5" cy="7.5" r="6.5" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M4.5 7.5 l2.2 2.2 l4-4.4" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>原型演示 · 操作成功'
+      : '<svg viewBox="0 0 15 15"><circle cx="7.5" cy="7.5" r="6.5" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M5 5 l5 5 M10 5 l-5 5" stroke="currentColor" stroke-width="1.5"/></svg>原型演示 · 操作失败';
+    el.addEventListener('click', function(){ host.removeChild(el); });
+    host.appendChild(el);
+  }
+  document.querySelectorAll('[data-action="toast-ok"]').forEach(function(el){
+    el.addEventListener('click', function(){ toast(true); });
+  });
+  document.querySelectorAll('[data-action="toast-err"]').forEach(function(el){
+    el.addEventListener('click', function(){ toast(false); });
+  });
+
+  /* scrim 演示 */
+  var scrim = document.getElementById('scrim');
+  document.querySelectorAll('[data-action="scrim"]').forEach(function(el){
+    el.addEventListener('click', function(){ scrim.hidden = !scrim.hidden; });
+  });
+})();
+</script>
+</body>
+</html>
