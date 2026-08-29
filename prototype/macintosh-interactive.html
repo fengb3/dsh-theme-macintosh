@@ -115,6 +115,7 @@ html[data-theme="light"] ::-webkit-scrollbar-button:single-button:horizontal:inc
    §2 基础 — 按钮 / 图标钮 / 输入框 / 折叠三角 / 胶囊
    ============================================================ */
 h1,h2,h3,p{margin:0}
+a{color:var(--accent)}
 svg{display:block}
 button{font:inherit;color:inherit}
 textarea,input{font:inherit}
@@ -755,7 +756,7 @@ html[data-theme="light"] .hero .h-mark{filter:none}
     <section class="main-win win">
       <div class="titlebar">
         <span class="t-box t-close" title="close"><svg aria-hidden="true"><use href="#i-close"/></svg></span>
-        <span class="t-title" id="main-title">— DeepSeek Harness</span>
+        <span class="t-title" id="main-title" title="点击切换模式" style="cursor:pointer">— 标准模式</span>
         <span class="t-box t-zoom" title="zoom"><svg aria-hidden="true"><use href="#i-zoom"/></svg></span>
       </div>
 
@@ -1010,6 +1011,13 @@ var SESSIONS = [
     ]
   },
   {
+    id:'s-md', title:'Markdown 全要素演示', run:false,
+    script:[
+      [{md:'<h1>一级标题 Heading 1</h1><h2>二级标题 Heading 2</h2><h3>三级标题 Heading 3</h3><p>正文段落:经典麦金塔主题的 <strong>加粗</strong>、<em>斜体</em>、<code>行内代码 inline_code()</code>、以及一个 <a href="#" onclick="return false">超链接</a>。段与段之间有 8px 间距,长文本自动换行并保持 1.8 倍行距。</p><p>第二段:验证 p + p 的 margin-top。</p><blockquote>引用块 blockquote — 左侧 2px 淡紫竖线,文字 muted。适合放补充说明或原文摘录。</blockquote><h3>无序列表</h3><ul><li>列表项一</li><li>列表项二 <code>带行内代码</code></li><li>列表项三</li></ul><h3>有序列表</h3><ol><li>第一步:拆数</li><li>第二步:分配律</li><li>第三步:合并</li></ol><h3>代码块</h3><pre><code>function mul9(x) {\n  return 9 * (x - 2) + 18; // 拆数还原\n}\nmul9(8); // =&gt; 72</code></pre><h3>表格</h3><table><thead><tr><th>拆法</th><th>算式</th><th>结果</th></tr></thead><tbody><tr><td>10 − 2</td><td>9×10 − 9×2</td><td>72</td></tr><tr><td>3 × 8 × 3</td><td>(9×8)×1</td><td>72</td></tr><tr><td><code>7 = 10 − 3</code></td><td>6×10 − 6×3</td><td>42</td></tr></tbody></table><p>以上覆盖 .md 支持的全部语法:h1–h3、段落、<strong>/<em>、行内 code、链接、引用、ul/ol、pre 代码块、table。</p>'}],
+      [{md:'<p>要素齐了 — 表格带表头底色,代码块深底横滚,引用块竖线缩进,都在这条会话里一目了然。</p>'}]
+    ]
+  },
+  {
     id:'s2', title:'像素字体渲染调研',
     goal:'给出像素字体在各端的渲染保真清单',
     todos:['整理渲染关键开关','梳理字号与设计网格对齐规则','跨平台差异结论'],
@@ -1040,7 +1048,9 @@ var newCount = 0;
 /* ============================================================
    状态 + DOM
    ============================================================ */
-var state = { view:'chat', current:null, sessions:SESSIONS.slice(), busy:{}, fallback:{},
+/* DSH preset 模式(标题栏右侧显示;点标题切换,仅演示) */
+var MODES = ['标准模式', '创造模式', '计划模式'];
+var state = { view:'chat', mode:MODES[0], current:null, sessions:SESSIONS.slice(), busy:{}, fallback:{},
               queue:{}, stats:{}, todos:{}, askMode:false, flows:{}, heroes:{} };
 var flow = document.getElementById('flow');
 var titleEl = document.getElementById('main-title');
@@ -1753,14 +1763,51 @@ function renderHero(s){
     '<button class="h-chip" data-chip="continue"><svg aria-hidden="true"><use href="#i-check"/></svg>继续「分步思考计算9x8」</button>' +
     '<button class="h-chip" data-chip="new"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-px-plus"/></svg>新建会话</button>' +
     '<button class="h-chip" data-chip="tools"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-px-terminal"/></svg>看工具调用示例</button>' +
-    '</div>';
-  hero.querySelectorAll('.h-chip').forEach(function(chip){
+    '</div>' +
+    /* 模式下拉(DSH preset):设置 state.mode,同步标题栏 */
+    '<div class="cb-anchor" style="margin-top:2px">' +
+    '<button class="h-chip" id="hero-mode-btn" type="button" title="设置当前模式">' +
+    '<svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-px-sliders"/></svg>模式：' + state.mode +
+    '<svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-px-chevd"/></svg></button>' +
+    '<div class="menu" id="hero-mode-menu" hidden style="position:absolute;top:calc(100% + 6px);left:0;box-shadow:var(--shadow-pop)">' +
+    '<span class="m-group">模式 · preset</span>' +
+    MODES.map(function(m){
+      return '<span class="m-opt' + (m === state.mode ? ' on' : '') + '" data-mode="' + m + '">' +
+        '<svg class="mo-ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-px-sliders"/></svg>' + m + '</span>';
+    }).join('') +
+    '</div></div>';
+  hero.querySelectorAll('.h-chip[data-chip]').forEach(function(chip){
     chip.addEventListener('click', function(){
       var k = chip.getAttribute('data-chip');
       if(k === 'continue'){ switchSession(state.sessions[0]); }
       else if(k === 'tools'){ switchSession(state.sessions.filter(function(x){ return x.id === 's-tools'; })[0] || state.sessions[0]); }
       else { document.getElementById('btn-new').click(); }
     });
+  });
+  /* 模式下拉交互:开 = 闪烁出场,关 = 闪烁退场;点外收起;选择落地回写标题 */
+  var modeBtn = hero.querySelector('#hero-mode-btn');
+  var modeMenu = hero.querySelector('#hero-mode-menu');
+  modeBtn.addEventListener('click', function(e){
+    e.stopPropagation();
+    if(modeMenu.hidden) flashIn(modeMenu, function(){ modeMenu.hidden = false; });
+    else flashOut(modeMenu, function(){ modeMenu.hidden = true; });
+  });
+  modeMenu.addEventListener('click', function(e){
+    var opt = e.target.closest('.m-opt');
+    if(!opt) return;
+    e.stopPropagation();
+    state.mode = opt.getAttribute('data-mode');
+    modeMenu.querySelectorAll('.m-opt').forEach(function(o){ o.classList.toggle('on', o === opt); });
+    modeBtn.childNodes[1].nodeValue = '模式：' + state.mode;
+    titleEl.textContent = (state.view === 'chat'
+      ? (state.current ? state.current.title + ' — ' : '') + state.mode
+      : '轨迹 — ' + state.mode);
+    flashOut(modeMenu, function(){ modeMenu.hidden = true; });
+  });
+  document.addEventListener('click', function(e){
+    if(!modeMenu.hidden && !modeMenu.contains(e.target) && e.target !== modeBtn) {
+      flashOut(modeMenu, function(){ modeMenu.hidden = true; });
+    }
   });
   host.appendChild(hero);
 }
@@ -1772,7 +1819,7 @@ function switchSession(s){
   var next = flowOf(s);
   flashIn(next, function(){
     mountFlow(s); /* 换挂该会话的消息流(旧流摘下保存,历史/思考卡全部留档) */
-    titleEl.textContent = s.title + ' — DeepSeek Harness';
+    titleEl.textContent = s.title + ' — ' + state.mode;
     if(!next.childElementCount) renderHero(s); /* 空会话才铺 hero */
     scrollBottom(next);
     updateStatusbar(s);
@@ -1816,14 +1863,21 @@ function setView(v){
   flashOut(from, function(){
     from.style.display = 'none';
     titleEl.textContent = (v === 'chat'
-      ? (state.current ? state.current.title + ' — ' : '') + 'DeepSeek Harness'
-      : '轨迹 — DeepSeek Harness');
+      ? (state.current ? state.current.title + ' — ' : '') + state.mode
+      : '轨迹 — ' + state.mode);
     if(v === 'chat' && state.current){ updateStatusbar(state.current); }
     else { stLeft.textContent = '轨迹视图 · 一期暂缓'; stRight.textContent = 'PLACEHOLDER'; }
     flashIn(to, function(){ to.style.display = 'flex'; });
   });
 }
 mtabChat.addEventListener('click', function(){ setView('chat'); });
+/* 标题栏模式切换(演示):点击 "{标题} — {模式}" 的模式段循环 preset */
+titleEl.addEventListener('click', function(){
+  state.mode = MODES[(MODES.indexOf(state.mode) + 1) % MODES.length];
+  titleEl.textContent = (state.view === 'chat'
+    ? (state.current ? state.current.title + ' — ' : '') + state.mode
+    : '轨迹 — ' + state.mode);
+});
 mtabTrace.addEventListener('click', function(){ setView('trace'); });
 
 /* ============================================================

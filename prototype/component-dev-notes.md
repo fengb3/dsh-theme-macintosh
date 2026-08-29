@@ -61,6 +61,7 @@ dockSwap(fn)        // 输入坞 ⇄ 问答卡三拍换装（与 flashIn 同语�
 | 浮层 | `closeAllPops(except)` | 所有 `.cb-anchor .menu` + ctx-pop 互斥收起 |
 | 视图 | `setView(v)` / `switchSession(s)` / `renderHero(s)` | 对话/轨迹切换、会话切换（flashIn 换 flow）、空会话铺 hero |
 | 主题 | `flipTheme()` | 切 `data-theme`；入口 = 侧栏页脚月牙钮（顶栏右上已移除） |
+| 模式 | `renderHero` 内模式下拉 / `titleEl` 点击 | hero `.cb-anchor+.menu` 设置 `state.mode` 并回写标题栏；点主窗标题循环 preset（演示） |
 
 ---
 
@@ -80,16 +81,18 @@ dockSwap(fn)        // 输入坞 ⇄ 问答卡三拍换装（与 flashIn 同语�
 ## 3 · 数据与状态模型（interactive 的脚本驱动层）
 
 ```js
+MODES = ['标准模式', '创造模式', '计划模式']   // DSH preset;state.mode 默认标准模式
 SESSIONS = [{ id, title, run?, auto?, goal?, todos?[], injects?[{ic,tt}],
   script: [turn[], ...] }]          // turn = block[]，按 500ms 逐块播放
 block = { md:'<html>' }             // assistant 正文（含 tail 复制/重发/统计）
       | { tool:{ ic, name, args, state, out, doneOut?, doneMs? } }   // doneOut+doneMs = running→done 延时翻转
       | { row:'retry'|'cap', tt }   // 自动重试行 / 上限行
       | { ask:{ steps:[{type:'radio'|'check'|'open', cap, q, ph?, opts:[{t,d}|{t:'__free__',ph}]}] } }
-state = { view, current, sessions, busy:{}, fallback:{}, queue:{}, stats:{}, todos:{}, askMode, flows:{} }
+state = { view, mode, current, sessions, busy:{}, fallback:{}, queue:{}, stats:{}, todos:{}, askMode, flows:{} }
 ```
 - 脚本播完走 `FALLBACK` 兜底循环；`s.auto` 会话点开即自动跑一轮。
 - `state.busy[sid]` 存在 = 回合运行中（Send 变 Stop）；`state.flows[sid]` = 会话消息流 DOM 留档。
+- **模式（preset）**：主窗标题栏 = `"{会话标题} — {当前模式}"`（轨迹视图 = `"轨迹 — {模式}"`）；hero 下拉菜单设置、点标题栏标题循环切换（演示用）；示例会话 `s-md` 演示 `.md` 全要素语法。
 
 ---
 
@@ -172,7 +175,7 @@ state = { view, current, sessions, busy:{}, fallback:{}, queue:{}, stats:{}, tod
 
 ### 6.2 窗口语汇
 - `.win`：白面 + 1px 边 + 5px 圆角 + 3px 硬投影 + overflow:hidden；`.desk > .win{border-radius:0}` 直角特例（**依赖直接子选择器**，DOM 多包一层即失效）
-- `.titlebar`：20px pinstripe（`repeating-linear-gradient(180deg, stripe 0 1px, transparent 1px 3px)` 叠 surface-2）+ `::before` 顶部 1px accent 线 + 13px close/zoom box（SVG 三色位）；`.t-title` 自带 surface-2 实底打断条纹、max-width 60% ellipsis；padding 0 26px 给 box 让位
+- `.titlebar`：20px pinstripe（`repeating-linear-gradient(180deg, stripe 0 1px, transparent 1px 3px)` 叠 surface-2）+ `::before` 顶部 1px accent 线 + 13px close/zoom box（SVG 三色位）；`.t-title` 自带 surface-2 实底打断条纹、max-width 60% ellipsis；padding 0 26px 给 box 让位；**主窗标题 = `"{会话标题} — {当前模式}"`**（DSH preset：标准模式/创造模式/计划模式，interactive 由 `state.mode` 维护，hero 下拉设置、点标题循环切换）
 - `.statusbar`：24px surface-3 + 1px 顶线，FindersKeepers 等宽族，span ellipsis
 - `.win-body`（interactive）：titlebar/statusbar 之间标准夹层 `flex:1;min-height:0`
 
@@ -225,7 +228,7 @@ state = { view, current, sessions, busy:{}, fallback:{}, queue:{}, stats:{}, tod
 
 ### 8.1 组件要点
 - `.flow`：`flex:1;overflow-y:auto;min-height:0` + gap 14 padding 16 + **`> *{flex:none}`**
-- `.md`：14px/1.8 ui 族；h1–h3 统一 display 600 17px（h2 15/h3 14）；行内 code = sel-bg 底 + r-tag；pre = bg-deep + 横滚；table 全格线 border-soft、th display 体 surface-2 底；blockquote 左 2px accent-dim
+- `.md`：14px/1.8 ui 族；h1–h3 统一 display 600 17px（h2 15/h3 14）；行内 code = sel-bg 底 + r-tag；`a` 染 accent（两文件均有）；pre = bg-deep + 横滚；table 全格线 border-soft、th display 体 surface-2 底；blockquote 左 2px accent-dim。interactive 示例会话 `s-md` 覆盖全要素（标题/段落/加粗斜体/行内 code/链接/引用/ul/ol/pre/table），可作 `.md` 渲染的自测基准
 - `.msg.user`：右对齐；bubble = accent 实底 accent-ink 反白、520px、radius 8px（比卡片大一档）；attach：132×92 `.ph` 占位 + IMG 徽 + `.cap` 说明
 - `.inject` 四型：surface-2 灰底 + **1px dashed** 虚线边 + 15px faint 图标 + 单行 ellipsis；四型（system-reminder / runtime context / 压缩 checkpoint / skill_content）同款样式靠图标文案区分
 - `.reasoning`：surface-3 底；run 态 `color-mix(spark 9%)` 琥珀染色 + r-tag 变 spark；头部 = tri + r-tag + r-sum（内层 `.s-in` position:relative 供白块闪）+ r-dur；体 `pre-wrap` 12px muted；`.cover` = 透明字 + 白块底（浅色反黑）
@@ -316,7 +319,7 @@ subcalls：左 2px 软线缩进 + sc-row（ok=绿 i-check / run=琥珀 clock）�
 ## 11 · §9 全局浮层
 
 ### 11.1 结构要点
-- **hero**：居中列；h-mark 48px HappyMac（深色 drop-shadow 硬投影、**浅色 filter:none**）；h-title 34px（em 染 accent、≤640 降 26）；h-badge sel-bg 底方角；h-chip 26px 无 hover；interactive 为 JS 渲染（renderHero → 首条消息 flashOut 移除，chip 有真实切会话行为）
+- **hero**：居中列；h-mark 48px HappyMac（深色 drop-shadow 硬投影、**浅色 filter:none**）；h-title 34px（em 染 accent、≤640 降 26）；h-badge sel-bg 底方角；h-chip 26px 无 hover；chips 行下方**模式下拉**（`.cb-anchor + .menu` 向下弹，设 `state.mode` 同步主窗标题栏，选项 `.on` = accent 反色）；interactive 为 JS 渲染（renderHero → 首条消息 flashOut 移除，chip 有真实切会话行为）
 - **.menu**：min-width 210 + padding 4 + shadow-pop + z:70；m-group uppercase 10px；m-opt.on = accent 实底反色；danger 染红；m-sep 1px 软线；**无 hover**；快捷键列 .mo-key 规格预留未实现
 - **dialog**：mask（z:80，`color-mix(bg-deep 55%)`，grid 居中）+ `.dialog.win`（min(720,92vw) × min(520,86vh)）= titlebar + 左 nav 172px（dn-item.on = sel-bg 底非反色）+ 右 main 滚动 + statusbar；`.set-row` 底软线末行去线；**`.switch`** 34×18 方块开关（input:checked ~ 兄弟选择器，knob 2px→18px 硬切，focus 虚线环经 ~ 透传）
 - **toast**：260–360px 单条，**仅图标变色**（ok 绿/err 红）；宿主 fixed 右下 z:90；**无自动消失定时器，点击自身 flashOut 关闭**
@@ -353,7 +356,7 @@ subcalls：左 2px 软线缩进 + sc-row（ok=绿 i-check / run=琥珀 clock）�
 2. **PORT-NOTE 语义**：86 处（65 描边）—— 描边默认 transparent 的逐处例外声明；变更 selector 走 BREAKING 并同步附录 A
 3. **附录 A selector 门禁**：文件尾清单为移植比对基准（details.* 与 composer.stats 已随死代码清理移除）
 4. **已删项勿复活**：--dot/--info-w/--rail-raised/--spark-dim/--spark-ink/--danger-strong/--scroll-arrow、mc-blink/mc-in、m-clock/win-body(workspace)/infobar/desk-icons/s-act、i-caretdown/i-machd/i-trash/i-px-image/i-appmenu、Fusion Pixel 10px 字体、§4b/§8 整节
-5. **顶栏右上无元素**（已按规格移除）；主题切换入口 = 侧栏页脚月牙钮
+5. **顶栏右上无元素**（已按规格移除）；主题切换入口 = 侧栏页脚月牙钮；**主窗标题后缀 = 当前模式（DSH preset）**，正式页接宿主真实 mode 状态（hero 下拉/点标题切换仅为演示交互）
 6. **`.flow > *{flex:none}`** 与 min-height:0 链：任何列表滚动区必带
 7. **动画纪律终检**：无 hover / 无 transition / 出场只闪烁 / 一切延时走 CLOCK.next / pulse·sweep 负延迟对相位 / 浅色遮罩三处反转齐全
 8. **正式 token 以 workspace 全集为准**（interactive 删减的动效 token 需恢复）
