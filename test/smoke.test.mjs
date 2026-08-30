@@ -31,3 +31,28 @@ test('assemble 产出含 SVG sprite 符号库', () => {
   assert.ok(out.includes('i-cl-HappyMac'), '应含品牌 HappyMac 符号');
   assert.ok(out.includes('--font-sb'), 'tokens 应含五族回退链');
 });
+
+test('assemble --font-base 产出 URL 引用而非 base64', () => {
+  const tmpOut = path.join(ROOT, 'dist', 'client-body.urltmp.js');
+  execFileSync(process.execPath, [path.join(ROOT, 'tools', 'assemble.mjs'),
+    '--font-base', 'http://127.0.0.1:3199/assets', '--out', tmpOut], { cwd: ROOT });
+  const fs = require('node:fs');
+  try {
+    const out = fs.readFileSync(tmpOut, 'utf8');
+    assert.ok(out.includes('url(http://127.0.0.1:3199/assets/fonts/'),
+      '应含字体 URL 引用');
+    assert.ok(!out.includes('data:font/ttf;base64,'), 'URL 模式不得内联 base64 字体');
+    assert.ok(out.includes('unicode-range'), 'ChiKareGo Latin 别名应带 unicode-range');
+    // 5 个 @font-face 全走 URL：至少 5 处 fonts/ 引用
+    assert.ok(out.split('http://127.0.0.1:3199/assets/fonts/').length - 1 >= 5,
+      '五个字体都应使用 URL 形式');
+  } finally {
+    if (fs.existsSync(tmpOut)) fs.unlinkSync(tmpOut);
+  }
+});
+
+test('sprite 无残留 inkscape/inkpad 元数据属性', () => {
+  execFileSync(process.execPath, [path.join(ROOT, 'tools', 'assemble.mjs')], { cwd: ROOT });
+  const out = require('node:fs').readFileSync(path.join(ROOT, 'dist', 'client-body.js'), 'utf8');
+  assert.ok(!/inkscape:|inkpad:/.test(out), 'sprite 不应含 inkscape/inkpad 属性');
+});

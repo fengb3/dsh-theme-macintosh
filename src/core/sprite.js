@@ -70,10 +70,10 @@ const McSprite = {
     </g>
   </symbol>
   <symbol id="i-cl-Watch" viewBox="0 0 2000 2000">
-  <g id="Fill" inkscape:label="Fill" inkscape:groupmode="layer" inkpad:layerName="Fill">
+  <g id="Fill">
   <path d="M850+800L850+850L800+850L800+1150L850+1150L850+1200L1150+1200L1150+1150L1200+1150L1200+850L1150+850L1150+800" opacity="1" fill="#ffffff"/>
   </g>
-  <g id="Outline" inkscape:label="Outline" inkscape:groupmode="layer" inkpad:layerName="Outline">
+  <g id="Outline">
   <path d="M850+600L1150+600L1150+800L850+800L850+600Z" opacity="1" fill="#000000"/>
   <path d="M1150+800L1200+800L1200+850L1150+850L1150+800Z" opacity="1" fill="#000000"/>
   <path d="M800+800L850+800L850+850L800+850L800+800Z" opacity="1" fill="#000000"/>
