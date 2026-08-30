@@ -556,9 +556,8 @@ let mcThemeOrig = undefined;
 const McSidebar = {
   css: [
     // 侧栏列 = Finder 窗（.win 语汇完整版）：rail-1 底 + 四边 1px 黑边 + 3px 硬投影 + 直角。
-    // 负 margin 抵消容器 padding（-12px 上/下/左）：侧栏贴满视口顶边与左缘，标题栏真正顶格；
-    // 与主窗之间仍留 12px 桌面缝隙（容器 gap）。整窗字体 --font-sb（§7.1）
-    `${MC_MAP.sidebar}{background:var(--mc-rail-1);border:1px solid var(--mc-border);border-radius:0;box-shadow:var(--mc-shadow-panel);margin:-12px 0 -12px -12px;font-family:var(--font-sb)}`,
+    // 桌面缝隙由容器 padding/gap 提供（四边 12px，与主窗同浮在噪点桌面上）。整窗字体 --font-sb（§7.1）
+    `${MC_MAP.sidebar}{background:var(--mc-rail-1);border:1px solid var(--mc-border);border-radius:0;box-shadow:var(--mc-shadow-panel);font-family:var(--font-sb)}`,
     // 官方侧栏根自带 padding:6px 12px —— 清零，窗内内容顶格（行级间距由各自行自带）
     `${MC_MAP.sidebarRoot}{padding:0}`,
     // 品牌行：字号 17px（finder 图标 24px 经 sidebar.brand.mark 席位注入，见 slots）；
