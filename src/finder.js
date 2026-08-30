@@ -1,12 +1,11 @@
-// src/finder.js —— 侧栏内容区重绘：遮蔽 sidebar.workspaces 席位，Finder 树骨架（静态假数据）
+// src/finder.js —— 侧栏内容区重绘：遮蔽 sidebar.workspaces 席位，Finder 树接官方真实数据
 // 协议：{ css, slots(ctx) }。样式全部 .mc- 自有类（宿主选择器零出现，audit §5 安全）；
 // 无 :hover、无 transition，按压只 :active；一切延时走 CLOCK（经 mcfx 的 flashIn，100ms 栅格）。
-// 纯顶层声明，无模块系统语法；与 tokens/clock/mcfx/sprite 拼进同一作用域。
-// 本步为骨架（假数据）。下一步接真实数据：官方经席位 props 传入 useSessions/useWorkspaces/
-// renderSlot 等（aurum 先例 dsh-theme-aurum/client.js L3123-3150 的遮蔽注册写法），
-// 届时只替换数据源与动作，DOM 结构不动。
+// 数据：官方经席位 props 传入 useSessions/useWorkspaces（aurum AuBrowserWide 同款消费，
+// 先例 dsh-theme-aurum/client.js L2285-2383）；缺钩子时降级假数据。
+// 动作：点击行经 ctx.sessions.open(sessionId) 打开会话（aurum auActions.open 同款）。
 
-// —— 假数据（结构对齐官方 workspace 树：工作区 → 会话；status: run|done|wait；xtra 超 5 折叠）——
+// —— 降级假数据（props 钩子缺席时；结构：工作区 → 会话；status: run|done|wait；xtra 超 5 折叠）——
 const MC_FINDER_DATA = [
   { id: 'ws-mac', name: 'dsh-theme-macintosh', sessions: [
     { id: 'mc-1', title: '侧栏骨架：遮蔽席位渲染', status: 'done' },
@@ -28,20 +27,85 @@ const MC_FINDER_DATA = [
 ];
 const MC_FINDER_SEL0 = 'mc-1'; // 初始选中行（假数据内 1 条）
 
+// —— 官方数据推导（aurum auWsLabel/auTitle/auVisible/auByRecency 同款）——
+// 实测字段（aurum 消费佐证 + client-runtime store 定义）：
+//   sessions 快照 { current, ids, byId }；session: id/displayTitle/blank/origin/
+//     running(bool)/pendingInteraction/completed(bool)/updatedAt
+//   workspaces 快照 { items:[{ workspaceId, title, path, sessionIds }], archivedSessionIds }
+function mcWsLabel(w) {
+  if (!w) return '未分组';
+  if (w.title && typeof w.title === 'string' && w.title !== '') return w.title;
+  const cwd = typeof w.path === 'string' ? w.path : '';
+  if (cwd === '') return '未分组';
+  const base = cwd.replace(/[/\\]+$/, '').split(/[/\\]/).pop();
+  return base && base !== '' ? base : cwd;
+}
+function mcTitle(s) { return s.blank ? '新会话' : (s.displayTitle || '未命名会话'); }
+function mcVisible(s, current, archived) {
+  return s.origin !== 'subagent' && !archived.has(s.id) && (!s.blank || s.id === current);
+}
+// 状态映射：running→run(脉冲点)；completed 且非当前→done(✓)；其余（含 pendingInteraction 等待）→wait
+function mcSessStatus(s, current) {
+  if (s.running === true) return 'run';
+  if (s.completed === true && s.id !== current) return 'done';
+  return 'wait';
+}
+// 快照 → 分组列表（结构与假数据同形：id/name/path/sessions[{id,title,status,xtra}]）
+// 会话保持官方 sessionIds 手动序；每组前 5 条外标 xtra（sb-more 折叠语义）
+function mcFinderGroups(list, wsState) {
+  const archived = new Set((wsState && wsState.archivedSessionIds) || []);
+  const workspaces = (wsState && wsState.items) || [];
+  const current = list.current;
+  const norm = function (s, xtra) {
+    return { id: s.id, title: mcTitle(s), status: mcSessStatus(s, current), xtra: xtra };
+  };
+  const groups = [];
+  const accounted = new Set();
+  for (let i = 0; i < workspaces.length; i++) {
+    const w = workspaces[i];
+    const members = [];
+    const ids = w.sessionIds || [];
+    for (let j = 0; j < ids.length; j++) {
+      const s = list.byId[ids[j]];
+      if (s === undefined) continue;
+      accounted.add(ids[j]);
+      if (!mcVisible(s, current, archived)) continue;
+      members.push(norm(s, members.length >= 5));
+    }
+    groups.push({ id: w.workspaceId, name: mcWsLabel(w), path: w.path || '', sessions: members });
+  }
+  const stray = (list.ids || []).filter(function (id) {
+    const s = list.byId[id];
+    return s !== undefined && !accounted.has(id) && mcVisible(s, current, archived);
+  }).map(function (id, i) { return norm(list.byId[id], i >= 5); });
+  if (stray.length > 0) groups.push({ id: '__ungrouped__', name: '未分组', path: '', sessions: stray });
+  return groups;
+}
+
 // 滚动区标题栏：左「工作区」标签 + 紧邻右侧三个 18px 小钮（搜索/视图选项/添加）——
-// 按钮跟标签走（flex:none），不顶到侧栏右缘（原型 §4 .sb-listbar 语汇）
-function McFinderListbar() {
+// 按钮跟标签走（flex:none），不顶到侧栏右缘（原型 §4 .sb-listbar 语汇）。
+// 搜索钮：本地标题过滤（输入暂用 window.prompt 顶替，TODO 二期内嵌输入行）；
+// 视图选项/添加：no-op（title 注明二期）。
+function McFinderListbar(props) {
   const h = React.createElement;
-  const btn = function (title, icon) {
-    return h('button', { className: 'mc-gh-btn', type: 'button', title: title, 'aria-label': title, 'data-mc-finder': '' },
-      h('svg', { viewBox: '0 0 24 24', 'aria-hidden': true }, h('use', { href: icon })));
+  const btn = function (title, icon, onClick) {
+    const p = { className: 'mc-gh-btn', type: 'button', title: title, 'aria-label': title, 'data-mc-finder': '' };
+    if (onClick) p.onClick = onClick;
+    return h('button', p, h('svg', { viewBox: '0 0 24 24', 'aria-hidden': true }, h('use', { href: icon })));
+  };
+  const onSearch = function () {
+    // TODO(二期)：内嵌搜索输入行（aurum au-ws-search 同款）；暂用系统 prompt 顶替
+    if (typeof window === 'undefined' || typeof window.prompt !== 'function') return;
+    const v = window.prompt('搜索会话（按标题过滤，留空清除）', '');
+    if (v === null) return;
+    props.onQuery(v);
   };
   return h('div', { className: 'mc-sb-listbar' },
     h('span', { className: 'mc-sb-lb' }, '工作区'),
     h('span', { className: 'mc-sb-la' },
-      btn('搜索会话', '#i-px-search'),
-      btn('视图选项', '#i-px-sliders'),
-      btn('添加新工作区', '#i-px-plus')));
+      btn('搜索会话', '#i-px-search', onSearch),
+      btn('视图选项（二期）', '#i-px-sliders'),
+      btn('添加新工作区（二期）', '#i-px-plus')));
 }
 
 // 会话行：状态槽（run=脉冲点 / done=✓ / wait=空占位）+ 标题 + 三点菜单钮。
@@ -58,7 +122,7 @@ function McFinderSess(props) {
   let slot = null;
   if (s.status === 'run') slot = h('i', { className: 'mc-s-dot' });
   else if (s.status === 'done') slot = h('svg', { className: 'mc-s-ok', 'aria-hidden': true }, h('use', { href: '#i-check' }));
-  return h('div', { className: cls, role: 'button', tabIndex: 0, onClick: pick, title: s.title },
+  return h('div', { className: cls, role: 'button', tabIndex: 0, onClick: pick, title: s.title, 'aria-selected': on ? 'true' : 'false' },
     h('span', { className: 'mc-s-tt' }, esc(s.title)),
     h('span', { className: 'mc-s-slot' }, slot),
     h('button', {
@@ -108,13 +172,24 @@ function McFinderGroup(props) {
         esc('展开其余 ' + xtraCount + ' 个会话')) : null));
 }
 
-// Finder 树根：本地 state 管选中 / 分组开合 / 余量展开。运行脉冲点挂载即与 CLOCK 三色相位对齐。
-function McFinderTree() {
+// Finder 树根：消费官方 props.useSessions/useWorkspaces 推导分组（缺钩子降级假数据）。
+// 选中：真数据以 list.current 为准（官方权威）；假数据走本地 state。
+// 本地 state 另管：分组开合 / 余量展开 / 搜索过滤词。
+// 快照变更（ids/状态指纹变化）触发重渲染时，对 sb-tree 容器做一次 flashOut→flashIn 轻闪过场。
+function McFinderTree(props) {
   const h = React.createElement;
+  const live = typeof props.useSessions === 'function' && typeof props.useWorkspaces === 'function';
+  const list = live ? props.useSessions(function (s) { return s; }) : null;
+  const wsState = live ? props.useWorkspaces(function (s) { return s; }) : null;
+  const openSession = typeof props.openSession === 'function' ? props.openSession : null;
+  const groups = live && list && wsState ? mcFinderGroups(list, wsState) : MC_FINDER_DATA;
+  const current = live ? (list ? list.current : null) : null;
   const selState = React.useState(MC_FINDER_SEL0);
-  const sel = selState[0]; const setSel = selState[1];
-  const openState = React.useState({ 'ws-mac': true, 'ws-aurum': true, 'ws-algae': false });
+  const sel = live ? current : selState[0];
+  const openState = React.useState(null); // null = 默认全开；记录开合覆盖 {gid:bool}
   const expState = React.useState({});
+  const qState = React.useState('');
+  const q = qState[0].trim().toLowerCase();
   const root = React.useRef(null);
   React.useEffect(function () {
     // 负延迟注入：多 run 点同屏不交错（CLOCK 惰性单例在 McClock.mount 后必在）
@@ -122,21 +197,47 @@ function McFinderTree() {
       const dots = root.current.querySelectorAll('.mc-sess.run .mc-s-dot');
       for (let i = 0; i < dots.length; i++) CLOCK.syncAnim(dots[i]);
     }
-  }, []);
+  });
+  // 数据变更轻闪：useSessions/useWorkspaces 快照变化 → 分组指纹变化 → flashOut→flashIn 过场。
+  // 首次挂载只记指纹不闪（宁轻勿炸；McMcfx 内部 isConnected 校验兜底重渲染换节点）
+  const sig = groups.map(function (g) {
+    return g.id + ':' + g.sessions.map(function (s) { return s.id + '/' + s.status; }).join(',');
+  }).join('|');
+  const prevSig = React.useRef(null);
+  React.useEffect(function () {
+    if (prevSig.current === null) { prevSig.current = sig; return; }
+    if (prevSig.current === sig) return;
+    prevSig.current = sig;
+    const tree = root.current && root.current.querySelector
+      ? root.current.querySelector('.mc-sb-tree') : null;
+    if (tree) flashOut(tree, function () { flashIn(tree, function () {}); });
+  }, [sig]);
   const onToggle = function (gid) {
-    openState[1](function (o) { const n = Object.assign({}, o); n[gid] = !o[gid]; return n; });
+    openState[1](function (o) { const n = Object.assign({}, o || {}); n[gid] = !(o ? o[gid] : true); return n; });
   };
   const onExpand = function (gid) {
     expState[1](function (m) { const n = Object.assign({}, m); n[gid] = true; return n; });
   };
-  const onPick = function (sid) { setSel(sid); };
+  const onPick = function (sid) {
+    if (openSession) openSession(sid); // 官方打开会话；current 随快照切换，选中行自跟上
+    if (!live) selState[1](sid); // 假数据降级：本地选中
+  };
+  // 搜索过滤：命中标题（或分组名）的会话保留；过滤态不折叠 xtra（全量展示匹配行）
+  const shown = q === '' ? groups : groups.map(function (g) {
+    const gMatch = g.name.toLowerCase().indexOf(q) !== -1;
+    const hit = g.sessions.filter(function (s) {
+      return gMatch || s.title.toLowerCase().indexOf(q) !== -1;
+    }).map(function (s) { return Object.assign({}, s, { xtra: false }); });
+    return Object.assign({}, g, { sessions: hit });
+  }).filter(function (g) { return g.sessions.length > 0; });
   return h('div', { className: 'mc-sb-find', ref: root },
-    h(McFinderListbar),
+    h(McFinderListbar, { onQuery: qState[1] }),
     h('nav', { className: 'mc-sb-tree' },
-      MC_FINDER_DATA.map(function (g) {
+      shown.map(function (g) {
         return h(McFinderGroup, {
           key: g.id, group: g,
-          open: !!openState[0][g.id], expanded: !!expState[0][g.id],
+          open: q !== '' ? true : (openState[0] === null ? true : !!openState[0][g.id]),
+          expanded: !!expState[0][g.id] || q !== '',
           selected: sel, onToggle: onToggle, onExpand: onExpand, onPick: onPick,
         });
       })));
@@ -203,12 +304,17 @@ const McFinder = {
     // 遮蔽官方工作区树：priority:-1 lowest-render（aurum client.js L3123-3150 同款）。
     // 官方注册保留 —— 停插件即还原；McSidebar.css 的官方树覆写因此降级为兜底（遮蔽失败时不破版）。
     // inject 返回 disposer，register 返回 disposer —— 经 ctx.effect(() => disp) 归入本 fiber。
+    // ctx.sessions：plugin 尾部 inject:['sessions'] 声明（aurum 同款）——打开会话走 sessionsSvc.open。
+    const sessionsSvc = ctx.sessions;
     ctx.effect(() => S.inject('sidebar.workspaces', () => S.register(
       { name: 'sidebar.workspaces', priority: -1, registrant: 'macintosh' },
       function McFinderHost(props) {
         if (typeof React === 'undefined') return null;
-        // props（官方经席位传入，本步骨架不用）：useSessions / useWorkspaces / renderSlot —— 下一步接
-        return React.createElement(McFinderTree, props);
+        const p = Object.assign({}, props);
+        p.openSession = sessionsSvc && typeof sessionsSvc.open === 'function'
+          ? function (id) { try { sessionsSvc.open(id); } catch (e) { try { console.error('[mcx] open session failed:', e && e.message); } catch (e2) {} } }
+          : null; // TODO(二期)：服务缺席时行内提示；当前静默降级假数据选中
+        return React.createElement(McFinderTree, p);
       }
     )));
   },
