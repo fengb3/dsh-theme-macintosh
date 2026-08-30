@@ -110,7 +110,7 @@ ${modsInit}
         }
       } catch (e) { console.error('[mcx] overrideTokens failed:', e && e.message); }
       try { console.log('[mcx] apply 完成，样式已入 head'); } catch (e) {}
-      ctx.effect(() => { try { window.clearInterval(hb); console.log('[mcx] fiber dispose — 样式/叠层移除'); } catch (e) {} style.remove(); });
+      ctx.effect(() => { try { window.clearInterval(hb); console.log('[mcx] fiber dispose — 样式/叠层移除\n' + (new Error().stack || '').split('\\n').slice(1, 8).join('\\n')); } catch (e) {} style.remove(); });
     },
   };
 })();`;
