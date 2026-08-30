@@ -81,7 +81,7 @@ return {
     let css = "@font-face{font-family:'FindersKeepers';src:url(/mcx-assets/fonts/FindersKeepers.ttf) format('truetype');font-display:swap}\\n@font-face{font-family:'ChiKareGo';src:url(/mcx-assets/fonts/ChiKareGo.ttf) format('truetype');font-display:swap}\\n@font-face{font-family:'Fusion Pixel 12px monospaced';src:url(/mcx-assets/fonts/fusion-pixel-12px-monospaced-latin.ttf) format('truetype');font-display:swap}\\n@font-face{font-family:'Fusion Pixel 12px monospaced zh';src:url(/mcx-assets/fonts/fusion-pixel-12px-monospaced-zh_hans.ttf) format('truetype');font-display:swap}\\n@font-face{font-family:'ChiKareGo Latin';src:url(/mcx-assets/fonts/ChiKareGo.ttf) format('truetype');unicode-range:U+0041-005A,U+0061-007A,U+00C0-024F,U+1E00-1EFF,U+2000-206F;font-display:swap}";
     for (const k of order) { const m = mods[k]; if (!m) continue;
       if (m.css) css += m.css + '\\n';
-      if (m.mount) try { const td = m.mount(ctx); if (typeof td === 'function') ctx.effect(() => td()); } catch(e) { try { console.error('[mcx] mount ' + k + ' failed:', e && e.message); } catch (e2) {} }
+      if (m.mount) try { const td = m.mount(ctx); if (typeof td === 'function') ctx.effect(() => td); } catch(e) { try { console.error('[mcx] mount ' + k + ' failed:', e && e.message); } catch (e2) {} }
       if (m.slots) try { m.slots(ctx) } catch(e) { try { console.error('[mcx] slots ' + k + ' failed:', e && e.message); } catch (e2) {} }
     }
     style.textContent = css; document.head.appendChild(style);
@@ -109,17 +109,16 @@ return {
           '--dsw-specific-sidebar-fill': pair('var(--mc-rail-1)'),
           '--dsw-font-family': pair('var(--font-ui)'),
         });
-        ctx.effect(() => { try { off(); } catch (e) {} });
+        ctx.effect(() => () => { try { off(); } catch (e) {} });
         console.log('[mcx] theme.overrideTokens 已叠层');
       } else {
         console.warn('[mcx] theme 服务不可用，仅 CSS 层生效');
       }
     } catch (e) { console.error('[mcx] overrideTokens failed:', e && e.message); }
     try { console.log('[mcx] apply 完成，样式已入 head'); } catch (e) {}
-    ctx.effect(() => {
+    ctx.effect(() => () => {
       try { if (typeof stopBeat === 'function') stopBeat(); } catch (e) {}
       try { if (hb !== null) window.clearInterval(hb); } catch (e) {}
-      try { console.log('[mcx] fiber dispose — 样式/叠层移除'); } catch (e) {}
       style.remove();
     });
   },
