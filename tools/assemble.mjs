@@ -67,15 +67,17 @@ ${modsInit}
     // 勿声明 inject:['slots']：动态 fiber 内该服务不可见时会永久 parked（apply 不执行但宿主仍报成功）。
     // 席位一律在模块内用 ctx.get('slots') 可选读取（守卫允许），拿不到则静默跳过。
     apply(ctx) {
+      try { console.log('[mcx] apply — 主题注入开始'); } catch (e) {}
       const style = document.createElement('style');
       style.setAttribute('data-mc-root','');
       let css = ${JSON.stringify(fontCss)};
       for (const k of order) { const m = mods[k]; if (!m) continue;
         if (m.css) css += m.css + '\\n';
-        if (m.mount) try { const td = m.mount(ctx); if (typeof td === 'function') ctx.effect(() => td()); } catch(e) { /* 模块失败不拖垮其余 */ }
-        if (m.slots) try { m.slots(ctx) } catch(e) {}
+        if (m.mount) try { const td = m.mount(ctx); if (typeof td === 'function') ctx.effect(() => td()); } catch(e) { try { console.error('[mcx] mount ' + k + ' failed:', e && e.message); } catch (e2) {} }
+        if (m.slots) try { m.slots(ctx) } catch(e) { try { console.error('[mcx] slots ' + k + ' failed:', e && e.message); } catch (e2) {} }
       }
       style.textContent = css; document.head.appendChild(style);
+      try { console.log('[mcx] apply 完成，样式已入 head'); } catch (e) {}
       ctx.effect(() => style.remove());
     },
   };

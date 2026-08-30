@@ -1,5 +1,7 @@
 // src/core/clock.js —— 层1：100ms 栅格帧时钟（值照《笔记》§1.1；一切延时必须走 CLOCK.next）
 // 纯顶层声明，无模块系统语法；纯函数经 CJS 兼容出口供测试 createRequire 使用
+// 注意：动态 client 闭包里 setInterval/clearInterval 标识符被 runner 的
+// DYNAMIC_CLIENT_REDIRECTS 抛错陷阱遮蔽 —— 原生实现必须经 window.* 获取。
 function computeNext(now, at, grid) {
   // at = 目标时刻（调用方传 now+ms）：量化到 ≥at 的最近栅格沿
   // CLOCK.next 侧即 Math.ceil((now+ms+1)/grid)*grid（控制器裁定公式）
@@ -7,6 +9,10 @@ function computeNext(now, at, grid) {
   return Math.ceil((at + 1) / grid) * grid;
 }
 if (typeof module !== 'undefined' && module.exports) module.exports = { computeNext };
+
+const mcG = (typeof window !== 'undefined' ? window : globalThis);
+const mcNativeInterval = mcG.setInterval.bind(mcG);
+const mcNativeClear = mcG.clearInterval.bind(mcG);
 
 // CLOCK 惰性单例：mount(ctx) 时才创建并起 100ms 分发定时器
 let CLOCK = null;
@@ -37,13 +43,13 @@ const McClock = {
     };
 
     function teardown() {
-      if (timer !== null) { clearInterval(timer); timer = null; }
+      if (timer !== null) { mcNativeClear(timer); timer = null; }
       queue = [];
       CLOCK = null;
     }
 
     CLOCK = clock;
-    timer = setInterval(() => {
+    timer = mcNativeInterval(() => {
       const t = Date.now();
       const due = [];
       queue = queue.filter((j) => (j.at <= t ? (due.push(j), false) : true));
