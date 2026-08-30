@@ -1,58 +1,55 @@
 # dsh-theme-macintosh
 
-DSH（DeepSeek Harness Web GUI）的 Classic Macintosh 像素风主题插件（一期）。详见
-`docs/superpowers/specs/2026-08-30-macintosh-theme-design.md` 与
-`docs/superpowers/plans/2026-08-30-macintosh-theme-phase1.md`。
+DSH（DeepSeek Harness Web GUI）的 Classic Macintosh 像素风主题插件。详见
+`docs/superpowers/specs/2026-08-30-macintosh-theme-design.md`（设计）与
+`docs/superpowers/plans/2026-08-30-macintosh-theme-phase1.md`（一期计划 + 收尾实录 + 二期待办）。
 
-## 一期预览
+## 安装（常驻插件形态，一期最终形态）
 
-### 前置
+本包以**持久化组合插件**形式安装（同 dsh-theme-aurum 的机制），页面刷新即生效，无需任何 Run 操作：
 
-- Node.js（无需安装依赖，零 npm 包）。
-
-### 构建（URL 字体模式，推荐）
-
-1. 起本地字体服务（**须保持运行**）：
+1. 在 DSH web profile 里链接本包（`~/.dsh/profiles/web/`）：
 
    ```
-   node tools/serve-assets.mjs
+   pnpm add link:<本仓库绝对路径>
    ```
 
-   字体经 `http://127.0.0.1:3199/assets/...` 提供。
+   并在 `package.json` 的 `dsh.profile.bundles` 数组中加入 `"dsh-theme-macintosh"`。
 
-2. 装配产物：
+2. 重启 web 宿主（插件集扫描为进程内缓存，重启才再生）：
 
    ```
-   node tools/assemble.mjs --font-base http://127.0.0.1:3199/assets
+   & $env:USERPROFILE\.dsh\restart-dsh-web.ps1
    ```
 
-   输出 `dist/client-body.js`（自包含的 client 插件函数体，plain JS、无 import）。
+3. 刷新页面 —— Macintosh 主题常驻生效。
 
-### 装载与卸载（harness 动态插件流程）
+- **字体**：经宿主半 `index.js` 挂载的 `/mcx-assets/` 静态路由提供（本包 `assets/fonts/`），无外部服务依赖。
+- **kit 检视页**：devtools 控制台执行 `__MC_KIT_OPEN__ = true`。
+- **深浅切换**：侧栏底部的月牙按钮（翻转 `html[data-theme]`，token 经 `theme.overrideTokens` 常驻叠层动态跟随）。
+- **卸载**：从 bundles 数组移除本包并重启宿主。
 
-在 DSH 会话中让 agent 用 `cordis_define` 新建插件：`code.client` 填入
-`dist/client-body.js` 的文件内容（Host 半留空），随后 `cordis_run` 该 Package ——
-UI 弹出批准请求，用户允许后**刷新页面**即可看到 Classic Macintosh 主题。
+## 开发
 
-- **kit 检视页**：devtools 控制台执行 `__MC_KIT_OPEN__=true` 打开组件检视页。
-- **深浅切换**：侧栏底部（sidebar foot）的月亮按钮。
-- **卸载**：`cordis_stop` 即完全干净撤除（样式、sprite、时钟全随 Run 销毁），
-  刷新后官方配色恢复。
+- 源码：`src/`（模块化：core 四件 + chrome/sidebar + kit），`tools/assemble.mjs` 装配；
+  `client.js` 为常驻浏览器半（loader 格式），`index.js` 为宿主半（静态资源路由）。
+- 改 `client.js` 后同样需要**重启宿主**生效（boot 清单 rev 缓存）。
+- 测试与静态纪律走查：
 
-### 字体两种模式
+  ```
+  npm test
+  ```
 
-| 模式 | 命令 | 特点 |
-| --- | --- | --- |
-| URL 模式 | `--font-base http://127.0.0.1:3199/assets` | 产物小，但须保持 `serve-assets.mjs` 运行 |
-| base64 模式 | `node tools/assemble.mjs`（默认） | 自包含单文件，无外部依赖，但体积巨大 |
+  = 单元/冒烟测试 + `tools/audit.mjs`（无 `:hover`、无 `transition`、定时器管制、
+  `innerHTML` 必经 `esc()`、`--desktop-pattern` 浅色不覆盖、宿主选择器仅限 map 段）。
 
-### 测试与静态走查
+- 终验（Playwright，含页面重载持久性断言）：
 
-```
-npm test
-```
+  ```
+  node tools/verify-persistent.mjs
+  ```
 
-= `node --test "test/*.test.mjs"`（单元/冒烟测试）+ `node tools/audit.mjs`
-（静态纪律走查：无 `:hover`、无 `transition:`（reduced-motion 豁免除外）、
-定时器仅限 `src/core/clock.js`、`innerHTML` 插值必经 `esc()`、
-`--desktop-pattern` 浅色不覆盖、宿主选择器仅限 `src/chrome/map.js`）。
+## 历史遗留（开发期工具，运行时不再依赖）
+
+- `tools/serve-assets.mjs`：动态插件时期的字体服务（3199 端口）。常驻形态走宿主路由，已不需要。
+- `tools/assemble.mjs`：把 `src/` 装配成动态插件产物 `dist/client-body.js`（`--font-base` URL 模式 / 默认 base64）。`client.js` 已手工接管为常驻格式；修改样式时以 `client.js` 为准，`src/` 为设计参照。

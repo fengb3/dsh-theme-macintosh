@@ -236,3 +236,60 @@ test('esc 转义四种字符', () => {
 - Spec 覆盖：§1 架构（Task 1/6/7）、§2 文件组织与 kit（Task 1/5）、§3 一期模块 1–5（Task 2–7）、§4 映射三层（Task 1/6/7）、§5 动画纪律（Task 2/3/5/8）、§6 错误处理（Task 1 装配器 try/catch、Task 3 isConnected、Task 6 失配演练）、§7 测试（各任务 + Task 8）、§8 一期交付（Task 8）。二期/三期不在本计划，符合既定范围。
 - 占位符：无 TBD/TODO；代码步骤均给出实现。
 - 类型一致：模块协议 `{ css, mount?, slots? }`、`CLOCK.next/syncAnim/dispose`、`esc/flashIn/flashOut/accToggle`、MAP 键名各任务一致。
+
+---
+
+# 一期收尾实录（2026-08-30）
+
+## 最终交付形态（重大路线变更）
+
+一期原计划以**动态 Cordis 插件**交付预览；实施中动态客户端半遭遇无法定位的宿主生命周期问题（apply 完成后 fiber 同一毫秒被中止，动态与常驻通道均复现，最终定位为 `dsh.client.inject` 字段配置错误后转为常驻形态彻底解决）。最终交付为**持久化组合插件**（同 dsh-theme-aurum 机制）：
+
+- `index.js` 宿主半：`/mcx-assets/` 静态资源路由（字体等，服务本包 `assets/`）。
+- `client.js` 浏览器半（loader 格式）：tokens 双主题全集 + 官方 token 经 `theme.overrideTokens` 常驻叠层（14 个 alias，值用 `var(--mc-*)` 间接引用保持月牙钮联动）+ SVG sprite + 桌面噪点画布 + chrome/sidebar 样式覆写（MC_MAP 选择器管制）+ Finder 品牌标 + 月牙深浅钮 + kit 检视页。
+- 安装：profile `dsh.profile.bundles` 行 + 宿主重启；刷新页面即常驻。
+- 终验：`node tools/verify-persistent.mjs` GREEN（字体/配色/sprite/画布/样式 + 重载持久性）。
+
+## 实施过程关键裁定与教训（下一期必读）
+
+1. **宿主主题施加机制**：ThemePresenter 把活动主题 token 以 **inline style 写在 `<body>`** 上，任何 CSS 选择器都无法压过 —— 官方 token 覆盖**必须**走 `theme.overrideTokens` 叠层（不要再用 CSS body 规则硬扛，那是死路）。
+2. **`dsh.client.inject` 与 `external` 的区别**：`inject` 列表必须是图内模块 id（如 `@deepseek-ai/dsh-client-ui-theme`）；`react` 之类静态依赖放 `external`。放错会导致装载器解析失败、fiber 在 apply 完成同一毫秒被静默中止（无任何报错）。
+3. **single 槽遮蔽注册**：官方已占位的 single 槽（如 `sidebar.brand.mark`）必须 `priority: -1` 遮蔽注册；默认 0 会抛 "already has a registration"。
+4. **timer mixin**：`ctx.interval` 等需插件声明 `inject:['timer']`，否则抛错（勿裸用）。
+5. **动态客户端闭包陷阱**：`setTimeout/setInterval/fetch/require` 标识符被 runner 抛错陷阱遮蔽；原生实现须 `window.*` 获取（本包 CLOCK 即此处理）。
+6. **动态插件 `inject:['slots']` 陷阱**：动态 fiber 内 slots 服务不可见时会永久 parked（apply 不执行但宿主仍报激活成功）——用 `ctx.get('slots')` 可选读取代替声明注入。
+7. **宿主插件集扫描为进程内缓存**：改 client.js / package.json 的 dsh.client 字段后必须重启宿主；页面刷新只认 boot 清单 rev。
+8. **会话行/侧栏锚点**（MC_MAP，宿主 0.1.1-rc.1 行号级核验）：`[data-conversation-scroll]`、`[data-composer-card]`、`div[data-phase]`、`div[role="treeitem"][aria-selected]`；结构位选择器（`#root > div > div:first-child` 系）标 DRIFT-RISK，宿主升级先复核 `src/chrome/map.js` / `client.js` 内 MC_MAP。
+
+## 一期验收清单（已达成）
+
+- [x] 常驻形态：重启 + 刷新即生效，重载持久（verify-persistent GREEN）
+- [x] 像素字体（ChiKareGo/Fusion Pixel/FindersKeepers，经宿主静态路由）
+- [x] 暗夜 Mac 深色 / System 7 白窗浅色（月牙钮切换，含遮罩三处反转）
+- [x] 桌面噪点画布 + 主列窗口化（描边/圆角/硬投影）+ Finder 侧栏覆写（选中整行反色方角、折叠轨形态）
+- [x] kit 检视页（色板/原语五态/mcfx 演示/图标墙，`__MC_KIT_OPEN__` 开关）
+- [x] 撤除干净（bundles 移除 + 重启即恢复官方样式）
+- [x] `npm test` 全绿（单元 + 静态纪律 audit）
+
+## 二期待办（会话区，按序开工；开工时另写二期 spec/plan）
+
+> 模块清单见 spec §3；以下为含一期遗留的执行清单。工作目标：`client.js`（常驻半）为主战场，`src/` 为设计参照。
+
+1. **清 diagnostics**：移除 client.js 内全部 `[mcx]` console 日志（apply/dispose 打点等）。
+2. **flow 会话流模块**（spec §5/§8）：`.md` 渲染（以原型 `s-md` 全要素会话为自测基准）、用户气泡、inject 四型、reasoning 样式覆写（琥珀染色；完整五帧流式状态机保留 kit 演示）、turn-tail。锚点：`conversation.chat.node` keyed 槽（15 种 ChatNodeKind）——先探针后映射。
+3. **dock 输入坞模块**（spec §9）：composer 卡壳覆写、todo/goal/queue 家具（`conversation.input.dock` / `composer.dock` 槽）、ctx 圆环、ask 向导（接管 `conversation.composer` 链或样式覆写，先探针）。
+4. **toolcard 工具卡模块**（spec §7）：三态（running 琥珀扫掠/失败红边）、图标语义映射（sprite i-* ↔ 工具名）、subcalls/diff。锚点：`tool.call.toolview` keyed 槽。
+5. **overlays 浮层模块**（spec §9）：menu/dialog/toast/scrim（以 workspace 原型为唯一规范源）、hero 空会话。
+6. **responsive**（spec §10）：三档断点 + 抽屉（≤820 结构切换 / ≤640 密度 / ≤480 极窄）。
+7. **kit 页扩区**：随 2–5 各模块新增演示区（含推理卡五帧状态机演示）。
+8. **滚动条四向箭头 SVG**（一期 DEFERRED：8 条 data-URI 与 border 色硬耦合）。
+9. **气球 symbol**：原型 sprite 未收录，空态需要时按笔记 §10.312 重绘。
+10. **浅色模式 QA 专项**：System 7 白窗下逐区核对（含 kit 页并排比对 workspace 原型）。
+11. **工具清理评估**：`tools/serve-assets.mjs`（已无用）与 `tools/assemble.mjs`/`src-build` 链路是否保留为设计参照或删除；audit 对 `client.js` 的覆盖已扩，维持。
+12. **deferred minors 清欠**（.superpowers/sdd/2026-08-30-macintosh-theme-phase1/progress.md 全量在册）：audit .01ms 豁免未锚定 media 块、浅色块 lazy 正则、暗色 accent-dim/ink 与原型小偏差、mount 重入共享 dispose、`__setSchedulerForTest` 入 bundle 等——终审已 triage 均随二期。
+13. **上游课题（可选）**：动态插件 fiber「apply 完成即处决」之谜已由 inject 配置错误解释，但「宿主报成功而客户端静默失败」的无反馈现象值得上游反馈。
+14. **spec 勘误**：桌面画布实际走 mount/z-index:-1（非 shell.overlay），spec §1/§2 对应段落更新。
+
+## 分支与推送
+
+- 分支 `feat/mc-phase1` 全部合入 `main` 后推送 origin（github.com/fengb3/dsh-theme-macintosh）。
