@@ -671,9 +671,11 @@ const McSidebar = {
     '.mc-tzoom{right:5px}',
     '.mc-tbox svg{width:13px;height:13px;display:block}',
     '.mc-tbox:active svg{opacity:.55}',
-    // 折叠态标题栏只留 tclose：56px 轨道里放不下标题与 zoom
-    `${MC_MAP.appRootRail} .mc-title,` +
-      `${MC_MAP.appRootRail} .mc-tzoom{display:none}`,
+    // 折叠态标题栏整体隐藏（原型 .rail-mini .titlebar{display:none}）——展开入口 = 官方 rail
+    // 首钮（渲染我们的 Finder mark），tclose 在轨内不重复占位
+    `${MC_MAP.appRootRail} .mc-titlebar{display:none}`,
+    // 折叠态页脚：原型 .rail-mini .sb-foot —— 纵排居中（设置图标钮单列）
+    `${MC_MAP.sidebarFootRail}{display:flex;flex-direction:column;justify-content:center;align-items:center;gap:8px;padding:8px 0}`,
     // 官方折叠钮：展开态隐藏（折叠/展开动作由 tclose 程序化触发，保官方行为与持久化）；
     // 折叠态保留官方钮 = rail 首钮（渲染我们的品牌 mark），作展开的双保险入口
     `${MC_MAP.sidebarCollapseBtnWide}{display:none}`,
@@ -987,6 +989,7 @@ function McFinderMini(props) {
   };
   return h('div', { className: 'mc-sb-mini' },
     btn('mc-mini-btn mc-mini-new', '新建会话', '#i-px-plus', onNew),
+    btn('mc-mini-btn', '添加工作区（二期）', '#i-folder'),
     btn('mc-mini-btn', '搜索会话', '#i-px-search', onSearch));
 }
 
@@ -1152,8 +1155,8 @@ const McFinder = {
 .mc-gh-btn:active{color:var(--mc-fg)}
 .mc-sb-find .mc-gh-btn svg{width:12px;height:12px}
 .mc-g-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
-  font:400 15px/1.25 var(--font-mono);letter-spacing:.02em;color:var(--mc-fg)}
-.mc-g-count{font:500 10px/1.3 var(--font-sb);color:var(--mc-faint)}
+  font:400 15px/1.25 'FindersKeepers','Fusion Pixel 12px monospaced zh','Noto Sans SC',monospace;letter-spacing:.02em;color:var(--mc-fg)}
+.mc-g-count{font:500 10px/1.3 var(--font-mono);color:var(--mc-faint)}
 .mc-group-body{overflow:hidden;height:auto}
 .mc-group-body:not(.open){height:0}
 .mc-sess{display:flex;align-items:center;gap:6px;width:100%;box-sizing:border-box;
@@ -1186,11 +1189,11 @@ const McFinder = {
 .mc-sb-find .mc-sb-more svg{width:11px;height:11px;flex:none}
 /* ===== 折叠态迷你条（原型 .sb-mini；56px 官方轨内一列 26px 图标钮）===== */
 .mc-sb-mini{display:flex;flex-direction:column;align-items:center;gap:6px;flex:1;min-height:0;padding:8px 0}
-.mc-mini-btn{display:grid;place-items:center;width:26px;height:26px;flex:none;
+.mc-mini-btn{display:grid;place-items:center;width:34px;height:30px;flex:none;
   border:1px solid var(--mc-border);border-radius:var(--mc-r-tag);
   background:var(--mc-surface-2);color:var(--mc-fg);cursor:pointer}
 .mc-mini-btn:active{background:var(--mc-border);color:var(--mc-surface)}
-.mc-mini-btn svg{width:14px;height:14px}
+.mc-mini-btn svg{width:16px;height:16px}
 .mc-mini-new{background:var(--mc-accent);color:var(--mc-accent-ink)}
 .mc-mini-new:active{background:var(--mc-border);color:var(--mc-surface)}`,
 

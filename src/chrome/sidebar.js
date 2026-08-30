@@ -1,4 +1,5 @@
-// src/chrome/sidebar.js —— 侧栏 Finder 窗覆写 + 真 DOM 标题栏 + 折叠迷你态 + 官方主题通道（Task 7 + 轮6）
+// src/chrome/sidebar.js —— 侧栏 Finder 窗覆写 + 主题官方通道 + 真 DOM 标题栏
+// 协议：{ css, mount?, slots? }。纪律：宿主选择器一律取自 MC_MAP；无 :hover、无 transition。
 // 协议：{ css, mount(ctx), slots(ctx) }。样式参考 prototype/component-dev-notes.md §7（侧栏 Finder 窗）。
 // 纪律：宿主选择器一律取自 MC_MAP（本文件只做插值）；无 :hover、无 transition（官方的也压平）；
 // 席位注册沿用 kit.js 在 Task 5 运行期验证过的 register(meta, render) 形态。
@@ -74,9 +75,11 @@ const McSidebar = {
     '.mc-tzoom{right:5px}',
     '.mc-tbox svg{width:13px;height:13px;display:block}',
     '.mc-tbox:active svg{opacity:.55}',
-    // 折叠态标题栏只留 tclose：56px 轨道里放不下标题与 zoom
-    `${MC_MAP.appRootRail} .mc-title,` +
-      `${MC_MAP.appRootRail} .mc-tzoom{display:none}`,
+    // 折叠态标题栏整体隐藏（原型 .rail-mini .titlebar{display:none}）——展开入口 = 官方 rail
+    // 首钮（渲染我们的 Finder mark），tclose 在轨内不重复占位
+    `${MC_MAP.appRootRail} .mc-titlebar{display:none}`,
+    // 折叠态页脚：原型 .rail-mini .sb-foot —— 纵排居中（设置图标钮单列）
+    `${MC_MAP.sidebarFootRail}{display:flex;flex-direction:column;justify-content:center;align-items:center;gap:8px;padding:8px 0}`,
     // 官方折叠钮：展开态隐藏（折叠/展开动作由 tclose 程序化触发，保官方行为与持久化）；
     // 折叠态保留官方钮 = rail 首钮（渲染我们的品牌 mark），作展开的双保险入口
     `${MC_MAP.sidebarCollapseBtnWide}{display:none}`,
@@ -251,3 +254,4 @@ const McSidebar = {
     })));
   },
 };
+
