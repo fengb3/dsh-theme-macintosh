@@ -188,7 +188,7 @@ const McFinder = {
 .mc-gh-btn:active{color:var(--mc-fg)}
 .mc-sb-find .mc-gh-btn svg{width:12px;height:12px}
 .mc-g-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
-  font:400 15px/1.25 'FindersKeepers','Fusion Pixel 12px monospaced zh','Noto Sans SC',monospace;letter-spacing:.02em;color:var(--mc-fg)}
+  font:400 15px/1.25 var(--font-sb);letter-spacing:.02em;color:var(--mc-fg)}
 .mc-g-count{font:500 10px/1.3 var(--font-mono);color:var(--mc-faint)}
 .mc-group-body{overflow:hidden;height:auto}
 .mc-group-body:not(.open){height:0}
@@ -198,7 +198,7 @@ const McFinder = {
 .mc-s-tt{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
   font:400 13px/1.5 var(--font-sb);color:var(--mc-fg)}
 .mc-s-slot{display:flex;align-items:center;justify-content:center;gap:4px;flex:none;order:-1;
-  width:15px;height:15px;margin-left:20px}
+  width:15px;height:15px;margin-left:14px}
 .mc-s-menu{display:grid;place-items:center;width:18px;height:18px;flex:none;
   background:none;border:none;cursor:pointer;color:var(--mc-faint);border-radius:var(--mc-r-tag)}
 .mc-s-menu:active{color:var(--mc-fg)}
