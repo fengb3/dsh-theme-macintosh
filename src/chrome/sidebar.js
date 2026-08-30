@@ -17,8 +17,10 @@ const McSidebar = {
     `${MC_MAP.sidebarRoot}{padding:0}`,
     // 品牌行：字号 17px（finder 图标 24px 经 sidebar.brand.mark 席位注入，见 slots）；
     // 名称经 sidebar.brand.name 席位注入 "Deepseek + Harness" 反色标签（原型 sb-head §4）
-    `${MC_MAP.sidebarBrand}{font:400 17px/1 var(--font-sb);color:var(--mc-fg)}`,
-    `${MC_MAP.sidebarBrand} svg{width:24px;height:24px;flex:none}`,
+    // :not([data-mc-finder]) —— 该 ID 级选择器命中侧栏列内一切 button（含 McFinder 自有钮），
+    // 加排除避免 24px 强压 Finder 树图标；官方品牌钮无该属性，规则照常兜底。
+    `${MC_MAP.sidebarBrand}:not([data-mc-finder]){font:400 17px/1 var(--font-sb);color:var(--mc-fg)}`,
+    `${MC_MAP.sidebarBrand}:not([data-mc-finder]) svg{width:24px;height:24px;flex:none}`,
     '.mc-sb-name{display:inline-flex;align-items:center;min-width:0}',
     '.mc-sb-brand{font:700 17px/1.2 var(--font-sb);letter-spacing:.02em;color:var(--mc-fg)}',
     '.mc-sb-tag{font:600 14px/1.2 var(--font-sb);background:var(--mc-fg);color:var(--mc-rail-1);padding:1px 5px;margin-left:5px;flex:none}',
@@ -54,21 +56,14 @@ const McSidebar = {
     `${MC_MAP.sessionRowSelected} *{color:inherit}`,
     // —— 侧栏元素级 Finder 语汇（原型 §4 sb-head/sb-actions/sb-tree/sb-foot）——
     // System 7 窗标题栏（CSS 装饰版）：20px pinstripe 条纹面 + 居中 "Sessions" 标题 + 顶缘 accent 线 +
-    // 左右 13px 描边方块（close/zoom 暗示，双层背景近似描边；交互属三期）。经 ::before 作首 flex 子。
+    // 左右 13px 像素方块（pixelarticons close/zoom data-URI，fill 深浅两组固定色，见 MC_TBOX；
+    // 交互属三期）。经 ::before 作首 flex 子。
     `${MC_MAP.sidebarRoot}::before{content:'Sessions';display:flex;align-items:center;justify-content:center;` +
       `height:20px;flex:none;font:600 12px/1 var(--font-sb);letter-spacing:.03em;color:var(--mc-fg);` +
-      `background:linear-gradient(var(--mc-surface-2),var(--mc-surface-2)) 6px center/11px 11px no-repeat,` +
-        `linear-gradient(var(--mc-border),var(--mc-border)) 5px center/13px 13px no-repeat,` +
-        `linear-gradient(var(--mc-surface-2),var(--mc-surface-2)) right 6px center/11px 11px no-repeat,` +
-        `linear-gradient(var(--mc-border),var(--mc-border)) right 5px center/13px 13px no-repeat,` +
-        `repeating-linear-gradient(180deg,rgba(255,255,255,.10) 0 1px,transparent 1px 3px),var(--mc-surface-2);` +
+      `background:${MC_TBOX.bg(MC_TBOX.closeDark, MC_TBOX.zoomDark, 'rgba(255,255,255,.10)')};` +
       `border-bottom:1px solid var(--mc-border);box-shadow:inset 0 1px 0 var(--mc-accent)}`,
     `html[data-theme="light"] ${MC_MAP.sidebarRoot}::before{background:` +
-      `linear-gradient(var(--mc-surface-2),var(--mc-surface-2)) 6px center/11px 11px no-repeat,` +
-      `linear-gradient(var(--mc-border),var(--mc-border)) 5px center/13px 13px no-repeat,` +
-      `linear-gradient(var(--mc-surface-2),var(--mc-surface-2)) right 6px center/11px 11px no-repeat,` +
-      `linear-gradient(var(--mc-border),var(--mc-border)) right 5px center/13px 13px no-repeat,` +
-      `repeating-linear-gradient(180deg,rgba(0,0,0,.20) 0 1px,transparent 1px 3px),var(--mc-surface-2)}`,
+      MC_TBOX.bg(MC_TBOX.closeLight, MC_TBOX.zoomLight, 'rgba(0,0,0,.20)') + '}',
     // 品牌行 sb-head：padding + 软底线（logoRow 官方 60px 定高放开为内容高）
     `${MC_MAP.sidebarLogoRow}{height:auto;min-height:0;padding:10px 12px 8px;background:var(--mc-rail-1);border-bottom:1px solid var(--mc-border-soft)}`,
     // New Session 钮 = .btn.primary 双内环语汇（§5）：accent 底 + 外 1px 线 + 2px 面缝双环；14px 图标
@@ -91,18 +86,20 @@ const McSidebar = {
     `${MC_MAP.sidebarRegion}{padding:0}`,
     // —— 像素图标替换（pixelarticons 24 栅格）：官方细轮廓 path 藏起，svg 本体 currentColor + 像素 mask 重绘 ——
     // 锚点 aria-label 为 zh i18n 文案（DRIFT-RISK：随语言/官方文案漂移，失配=回退官方轮廓图标，不破版）
-    `${MC_MAP.sidebarRegion} button svg *{visibility:hidden}`,
-    `${MC_MAP.sidebarRegion} button svg{background:currentColor}`,
-    `${MC_MAP.sidebarRegion} button[aria-label="搜索会话"] svg{` +
+    // :not([data-mc-finder]) —— McFinder 遮蔽成功时本区内容是自有组件（按钮带 data-mc-finder），
+    // 降级规则只打官方 DOM；遮蔽失败时官方按钮无该属性，规则照常兜底。
+    `${MC_MAP.sidebarRegion} button:not([data-mc-finder]) svg *{visibility:hidden}`,
+    `${MC_MAP.sidebarRegion} button:not([data-mc-finder]) svg{background:currentColor}`,
+    `${MC_MAP.sidebarRegion} button:not([data-mc-finder])[aria-label="搜索会话"] svg{` +
       `-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M6%202h8v2H6V2zM4%206V4h2v2H4zm0%208H2V6h2v8zm2%202H4v-2h2v2zm8%200v2H6v-2h8zm2-2h-2v2h2v2h2v2h2v2h2v-2h-2v-2h-2v-2h-2v-2zm0-8h2v8h-2V6zm0%200V4h-2v2h2z' fill='black'/%3E%3C/svg%3E") center/contain no-repeat;` +
       `mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M6%202h8v2H6V2zM4%206V4h2v2H4zm0%208H2V6h2v8zm2%202H4v-2h2v2zm8%200v2H6v-2h8zm2-2h-2v2h2v2h2v2h2v2h2v-2h-2v-2h-2v-2h-2v-2zm0-8h2v8h-2V6zm0%200V4h-2v2h2z' fill='black'/%3E%3C/svg%3E") center/contain no-repeat}`,
-    `${MC_MAP.sidebarRegion} button[aria-label="视图选项"] svg{` +
+    `${MC_MAP.sidebarRegion} button:not([data-mc-finder])[aria-label="视图选项"] svg{` +
       `-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M17%204h2v10h-2V4zm0%2012h-2v2h2v2h2v-2h2v-2h-4zm-4-6h-2v10h2V10zm-8%202H3v2h2v6h2v-6h2v-2H5zm8-8h-2v2H9v2h6V6h-2V4zM5%204h2v6H5V4z' fill='black'/%3E%3C/svg%3E") center/contain no-repeat;` +
       `mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M17%204h2v10h-2V4zm0%2012h-2v2h2v2h2v-2h2v-2h-4zm-4-6h-2v10h2V10zm-8%202H3v2h2v6h2v-6h2v-2H5zm8-8h-2v2H9v2h6V6h-2V4zM5%204h2v6H5V4z' fill='black'/%3E%3C/svg%3E") center/contain no-repeat}`,
-    `${MC_MAP.sidebarRegion} button[aria-label="添加工作区"] svg{` +
+    `${MC_MAP.sidebarRegion} button:not([data-mc-finder])[aria-label="添加工作区"] svg{` +
       `-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M11%204h2v7h7v2h-7v7h-2v-7H4v-2h7V4z' fill='black'/%3E%3C/svg%3E") center/contain no-repeat;` +
       `mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M11%204h2v7h7v2h-7v7h-2v-7H4v-2h7V4z' fill='black'/%3E%3C/svg%3E") center/contain no-repeat}`,
-    `${MC_MAP.sidebarRegion} button[aria-label$="的操作"] svg{` +
+    `${MC_MAP.sidebarRegion} button:not([data-mc-finder])[aria-label$="的操作"] svg{` +
       `-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M1%209h6v6H1V9zm2%202v2h2v-2H3zm6-2h6v6H9V9zm2%202v2h2v-2h-2zm6-2h6v6h-6V9zm2%202v2h2v-2h-2z' fill='black'/%3E%3C/svg%3E") center/contain no-repeat;` +
       `mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M1%209h6v6H1V9zm2%202v2h2v-2H3zm6-2h6v6H9V9zm2%202v2h2v-2h-2zm6-2h6v6h-6V9zm2%202v2h2v-2h-2z' fill='black'/%3E%3C/svg%3E") center/contain no-repeat}`,
     // 页脚 sb-foot：rail-2 面 + 顶线（§4）

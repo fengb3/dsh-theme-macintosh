@@ -491,6 +491,22 @@ const MC_MAP = {
 // 协议：{ css, mount(ctx) }。RULING：桌面画布走 mount（body 首元素 data-mc-desk，z-index:-1），
 // 不占 shell.overlay 席（该席 z-index:20 在 React 树内、叠在内容之上，只适合 kit 检视页那种浮层）。
 // 纪律：选择器字符串一律来自 map.js 的 MC_MAP（本文件只做插值）；无 :hover、无 transition。
+// —— 标题栏 close/zoom 像素方块（pixelarticons close.svg/zoom.svg，24 栅格）——
+// ::before 背景图用不了 sprite 多色位，fill 走固定深浅两组色：深色 #1f1f2e / 浅色 #ffffff。
+// bg() 组装完整 background 声明：左 close（5px）右 zoom（right 5px），13px 见方，pinstripe 底。
+const MC_TBOX_CLOSE_DARK = "%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%231f1f2e' d='M5 5h2v2H5V5zm4 4H7V7h2v2zm2 2H9V9h2v2zm2 0h-2v2H9v2H7v2H5v2h2v-2h2v-2h2v-2h2v2h2v2h2v2h2v-2h-2v-2h-2v-2h-2v-2zm2-2v2h-2V9h2zm2-2v2h-2V7h2zm0 0V5h2v2h-2z'/%3E%3C/svg%3E";
+const MC_TBOX_ZOOM_DARK = "%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%231f1f2e' d='M11 5h2v2h2v2h2V7h-2V5h-2V3h-2v2zM9 7V5h2v2H9zm0 0v2H7V7h2zm-5 6h16v-2H4v2zm9 6h-2v-2H9v-2H7v2h2v2h2v2h2v-2zm2-2h-2v2h2v-2zm0 0h2v-2h-2v2z'/%3E%3C/svg%3E";
+const MC_TBOX_CLOSE_LIGHT = "%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23ffffff' d='M5 5h2v2H5V5zm4 4H7V7h2v2zm2 2H9V9h2v2zm2 0h-2v2H9v2H7v2H5v2h2v-2h2v-2h2v-2h2v2h2v2h2v2h2v-2h-2v-2h-2v-2h-2v-2zm2-2v2h-2V9h2zm2-2v2h-2V7h2zm0 0V5h2v2h-2z'/%3E%3C/svg%3E";
+const MC_TBOX_ZOOM_LIGHT = "%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23ffffff' d='M11 5h2v2h2v2h2V7h-2V5h-2V3h-2v2zM9 7V5h2v2H9zm0 0v2H7V7h2zm-5 6h16v-2H4v2zm9 6h-2v-2H9v-2H7v2h2v2h2v2h2v-2zm2-2h-2v2h2v-2zm0 0h2v-2h-2v2z'/%3E%3C/svg%3E";
+const MC_TBOX = {
+  closeDark: MC_TBOX_CLOSE_DARK, zoomDark: MC_TBOX_ZOOM_DARK,
+  closeLight: MC_TBOX_CLOSE_LIGHT, zoomLight: MC_TBOX_ZOOM_LIGHT,
+  bg: function (close, zoom, stripe) {
+    return 'url("data:image/svg+xml,' + close + '") 5px center/13px 13px no-repeat'
+      + ',url("data:image/svg+xml,' + zoom + '") right 5px center/13px 13px no-repeat'
+      + ',repeating-linear-gradient(180deg,' + stripe + ' 0 1px,transparent 1px 3px),var(--mc-surface-2)';
+  },
+};
 const McChrome = {
   css: [
     // frame 底色让位 + 桌面缝隙容器化：AppFrame 根自带实底 background（不清掉会盖住桌面噪点）。
@@ -509,18 +525,10 @@ const McChrome = {
     `div[data-phase="hero"]::before,div[data-phase="inert"]::before{content:'DeepSeek Harness';` +
       `display:flex;align-items:center;justify-content:center;flex:none;` +
       `height:20px;font:600 12px/1 var(--font-sb);letter-spacing:.03em;color:var(--mc-fg);` +
-      `background:linear-gradient(var(--mc-surface-2),var(--mc-surface-2)) 6px center/11px 11px no-repeat,` +
-        `linear-gradient(var(--mc-border),var(--mc-border)) 5px center/13px 13px no-repeat,` +
-        `linear-gradient(var(--mc-surface-2),var(--mc-surface-2)) right 6px center/11px 11px no-repeat,` +
-        `linear-gradient(var(--mc-border),var(--mc-border)) right 5px center/13px 13px no-repeat,` +
-        `repeating-linear-gradient(180deg,rgba(255,255,255,.10) 0 1px,transparent 1px 3px),var(--mc-surface-2);` +
+      `background:${MC_TBOX.bg(MC_TBOX.closeDark, MC_TBOX.zoomDark, 'rgba(255,255,255,.10)')};` +
       `border-bottom:1px solid var(--mc-border);box-shadow:inset 0 1px 0 var(--mc-accent)}`,
     `html[data-theme="light"] div[data-phase="hero"]::before,html[data-theme="light"] div[data-phase="inert"]::before{background:` +
-      `linear-gradient(var(--mc-surface-2),var(--mc-surface-2)) 6px center/11px 11px no-repeat,` +
-      `linear-gradient(var(--mc-border),var(--mc-border)) 5px center/13px 13px no-repeat,` +
-      `linear-gradient(var(--mc-surface-2),var(--mc-surface-2)) right 6px center/11px 11px no-repeat,` +
-      `linear-gradient(var(--mc-border),var(--mc-border)) right 5px center/13px 13px no-repeat,` +
-      `repeating-linear-gradient(180deg,rgba(0,0,0,.20) 0 1px,transparent 1px 3px),var(--mc-surface-2)}`,
+      MC_TBOX.bg(MC_TBOX.closeLight, MC_TBOX.zoomLight, 'rgba(0,0,0,.20)') + '}',
     // 滚动口：最小干预 —— 只给深一档底色（窗内"文档区"），滚动条走 tokens 已有的全局 15px 经典款
     `${MC_MAP.scrollport}{background:var(--mc-bg-deep)}`,
     // composer 卡：surface 底 + 1px 边 + 小一级硬投影（方角，.mc-field 语汇）
@@ -562,8 +570,10 @@ const McSidebar = {
     `${MC_MAP.sidebarRoot}{padding:0}`,
     // 品牌行：字号 17px（finder 图标 24px 经 sidebar.brand.mark 席位注入，见 slots）；
     // 名称经 sidebar.brand.name 席位注入 "Deepseek + Harness" 反色标签（原型 sb-head §4）
-    `${MC_MAP.sidebarBrand}{font:400 17px/1 var(--font-sb);color:var(--mc-fg)}`,
-    `${MC_MAP.sidebarBrand} svg{width:24px;height:24px;flex:none}`,
+    // :not([data-mc-finder]) —— 该 ID 级选择器命中侧栏列内一切 button（含 McFinder 自有钮），
+    // 加排除避免 24px 强压 Finder 树图标；官方品牌钮无该属性，规则照常兜底。
+    `${MC_MAP.sidebarBrand}:not([data-mc-finder]){font:400 17px/1 var(--font-sb);color:var(--mc-fg)}`,
+    `${MC_MAP.sidebarBrand}:not([data-mc-finder]) svg{width:24px;height:24px;flex:none}`,
     '.mc-sb-name{display:inline-flex;align-items:center;min-width:0}',
     '.mc-sb-brand{font:700 17px/1.2 var(--font-sb);letter-spacing:.02em;color:var(--mc-fg)}',
     '.mc-sb-tag{font:600 14px/1.2 var(--font-sb);background:var(--mc-fg);color:var(--mc-rail-1);padding:1px 5px;margin-left:5px;flex:none}',
@@ -599,21 +609,14 @@ const McSidebar = {
     `${MC_MAP.sessionRowSelected} *{color:inherit}`,
     // —— 侧栏元素级 Finder 语汇（原型 §4 sb-head/sb-actions/sb-tree/sb-foot）——
     // System 7 窗标题栏（CSS 装饰版）：20px pinstripe 条纹面 + 居中 "Sessions" 标题 + 顶缘 accent 线 +
-    // 左右 13px 描边方块（close/zoom 暗示，双层背景近似描边；交互属三期）。经 ::before 作首 flex 子。
+    // 左右 13px 像素方块（pixelarticons close/zoom data-URI，fill 深浅两组固定色，见 MC_TBOX；
+    // 交互属三期）。经 ::before 作首 flex 子。
     `${MC_MAP.sidebarRoot}::before{content:'Sessions';display:flex;align-items:center;justify-content:center;` +
       `height:20px;flex:none;font:600 12px/1 var(--font-sb);letter-spacing:.03em;color:var(--mc-fg);` +
-      `background:linear-gradient(var(--mc-surface-2),var(--mc-surface-2)) 6px center/11px 11px no-repeat,` +
-        `linear-gradient(var(--mc-border),var(--mc-border)) 5px center/13px 13px no-repeat,` +
-        `linear-gradient(var(--mc-surface-2),var(--mc-surface-2)) right 6px center/11px 11px no-repeat,` +
-        `linear-gradient(var(--mc-border),var(--mc-border)) right 5px center/13px 13px no-repeat,` +
-        `repeating-linear-gradient(180deg,rgba(255,255,255,.10) 0 1px,transparent 1px 3px),var(--mc-surface-2);` +
+      `background:${MC_TBOX.bg(MC_TBOX.closeDark, MC_TBOX.zoomDark, 'rgba(255,255,255,.10)')};` +
       `border-bottom:1px solid var(--mc-border);box-shadow:inset 0 1px 0 var(--mc-accent)}`,
     `html[data-theme="light"] ${MC_MAP.sidebarRoot}::before{background:` +
-      `linear-gradient(var(--mc-surface-2),var(--mc-surface-2)) 6px center/11px 11px no-repeat,` +
-      `linear-gradient(var(--mc-border),var(--mc-border)) 5px center/13px 13px no-repeat,` +
-      `linear-gradient(var(--mc-surface-2),var(--mc-surface-2)) right 6px center/11px 11px no-repeat,` +
-      `linear-gradient(var(--mc-border),var(--mc-border)) right 5px center/13px 13px no-repeat,` +
-      `repeating-linear-gradient(180deg,rgba(0,0,0,.20) 0 1px,transparent 1px 3px),var(--mc-surface-2)}`,
+      MC_TBOX.bg(MC_TBOX.closeLight, MC_TBOX.zoomLight, 'rgba(0,0,0,.20)') + '}',
     // 品牌行 sb-head：padding + 软底线（logoRow 官方 60px 定高放开为内容高）
     `${MC_MAP.sidebarLogoRow}{height:auto;min-height:0;padding:10px 12px 8px;background:var(--mc-rail-1);border-bottom:1px solid var(--mc-border-soft)}`,
     // New Session 钮 = .btn.primary 双内环语汇（§5）：accent 底 + 外 1px 线 + 2px 面缝双环；14px 图标
@@ -636,18 +639,20 @@ const McSidebar = {
     `${MC_MAP.sidebarRegion}{padding:0}`,
     // —— 像素图标替换（pixelarticons 24 栅格）：官方细轮廓 path 藏起，svg 本体 currentColor + 像素 mask 重绘 ——
     // 锚点 aria-label 为 zh i18n 文案（DRIFT-RISK：随语言/官方文案漂移，失配=回退官方轮廓图标，不破版）
-    `${MC_MAP.sidebarRegion} button svg *{visibility:hidden}`,
-    `${MC_MAP.sidebarRegion} button svg{background:currentColor}`,
-    `${MC_MAP.sidebarRegion} button[aria-label="搜索会话"] svg{` +
+    // :not([data-mc-finder]) —— McFinder 遮蔽成功时本区内容是自有组件（按钮带 data-mc-finder），
+    // 降级规则只打官方 DOM；遮蔽失败时官方按钮无该属性，规则照常兜底。
+    `${MC_MAP.sidebarRegion} button:not([data-mc-finder]) svg *{visibility:hidden}`,
+    `${MC_MAP.sidebarRegion} button:not([data-mc-finder]) svg{background:currentColor}`,
+    `${MC_MAP.sidebarRegion} button:not([data-mc-finder])[aria-label="搜索会话"] svg{` +
       `-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M6%202h8v2H6V2zM4%206V4h2v2H4zm0%208H2V6h2v8zm2%202H4v-2h2v2zm8%200v2H6v-2h8zm2-2h-2v2h2v2h2v2h2v2h2v-2h-2v-2h-2v-2h-2v-2zm0-8h2v8h-2V6zm0%200V4h-2v2h2z' fill='black'/%3E%3C/svg%3E") center/contain no-repeat;` +
       `mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M6%202h8v2H6V2zM4%206V4h2v2H4zm0%208H2V6h2v8zm2%202H4v-2h2v2zm8%200v2H6v-2h8zm2-2h-2v2h2v2h2v2h2v2h2v-2h-2v-2h-2v-2h-2v-2zm0-8h2v8h-2V6zm0%200V4h-2v2h2z' fill='black'/%3E%3C/svg%3E") center/contain no-repeat}`,
-    `${MC_MAP.sidebarRegion} button[aria-label="视图选项"] svg{` +
+    `${MC_MAP.sidebarRegion} button:not([data-mc-finder])[aria-label="视图选项"] svg{` +
       `-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M17%204h2v10h-2V4zm0%2012h-2v2h2v2h2v-2h2v-2h-4zm-4-6h-2v10h2V10zm-8%202H3v2h2v6h2v-6h2v-2H5zm8-8h-2v2H9v2h6V6h-2V4zM5%204h2v6H5V4z' fill='black'/%3E%3C/svg%3E") center/contain no-repeat;` +
       `mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M17%204h2v10h-2V4zm0%2012h-2v2h2v2h2v-2h2v-2h-4zm-4-6h-2v10h2V10zm-8%202H3v2h2v6h2v-6h2v-2H5zm8-8h-2v2H9v2h6V6h-2V4zM5%204h2v6H5V4z' fill='black'/%3E%3C/svg%3E") center/contain no-repeat}`,
-    `${MC_MAP.sidebarRegion} button[aria-label="添加工作区"] svg{` +
+    `${MC_MAP.sidebarRegion} button:not([data-mc-finder])[aria-label="添加工作区"] svg{` +
       `-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M11%204h2v7h7v2h-7v7h-2v-7H4v-2h7V4z' fill='black'/%3E%3C/svg%3E") center/contain no-repeat;` +
       `mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M11%204h2v7h7v2h-7v7h-2v-7H4v-2h7V4z' fill='black'/%3E%3C/svg%3E") center/contain no-repeat}`,
-    `${MC_MAP.sidebarRegion} button[aria-label$="的操作"] svg{` +
+    `${MC_MAP.sidebarRegion} button:not([data-mc-finder])[aria-label$="的操作"] svg{` +
       `-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M1%209h6v6H1V9zm2%202v2h2v-2H3zm6-2h6v6H9V9zm2%202v2h2v-2h-2zm6-2h6v6h-6V9zm2%202v2h2v-2h-2z' fill='black'/%3E%3C/svg%3E") center/contain no-repeat;` +
       `mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M1%209h6v6H1V9zm2%202v2h2v-2H3zm6-2h6v6H9V9zm2%202v2h2v-2h-2zm6-2h6v6h-6V9zm2%202v2h2v-2h-2z' fill='black'/%3E%3C/svg%3E") center/contain no-repeat}`,
     // 页脚 sb-foot：rail-2 面 + 顶线（§4）
@@ -735,6 +740,221 @@ const McSidebar = {
         React.createElement('span', { className: 'mc-sb-brand' }, 'Deepseek'),
         React.createElement('span', { className: 'mc-sb-tag' }, 'Harness'));
     })));
+  },
+};
+
+// src/finder.js —— 侧栏内容区重绘：遮蔽 sidebar.workspaces 席位，Finder 树骨架（静态假数据）
+// 协议：{ css, slots(ctx) }。样式全部 .mc- 自有类（宿主选择器零出现，audit §5 安全）；
+// 无 :hover、无 transition，按压只 :active；一切延时走 CLOCK（经 mcfx 的 flashIn，100ms 栅格）。
+// 本步为骨架（假数据）。下一步接真实数据：官方经席位 props 传入 useSessions/useWorkspaces/
+// renderSlot 等（aurum 先例 dsh-theme-aurum/client.js L3123-3150 的遮蔽注册写法），
+// 届时只替换数据源与动作，DOM 结构不动。
+
+// —— 假数据（结构对齐官方 workspace 树：工作区 → 会话；status: run|done|wait；xtra 超 5 折叠）——
+const MC_FINDER_DATA = [
+  { id: 'ws-mac', name: 'dsh-theme-macintosh', sessions: [
+    { id: 'mc-1', title: '侧栏骨架：遮蔽席位渲染', status: 'done' },
+    { id: 'mc-2', title: '标题栏像素方块升级', status: 'run' },
+    { id: 'mc-3', title: 'mcfx 闪烁接入会话行', status: 'done' },
+    { id: 'mc-4', title: '镜像同步与 audit 走查', status: 'wait' },
+    { id: 'mc-5', title: 'Playwright 截图留证', status: 'done' },
+    { id: 'mc-6', title: '浅色主题对比度核对', status: 'wait', xtra: true },
+  ] },
+  { id: 'ws-aurum', name: 'dsh-theme-aurum', sessions: [
+    { id: 'au-1', title: '金 token 色板对比度复核', status: 'done' },
+    { id: 'au-2', title: '工具卡边框像素化', status: 'wait' },
+  ] },
+  { id: 'ws-algae', name: 'algae', sessions: [
+    { id: 'al-1', title: '简历因子拆解与重写', status: 'wait' },
+    { id: 'al-2', title: '周报要点摘取', status: 'done' },
+    { id: 'al-3', title: '会议纪要归档', status: 'wait' },
+  ] },
+];
+const MC_FINDER_SEL0 = 'mc-1'; // 初始选中行（假数据内 1 条）
+
+// 滚动区标题栏：左「工作区」标签 + 紧邻右侧三个 18px 小钮（搜索/视图选项/添加）——
+// 按钮跟标签走（flex:none），不顶到侧栏右缘（原型 §4 .sb-listbar 语汇）
+function McFinderListbar() {
+  const h = React.createElement;
+  const btn = function (title, icon) {
+    return h('button', { className: 'mc-gh-btn', type: 'button', title: title, 'aria-label': title, 'data-mc-finder': '' },
+      h('svg', { viewBox: '0 0 24 24', 'aria-hidden': true }, h('use', { href: icon })));
+  };
+  return h('div', { className: 'mc-sb-listbar' },
+    h('span', { className: 'mc-sb-lb' }, '工作区'),
+    h('span', { className: 'mc-sb-la' },
+      btn('搜索会话', '#i-px-search'),
+      btn('视图选项', '#i-px-sliders'),
+      btn('添加新工作区', '#i-px-plus')));
+}
+
+// 会话行：状态槽（run=脉冲点 / done=✓ / wait=空占位）+ 标题 + 三点菜单钮。
+// 选中行 .on 整行反色方角；onClick 走 flashIn 三拍（ghost→show→白闪→撤，100ms×2 走 CLOCK）。
+function McFinderSess(props) {
+  const h = React.createElement;
+  const s = props.sess;
+  const on = props.selected;
+  const cls = 'mc-sess' + (on ? ' on' : '') + (s.status === 'run' ? ' run' : '') + (s.xtra ? ' xtra' : '');
+  const pick = function (e) {
+    const row = e.currentTarget; // 事件对象即刻取 DOM（不依赖事件池生命周期）
+    flashIn(row, function () { props.onPick(s.id); }); // 选中态切换包进闪烁中拍
+  };
+  let slot = null;
+  if (s.status === 'run') slot = h('i', { className: 'mc-s-dot' });
+  else if (s.status === 'done') slot = h('svg', { className: 'mc-s-ok', 'aria-hidden': true }, h('use', { href: '#i-check' }));
+  return h('div', { className: cls, role: 'button', tabIndex: 0, onClick: pick, title: s.title },
+    h('span', { className: 'mc-s-tt' }, esc(s.title)),
+    h('span', { className: 'mc-s-slot' }, slot),
+    h('button', {
+      className: 'mc-s-menu', type: 'button', title: '会话菜单', 'aria-label': '会话菜单', 'data-mc-finder': '',
+      onClick: function (e) { e.stopPropagation(); }, // 菜单钮不触发行选中
+    }, h('svg', { viewBox: '0 0 24 24', 'aria-hidden': true }, h('use', { href: '#i-px-dots' }))));
+}
+
+// 工作区分组：group-head（折叠三角 i-tri + 文件夹 i-folder + 名称 + 计数 + dots/plus 小钮）+
+// group-body（会话行 + 超 5 条的「展开其余 N 个会话」钮）。折叠开合同走 flashIn 过场。
+function McFinderGroup(props) {
+  const h = React.createElement;
+  const g = props.group;
+  const open = !!props.open;
+  const expanded = !!props.expanded;
+  const xtraCount = g.sessions.filter(function (s) { return s.xtra; }).length;
+  const toggle = function (e) {
+    const grp = e.currentTarget.closest('.mc-group');
+    flashIn(grp, function () { props.onToggle(g.id); });
+  };
+  const ghBtn = function (title, icon) {
+    return h('button', { className: 'mc-gh-btn', type: 'button', title: title, 'aria-label': title, 'data-mc-finder': '' },
+      h('svg', { viewBox: '0 0 24 24', 'aria-hidden': true }, h('use', { href: icon })));
+  };
+  return h('div', { className: 'mc-group' + (expanded ? ' expanded' : '') },
+    h('div', { className: 'mc-group-head' },
+      h('button', { className: 'mc-gh-main', type: 'button', onClick: toggle, 'aria-expanded': open, 'data-mc-finder': '' },
+        h('svg', { className: open ? 'mc-tri open' : 'mc-tri', 'aria-hidden': true }, h('use', { href: '#i-tri' })),
+        h('svg', { 'aria-hidden': true }, h('use', { href: '#i-folder' })),
+        h('span', { className: 'mc-g-name' }, esc(g.name)),
+        h('span', { className: 'mc-g-count' }, esc(String(g.sessions.length)))),
+      h('span', { className: 'mc-gh-act' },
+        ghBtn('工作区菜单', '#i-px-dots'),
+        ghBtn('新建会话', '#i-px-plus'))),
+    h('div', { className: 'mc-group-body' + (open ? ' open' : '') },
+      g.sessions.map(function (s) {
+        return h(McFinderSess, { key: s.id, sess: s, selected: props.selected === s.id, onPick: props.onPick });
+      }),
+      xtraCount > 0 && !expanded ? h('button', {
+        className: 'mc-sb-more', type: 'button', 'data-mc-finder': '',
+        onClick: function (e) {
+          const row = e.currentTarget;
+          flashIn(row, function () { props.onExpand(g.id); });
+        },
+      },
+        h('svg', { viewBox: '0 0 24 24', 'aria-hidden': true }, h('use', { href: '#i-px-chevd' })),
+        esc('展开其余 ' + xtraCount + ' 个会话')) : null));
+}
+
+// Finder 树根：本地 state 管选中 / 分组开合 / 余量展开。运行脉冲点挂载即与 CLOCK 三色相位对齐。
+function McFinderTree() {
+  const h = React.createElement;
+  const selState = React.useState(MC_FINDER_SEL0);
+  const sel = selState[0]; const setSel = selState[1];
+  const openState = React.useState({ 'ws-mac': true, 'ws-aurum': true, 'ws-algae': false });
+  const expState = React.useState({});
+  const root = React.useRef(null);
+  React.useEffect(function () {
+    // 负延迟注入：多 run 点同屏不交错（CLOCK 惰性单例在 McClock.mount 后必在）
+    if (CLOCK && root.current) {
+      const dots = root.current.querySelectorAll('.mc-sess.run .mc-s-dot');
+      for (let i = 0; i < dots.length; i++) CLOCK.syncAnim(dots[i]);
+    }
+  }, []);
+  const onToggle = function (gid) {
+    openState[1](function (o) { const n = Object.assign({}, o); n[gid] = !o[gid]; return n; });
+  };
+  const onExpand = function (gid) {
+    expState[1](function (m) { const n = Object.assign({}, m); n[gid] = true; return n; });
+  };
+  const onPick = function (sid) { setSel(sid); };
+  return h('div', { className: 'mc-sb-find', ref: root },
+    h(McFinderListbar),
+    h('nav', { className: 'mc-sb-tree' },
+      MC_FINDER_DATA.map(function (g) {
+        return h(McFinderGroup, {
+          key: g.id, group: g,
+          open: !!openState[0][g.id], expanded: !!expState[0][g.id],
+          selected: sel, onToggle: onToggle, onExpand: onExpand, onPick: onPick,
+        });
+      })));
+}
+
+const McFinder = {
+  css: `/* ===== 侧栏 Finder 树（McFinder 重绘区；原型 §4 .sb-listbar/.sb-tree/.group/.sess/.sb-more 移植，全 .mc- 自有类）===== */
+.mc-sb-find{display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden;background:var(--mc-rail-1)}
+.mc-sb-listbar{display:flex;align-items:center;gap:4px;flex:none;
+  padding:4px 6px 4px 10px;border-bottom:1px solid var(--mc-border-soft)}
+.mc-sb-lb{font:600 11px/1.4 var(--font-sb);letter-spacing:.05em;color:var(--mc-faint)}
+.mc-sb-la{display:flex;align-items:center;gap:2px;flex:none}
+.mc-sb-tree{flex:1;overflow-y:auto;min-height:0;padding:8px}
+.mc-group + .mc-group{margin-top:6px}
+.mc-group-head{display:flex;align-items:center;gap:2px;width:100%;
+  padding:4px 4px 4px 0;background:none;border:none;text-align:left}
+.mc-gh-main{display:flex;align-items:center;gap:5px;flex:1;min-width:0;
+  padding:0;background:none;border:none;cursor:pointer;text-align:left}
+/* 图标尺寸加 .mc-sb-find 前缀抬特异性：压过官方区域级 button svg 规则（哈希类 0-2-1） */
+.mc-sb-find .mc-group-head svg{width:15px;height:15px;flex:none;color:var(--mc-fg)}
+.mc-gh-act{display:flex;align-items:center;gap:2px;flex:none}
+.mc-gh-btn{display:grid;place-items:center;width:18px;height:18px;flex:none;
+  background:none;border:none;cursor:pointer;color:var(--mc-faint);border-radius:var(--mc-r-tag)}
+.mc-gh-btn:active{color:var(--mc-fg)}
+.mc-sb-find .mc-gh-btn svg{width:12px;height:12px}
+.mc-g-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  font:400 15px/1.25 var(--font-mono);letter-spacing:.02em;color:var(--mc-fg)}
+.mc-g-count{font:500 10px/1.3 var(--font-sb);color:var(--mc-faint)}
+.mc-group-body{overflow:hidden;height:auto}
+.mc-group-body:not(.open){height:0}
+.mc-sess{display:flex;align-items:center;gap:6px;width:100%;box-sizing:border-box;
+  padding:3px 4px 3px 5px;margin-top:2px;background:none;border:none;cursor:pointer;text-align:left;
+  border-radius:var(--mc-r-tag)}
+.mc-s-tt{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  font:400 13px/1.5 var(--font-sb);color:var(--mc-fg)}
+.mc-s-slot{display:flex;align-items:center;justify-content:center;gap:4px;flex:none;order:-1;
+  width:15px;height:15px;margin-left:20px}
+.mc-s-menu{display:grid;place-items:center;width:18px;height:18px;flex:none;
+  background:none;border:none;cursor:pointer;color:var(--mc-faint);border-radius:var(--mc-r-tag)}
+.mc-s-menu:active{color:var(--mc-fg)}
+.mc-sb-find .mc-s-menu svg{width:12px;height:12px}
+.mc-sess.on{background:var(--mc-fg);border-radius:0}
+.mc-sess.on .mc-s-tt,.mc-sess.on .mc-s-menu{color:var(--mc-surface)}
+.mc-sess.on .mc-s-ok{color:var(--mc-surface)}
+.mc-s-dot{display:block;width:6px;height:6px;background:var(--mc-spark);flex:none;
+  clip-path:polygon(33% 0,67% 0,100% 33%,100% 67%,67% 100%,33% 100%,0 67%,0 33%)}
+.mc-sess.run .mc-s-dot{animation:mc-pulse 2.6s steps(1,end) infinite;
+  animation-delay:var(--pulse-delay,0ms)}
+.mc-s-ok{width:11px;height:11px;flex:none;color:var(--mc-success)}
+.mc-sess.xtra{display:none}
+.mc-group.expanded .mc-sess.xtra{display:flex}
+.mc-group.expanded .mc-sb-more{display:none}
+.mc-sb-more{display:flex;align-items:center;gap:5px;box-sizing:border-box;
+  width:calc(100% - 46px);margin:2px 0 0 46px;padding:2px 6px;
+  border:none;background:none;cursor:pointer;text-align:left;
+  color:var(--mc-accent);font:400 12px/1.6 var(--font-sb);border-radius:var(--mc-r-tag)}
+.mc-sb-more:active{color:var(--mc-fg)}
+.mc-sb-find .mc-sb-more svg{width:11px;height:11px;flex:none}`,
+
+  slots(ctx) {
+    // 可选读取 'slots' 服务（ctx.slots 常驻直达；勿属性访问未声明服务）
+    const S = ctx.slots;
+    if (!S || typeof S.register !== 'function' || typeof S.inject !== 'function') return;
+    // 遮蔽官方工作区树：priority:-1 lowest-render（aurum client.js L3123-3150 同款）。
+    // 官方注册保留 —— 停插件即还原；McSidebar.css 的官方树覆写因此降级为兜底（遮蔽失败时不破版）。
+    // inject 返回 disposer，register 返回 disposer —— 经 ctx.effect(() => disp) 归入本 fiber。
+    ctx.effect(() => S.inject('sidebar.workspaces', () => S.register(
+      { name: 'sidebar.workspaces', priority: -1, registrant: 'macintosh' },
+      function McFinderHost(props) {
+        if (typeof React === 'undefined') return null;
+        // props（官方经席位传入，本步骨架不用）：useSessions / useWorkspaces / renderSlot —— 下一步接
+        return React.createElement(McFinderTree, props);
+      }
+    )));
   },
 };
 
@@ -927,9 +1147,10 @@ const mods = {
   MC_MAP: MC_MAP,
   McChrome: McChrome,
   McSidebar: McSidebar,
+  McFinder: McFinder,
   McKit: McKit,
 };
-const order = ["McTokens","McClock","McMcfx","McSprite","MC_MAP","McChrome","McSidebar","McKit"];
+const order = ["McTokens","McClock","McMcfx","McSprite","MC_MAP","McChrome","McSidebar","McFinder","McKit"];
 
 return {
   inject: ["slots", "theme"],
