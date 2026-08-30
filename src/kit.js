@@ -48,19 +48,15 @@ const McKit = {
     // 席位：shell.overlay（additive 列表槽，order 靠后）；默认渲染 null
     const seat = (ctx && ctx.slot && ctx.slot.shell && ctx.slot.shell.overlay) || null;
     if (!seat || typeof seat.register !== 'function') return;
-    const reg = seat.register(
+    seat.register(
       { id: 'mc-kit', order: 900, label: () => 'MC Kit' },
       function kitEntry() {
         if (typeof React === 'undefined') return null;
         return React.createElement(McKitPage);
       },
     );
-    // register 可能返回注销器；幂等防重
-    if (typeof reg === 'function') McKitDispose = reg;
   },
 };
-
-let McKitDispose = null;
 
 // —— 检视页根组件：window.__MC_KIT_OPEN__ 真值才渲染，关闭走本地 state 强刷 ——
 function McKitPage() {
