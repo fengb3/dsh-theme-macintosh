@@ -7,6 +7,9 @@ node_modules/
 # 过程产物:验证截图集中 screenshots/(重拍即弃,不入库)
 screenshots/
 
+# 构建产物
+dist/
+
 # 系统杂项
 Thumbs.db
 Desktop.ini
