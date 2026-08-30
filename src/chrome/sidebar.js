@@ -2,6 +2,9 @@
 // 协议：{ css, slots(ctx) }。样式参考 prototype/component-dev-notes.md §7（侧栏 Finder 窗）。
 // 纪律：宿主选择器一律取自 MC_MAP（本文件只做插值）；无 :hover、无 transition；
 // 席位注册沿用 kit.js 在 Task 5 运行期验证过的 register(meta, render) 形态。
+// teardown 用：首次 flip 前的 data-theme 原值（undefined = 从未 flip，null = 原本无属性）
+let mcThemeOrig = undefined;
+
 const McSidebar = {
   css: [
     // 侧栏列 = Finder 窗：rail-1 底 + 1px 右边线；整窗字体 --font-sb（§7.1）
@@ -19,6 +22,16 @@ const McSidebar = {
     `${MC_MAP.sessionRowSelected} *{color:inherit}`,
   ].join('\n'),
 
+  // 撤除恢复：装配器先调 mount 再调 slots，此处抢在首次 flip 前捕获 data-theme 原值
+  mount() {
+    if (mcThemeOrig === undefined) mcThemeOrig = document.documentElement.getAttribute('data-theme');
+    return function teardown() {
+      if (mcThemeOrig === undefined) return; // 从未捕获（未进入 mount）→ 不动
+      if (mcThemeOrig === null) document.documentElement.removeAttribute('data-theme');
+      else document.documentElement.setAttribute('data-theme', mcThemeOrig);
+    };
+  },
+
   slots(ctx) {
     if (!ctx || !ctx.slot) return;
     // 月牙主题钮：sidebar.footer.action（list 席，宿主 dsh-client-ui-sidebar L307-310 注册）
@@ -30,6 +43,7 @@ const McSidebar = {
         if (typeof React === 'undefined') return null;
         const flip = function () {
           const el = document.documentElement;
+          if (mcThemeOrig === undefined) mcThemeOrig = el.getAttribute('data-theme');
           const cur = el.getAttribute('data-theme');
           el.setAttribute('data-theme', cur === 'light' ? 'dark' : 'light'); // 缺省视为 dark → light
         };

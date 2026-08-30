@@ -86,10 +86,20 @@ test('assemble 产出含 tokens/primitives 全集与 kit 检视页', () => {
   assert.ok(out.includes('MC_MAP.scrollport'), 'chrome css 应经 MC_MAP.scrollport 插值');
   assert.ok(out.includes('var(--mc-bg-deep)'), '滚动口应染 --mc-bg-deep');
   // 动画纪律：全 css 无 hover 态、无 transition 声明（豁免媒体查询里的 transition-duration 除外）
-  const cssStart = out.indexOf('data-mc-root');
-  const cssChunk = out.slice(cssStart);
-  assert.ok(!/:hover\b/.test(cssChunk), '全主题不得出现 :hover');
-  assert.ok(!/(?<!-)transition\s*:/.test(cssChunk), '全主题不得出现 transition 声明');
+  // 切片须覆盖全部模块 CSS：从模块区真正开始（const McTokens = {）到 apply 样板（return (function(){）之前
+  const cssStart = out.indexOf('const McTokens = {');
+  const cssEnd = out.indexOf('return (function(){');
+  assert.ok(cssStart >= 0, '应找到模块 CSS 起点 const McTokens = {');
+  assert.ok(cssEnd > cssStart, '应找到 apply 样板起点 return (function(){');
+  const cssChunk = out.slice(cssStart, cssEnd);
+  // 剥注释（照 audit.mjs 保守规则：base64/url( 行不剥 //，避免误伤 data-URI）
+  const cssScan = cssChunk
+    .replace(/\/\*[\s\S]*?\*\//g, ' ')
+    .split('\n')
+    .map((line) => (/base64|url\(/.test(line) ? line : line.replace(/(^|[^:])\/\/.*$/, '$1')))
+    .join('\n');
+  assert.ok(!/:hover\b/.test(cssScan), '全主题不得出现 :hover');
+  assert.ok(!/(?<!-)transition\s*:/.test(cssScan), '全主题不得出现 transition 声明');
 });
 
 test('assemble 产出含侧栏 Finder 覆写与主题月牙钮', () => {
