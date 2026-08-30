@@ -18,5 +18,14 @@ html[data-theme="light"]{
   --mc-fg:#0a0a0a; --mc-muted:#333; --mc-faint:#555; --mc-border:#0a0a0a;
   --mc-accent:#8f8fc0; --mc-sel-bg:#dadaff; --mc-warn:#8a6a1f;
   --dsw-specific-sidebar-fill:var(--mc-surface);
-}`
+}
+/* mcfx 闪烁类（照《笔记》§0.3）：只管遮罩本体，几何（定位/尺寸）由消费方给 */
+.mc-ghost{opacity:0;pointer-events:none}
+.mc-flash{background:#fff;pointer-events:none;position:relative}
+.mc-flash::after{ /* 扫描线：单条 1px 硬边，随遮罩全宽 */
+  content:'';position:absolute;left:0;right:0;top:0;height:1px;
+  background:rgba(0,0,0,.35);
+}
+html[data-theme="light"] .mc-flash{background:#0a0a0a}
+html[data-theme="light"] .mc-flash::after{background:rgba(255,255,255,.35)}`
 };
