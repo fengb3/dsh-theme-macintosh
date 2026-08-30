@@ -64,7 +64,8 @@ ${modsInit}
   };
   const order = ${JSON.stringify(present)};
   return {
-    inject: ['slots'], // 动态 ctx 不暴露 ctx.slot：席位系统是 'slots' 服务，须声明注入后经 ctx.slots 使用
+    // 勿声明 inject:['slots']：动态 fiber 内该服务不可见时会永久 parked（apply 不执行但宿主仍报成功）。
+    // 席位一律在模块内用 ctx.get('slots') 可选读取（守卫允许），拿不到则静默跳过。
     apply(ctx) {
       const style = document.createElement('style');
       style.setAttribute('data-mc-root','');

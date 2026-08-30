@@ -40,9 +40,11 @@ const McSidebar = {
   },
 
   slots(ctx) {
-    if (!ctx || !ctx.slots || typeof ctx.slots.register !== 'function') return;
-    const reg = ctx.slots.register.bind(ctx.slots);
-    const wait = ctx.slots.inject.bind(ctx.slots);
+    // 可选读取 'slots' 服务（ctx.get 是守卫允许的路径；勿用 ctx.slot 属性访问、勿声明 inject）
+    const S = (ctx && typeof ctx.get === 'function') ? ctx.get('slots') : null;
+    if (!S || typeof S.register !== 'function' || typeof S.inject !== 'function') return;
+    const reg = S.register.bind(S);
+    const wait = S.inject.bind(S);
     // 月牙主题钮：sidebar.footer.action（list 席）。ctx.slots.inject 等席位声明就绪后注册，
     // 返回的 disposer 经 ctx.effect 归入本 fiber（卸载即撤席位）。
     ctx.effect(() => wait('sidebar.footer.action', () => reg({

@@ -50,9 +50,10 @@ const McKit = {
 
   slots(ctx) {
     // 席位：shell.overlay（additive 列表槽，order 靠后）；默认渲染 null。
-    // ctx.slots 是注入的 'slots' 服务；inject() 等席位声明就绪，disposer 归本 fiber。
-    if (!ctx || !ctx.slots || typeof ctx.slots.register !== 'function') return;
-    ctx.effect(() => ctx.slots.inject('shell.overlay', () => ctx.slots.register({
+    // 'slots' 服务经 ctx.get 可选读取（勿声明 inject，勿属性访问）。
+    const S = (ctx && typeof ctx.get === 'function') ? ctx.get('slots') : null;
+    if (!S || typeof S.register !== 'function' || typeof S.inject !== 'function') return;
+    ctx.effect(() => S.inject('shell.overlay', () => S.register({
       name: 'shell.overlay',
       id: 'mc-kit',
       order: 900,
