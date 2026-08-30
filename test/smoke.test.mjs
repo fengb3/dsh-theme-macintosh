@@ -78,6 +78,12 @@ test('assemble 产出含 tokens/primitives 全集与 kit 检视页', () => {
   assert.ok(out.includes('__MC_KIT_OPEN__'), 'kit 开关应走 window.__MC_KIT_OPEN__');
   assert.ok(out.includes("'mc-kit'"), 'kit 应注册 mc-kit 席位');
   assert.ok(out.includes('shell.overlay'), 'kit 应占 shell.overlay');
+  // chrome：选择器管制 + 桌面画布
+  assert.ok(out.includes('MC_MAP'), '应内联 MC_MAP 宿主选择器表');
+  assert.ok(out.includes('data-mc-desk'), 'chrome.mount 应注入 data-mc-desk 桌面画布');
+  assert.ok(out.includes('--mc-shadow-panel'), '主列应套 .win 硬投影');
+  assert.ok(out.includes('[data-conversation-scroll]{background:var(--mc-bg-deep)'),
+    'chrome css 应以 MAP.scrollport 插值出滚动口染色规则');
   // 动画纪律：全 css 无 hover 态、无 transition 声明（豁免媒体查询里的 transition-duration 除外）
   const cssStart = out.indexOf('data-mc-root');
   const cssChunk = out.slice(cssStart);

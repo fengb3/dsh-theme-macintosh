@@ -1,0 +1,32 @@
+// src/chrome/chrome.js —— chrome 染色 + 桌面画布
+// 协议：{ css, mount(ctx) }。RULING：桌面画布走 mount（body 首元素 data-mc-desk，z-index:-1），
+// 不占 shell.overlay 席（该席 z-index:20 在 React 树内、叠在内容之上，只适合 kit 检视页那种浮层）。
+// 纪律：选择器字符串一律来自 map.js 的 MC_MAP（本文件只做插值）；无 :hover、无 transition。
+const McChrome = {
+  css: [
+    // frame 底色让位：AppFrame 根自带实底 background(--dsw-alias-bg-base)，不清掉会盖住桌面噪点；
+    // 各列（sidebarCol/detailsCol/主窗）自有实底，不受影响
+    `${MC_MAP.appRoot}{background:transparent}`,
+    // 主列 = 会话窗（.win 语汇）：surface 底 + 1px 边 + 5px 圆角 + 3px 硬投影。
+    // 刻意不收 overflow —— 宿主自管滚动（centerCol overflow:hidden + data-conversation-scroll）
+    `${MC_MAP.mainColumn}{background:var(--mc-surface);border:1px solid var(--mc-border);border-radius:var(--mc-r-window);box-shadow:var(--mc-shadow-panel)}`,
+    // 会话头部条：surface-3 + 1px 底线（宿主 header::after 线已由 token 别名染成 --mc-border，视觉重叠成加重底线）
+    `${MC_MAP.sessionHeader}{background:var(--mc-surface-3);border-bottom:1px solid var(--mc-border)}`,
+    // 滚动口：最小干预 —— 只给深一档底色（窗内"文档区"），滚动条走 tokens 已有的全局 15px 经典款
+    `${MC_MAP.scrollport}{background:var(--mc-bg-deep)}`,
+    // composer 卡：surface 底 + 1px 边 + 小一级硬投影（方角，.mc-field 语汇）
+    `${MC_MAP.composerCard}{background:var(--mc-surface);border:1px solid var(--mc-border);box-shadow:var(--mc-shadow-field);border-radius:0}`,
+  ].join('\n'),
+  // 桌面画布：fixed 全视口、置于内容之下（z-index:-1）、不接指针；噪点瓦片 8×8 平铺于 --mc-bg 之上。
+  // body 自身也带同款底（tokens 已设），本 div 是画布的显式承载（data-mc-desk），二者视觉一致、互为冗余。
+  mount(ctx) {
+    const desk = document.createElement('div');
+    desk.setAttribute('data-mc-desk', '');
+    desk.setAttribute('aria-hidden', 'true');
+    desk.style.cssText = 'position:fixed;inset:0;z-index:-1;pointer-events:none;'
+      + 'background-color:var(--mc-bg);background-image:var(--mc-desktop-pattern);'
+      + 'background-size:8px 8px;background-repeat:repeat;background-position:0 0';
+    document.body.insertBefore(desk, document.body.firstChild); // sprite svg 之后也无妨（都无几何影响）
+    return function teardown() { desk.remove(); };
+  },
+};
