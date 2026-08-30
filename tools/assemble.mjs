@@ -68,6 +68,9 @@ ${modsInit}
     // 席位一律在模块内用 ctx.get('slots') 可选读取（守卫允许），拿不到则静默跳过。
     apply(ctx) {
       try { console.log('[mcx] apply — 主题注入开始'); } catch (e) {}
+      try { window.__MC_LOADED_AT = Date.now(); } catch (e) {}
+      // 心跳：每 10s 报一次存活（fiber 被拆则心跳消失）
+      const hb = window.setInterval(() => { try { console.log('[mcx] alive t+' + Math.round((Date.now() - window.__MC_LOADED_AT) / 1000) + 's'); } catch (e) {} }, 10000);
       const style = document.createElement('style');
       style.setAttribute('data-mc-root','');
       let css = ${JSON.stringify(fontCss)};
@@ -107,7 +110,7 @@ ${modsInit}
         }
       } catch (e) { console.error('[mcx] overrideTokens failed:', e && e.message); }
       try { console.log('[mcx] apply 完成，样式已入 head'); } catch (e) {}
-      ctx.effect(() => style.remove());
+      ctx.effect(() => { try { window.clearInterval(hb); console.log('[mcx] fiber dispose — 样式/叠层移除'); } catch (e) {} style.remove(); });
     },
   };
 })();`;
