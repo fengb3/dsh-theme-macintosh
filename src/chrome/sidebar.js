@@ -33,41 +33,40 @@ const McSidebar = {
   },
 
   slots(ctx) {
-    if (!ctx || !ctx.slot) return;
-    // 月牙主题钮：sidebar.footer.action（list 席，宿主 dsh-client-ui-sidebar L307-310 注册）
-    const seat = ctx.slot.sidebar && ctx.slot.sidebar.footer && ctx.slot.sidebar.footer.action;
-    if (seat && typeof seat.register === 'function') { // 席位缺席 → 静默跳过（不短路 brand.mark）
-    seat.register(
-      { id: 'mc-theme-toggle', order: 50, label: () => '切换深浅主题' },
-      function moonToggle() {
-        if (typeof React === 'undefined') return null;
-        const flip = function () {
-          const el = document.documentElement;
-          if (mcThemeOrig === undefined) mcThemeOrig = el.getAttribute('data-theme');
-          const cur = el.getAttribute('data-theme');
-          el.setAttribute('data-theme', cur === 'light' ? 'dark' : 'light'); // 缺省视为 dark → light
-        };
-        return React.createElement('button', {
-          type: 'button',
-          className: 'mc-icon-btn',
-          'aria-label': '切换深浅主题',
-          title: '切换深浅主题',
-          onClick: flip,
-        }, React.createElement('svg', null, React.createElement('use', { href: '#i-moon' })));
-      },
-    );
-    }
-    // 品牌图标：Finder 24px 换掉宿主 FishLogo（single 席，宿主 L170 renderSlot fallback）
-    const mark = ctx.slot.sidebar && ctx.slot.sidebar.brand && ctx.slot.sidebar.brand.mark;
-    if (mark && typeof mark.register === 'function') {
-      mark.register(
-        { id: 'mc-brand-mark', label: () => 'Finder' },
-        function finderMark() {
-          if (typeof React === 'undefined') return null;
-          return React.createElement('svg', { width: 24, height: 24, 'aria-hidden': true },
-            React.createElement('use', { href: '#i-finder' }));
-        },
-      );
-    }
+    if (!ctx || !ctx.slots || typeof ctx.slots.register !== 'function') return;
+    const reg = ctx.slots.register.bind(ctx.slots);
+    const wait = ctx.slots.inject.bind(ctx.slots);
+    // 月牙主题钮：sidebar.footer.action（list 席）。ctx.slots.inject 等席位声明就绪后注册，
+    // 返回的 disposer 经 ctx.effect 归入本 fiber（卸载即撤席位）。
+    ctx.effect(() => wait('sidebar.footer.action', () => reg({
+      name: 'sidebar.footer.action',
+      id: 'mc-theme-toggle',
+      order: 50,
+      label: () => '切换深浅主题',
+    }, function MoonToggle() {
+      if (typeof React === 'undefined') return null;
+      const flip = function () {
+        const el = document.documentElement;
+        if (mcThemeOrig === undefined) mcThemeOrig = el.getAttribute('data-theme');
+        const cur = el.getAttribute('data-theme');
+        el.setAttribute('data-theme', cur === 'light' ? 'dark' : 'light'); // 缺省视为 dark → light
+      };
+      return React.createElement('button', {
+        type: 'button',
+        className: 'mc-icon-btn',
+        'aria-label': '切换深浅主题',
+        title: '切换深浅主题',
+        onClick: flip,
+      }, React.createElement('svg', null, React.createElement('use', { href: '#i-moon' })));
+    })));
+    // 品牌图标：Finder 24px 换掉宿主 FishLogo（single 席；动态条目优先于出厂件，实现换标）
+    ctx.effect(() => wait('sidebar.brand.mark', () => reg({
+      name: 'sidebar.brand.mark',
+      label: () => 'Finder',
+    }, function FinderMark() {
+      if (typeof React === 'undefined') return null;
+      return React.createElement('svg', { width: 24, height: 24, 'aria-hidden': true },
+        React.createElement('use', { href: '#i-finder' }));
+    })));
   },
 };

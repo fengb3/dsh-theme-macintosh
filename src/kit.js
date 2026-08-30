@@ -45,16 +45,18 @@ const McKit = {
 .kit-field{width:280px}`,
 
   slots(ctx) {
-    // 席位：shell.overlay（additive 列表槽，order 靠后）；默认渲染 null
-    const seat = (ctx && ctx.slot && ctx.slot.shell && ctx.slot.shell.overlay) || null;
-    if (!seat || typeof seat.register !== 'function') return;
-    seat.register(
-      { id: 'mc-kit', order: 900, label: () => 'MC Kit' },
-      function kitEntry() {
-        if (typeof React === 'undefined') return null;
-        return React.createElement(McKitPage);
-      },
-    );
+    // 席位：shell.overlay（additive 列表槽，order 靠后）；默认渲染 null。
+    // ctx.slots 是注入的 'slots' 服务；inject() 等席位声明就绪，disposer 归本 fiber。
+    if (!ctx || !ctx.slots || typeof ctx.slots.register !== 'function') return;
+    ctx.effect(() => ctx.slots.inject('shell.overlay', () => ctx.slots.register({
+      name: 'shell.overlay',
+      id: 'mc-kit',
+      order: 900,
+      label: () => 'MC Kit',
+    }, function KitEntry() {
+      if (typeof React === 'undefined') return null;
+      return React.createElement(McKitPage);
+    })));
   },
 };
 

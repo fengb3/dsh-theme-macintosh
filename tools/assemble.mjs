@@ -64,6 +64,7 @@ ${modsInit}
   };
   const order = ${JSON.stringify(present)};
   return {
+    inject: ['slots'], // 动态 ctx 不暴露 ctx.slot：席位系统是 'slots' 服务，须声明注入后经 ctx.slots 使用
     apply(ctx) {
       const style = document.createElement('style');
       style.setAttribute('data-mc-root','');
