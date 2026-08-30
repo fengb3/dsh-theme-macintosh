@@ -51,11 +51,11 @@ html[data-theme="light"]{
   /* 侧栏 Finder 白窗：rail 系浅色覆盖（System 7 白窗黑线；rail-1 与 --mc-surface 同为 #fff，无冲突） */
   --mc-rail-1:#fff; --mc-rail-2:#eee;
 }
-/* 官方 token 别名（层1）：宿主 ui-theme 把 --dsw-alias-* 定义在 body（深色 body[data-ds-dark-theme]），
-   :root 上的同名声明会被 body 覆盖 → 别名必须落在 body 上；用双选择器拿足特异性（0-1-1），
-   同特异性下我们的 style 更晚注入即胜出。值全部经 var(--mc-*) 间接引用，月牙钮翻转 html[data-theme]
+/* 官方 token 别名（层1）：宿主 ui-theme 把 --dsw-alias-* 定义在 body（深色 body[data-ds-dark-theme]）。
+   选择器用 html body 前缀抬高特异性（0-0-2 / 0-1-2），压过宿主 0-0-1 / 0-1-1 —— 宿主重连/重装
+   主题样式表再追加到我们之后也无法反超。值全部经 var(--mc-*) 间接引用，月牙钮翻转 html[data-theme]
    时别名随 --mc-* 动态跟随。全局字体一并接到像素链（--dsw-font-family 是官方正文字体位）。 */
-body, body[data-ds-dark-theme]{
+html body, html body[data-ds-dark-theme]{
   --dsw-alias-bg-base:var(--mc-bg); --dsw-alias-bg-layer-1:var(--mc-surface); --dsw-alias-bg-layer-2:var(--mc-surface-2);
   --dsw-alias-bg-overlay:var(--mc-surface-3); --dsw-alias-border-l1:var(--mc-border); --dsw-alias-border-l2:var(--mc-border);
   --dsw-alias-brand-primary:var(--mc-accent); --dsw-alias-label-primary:var(--mc-fg); --dsw-alias-label-secondary:var(--mc-muted);
@@ -81,14 +81,8 @@ html[data-theme="light"] ::selection{background:var(--mc-sel-bg);color:var(--mc-
 /* 焦点环 — 经典 Mac 虚线环（向外偏移 2px） */
 :focus-visible{outline:1px dashed var(--mc-border);outline-offset:2px}
 :focus:not(:focus-visible){outline:none}
-/* 15px 经典滚动条（双轨：scrollbar-width:thin + ::-webkit--scrollbar）
+/* 15px 经典滚动条：仅作用于真实滚动容器（选择器经 chrome.js 的 MC_MAP 注入；kit 自带）。
    DEFERRED: 四向 single-button 箭头 SVG 未移植（8 条 data-URI 与 border 色硬耦合），后续任务补 */
-*{scrollbar-width:thin;scrollbar-color:var(--mc-scroll-box) var(--mc-scroll-track)}
-::-webkit-scrollbar{width:15px;height:15px}
-::-webkit-scrollbar-track{background:var(--mc-scroll-track);
-  border-left:1px solid var(--mc-border)}
-::-webkit-scrollbar-thumb{background:var(--mc-scroll-box);border:1px solid var(--mc-border)}
-::-webkit-scrollbar-corner{background:var(--mc-scroll-track)}
 /* 动画豁免 — 全局压到 .01ms（闪烁是 class 切换不受影响） */
 @media (prefers-reduced-motion:reduce){
   *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;

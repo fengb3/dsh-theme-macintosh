@@ -24,7 +24,14 @@ const McSidebar = {
 
   // 撤除恢复：装配器先调 mount 再调 slots，此处抢在首次 flip 前捕获 data-theme 原值
   mount() {
-    if (mcThemeOrig === undefined) mcThemeOrig = document.documentElement.getAttribute('data-theme');
+    if (mcThemeOrig === undefined) {
+      mcThemeOrig = document.documentElement.getAttribute('data-theme');
+      // 默认主题跟随宿主深浅：宿主浅色时补 data-theme=light，避免"浅色宿主 × 深色 mc 值"的对比度穿帮
+      if (mcThemeOrig === null && !document.body.hasAttribute('data-ds-dark-theme')) {
+        document.documentElement.setAttribute('data-theme', 'light');
+        mcThemeOrig = null; // 仍记 null：卸载时移除属性，回到宿主原生
+      }
+    }
     return function teardown() {
       if (mcThemeOrig === undefined) return; // 从未捕获（未进入 mount）→ 不动
       if (mcThemeOrig === null) document.documentElement.removeAttribute('data-theme');
@@ -65,8 +72,11 @@ const McSidebar = {
       label: () => 'Finder',
     }, function FinderMark() {
       if (typeof React === 'undefined') return null;
-      return React.createElement('svg', { width: 24, height: 24, 'aria-hidden': true },
-        React.createElement('use', { href: '#i-finder' }));
+      // 显式给色：不依赖宿主按钮的继承色，防止图标透明/隐形
+      return React.createElement('svg', {
+        width: 24, height: 24, 'aria-hidden': true,
+        style: { color: 'var(--mc-fg)', display: 'block' },
+      }, React.createElement('use', { href: '#i-finder' }));
     })));
   },
 };

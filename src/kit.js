@@ -42,7 +42,11 @@ const McKit = {
   background:var(--mc-surface-2);border:1px solid var(--mc-border);border-radius:var(--mc-r-tag)}
 .kit-icell svg{width:20px;height:20px;color:var(--mc-fg)}
 .kit-ilabel{font:400 10px var(--font-mono);color:var(--mc-faint);word-break:break-all}
-.kit-field{width:280px}`,
+.kit-field{width:280px}
+.kit-scrim{scrollbar-width:thin;scrollbar-color:var(--mc-scroll-box) transparent}
+.kit-scrim::-webkit-scrollbar{width:15px}
+.kit-scrim::-webkit-scrollbar-track{background:var(--mc-scroll-track);border-left:1px solid var(--mc-border)}
+.kit-scrim::-webkit-scrollbar-thumb{background:var(--mc-scroll-box);border:1px solid var(--mc-border)}`,
 
   slots(ctx) {
     // 席位：shell.overlay（additive 列表槽，order 靠后）；默认渲染 null。
