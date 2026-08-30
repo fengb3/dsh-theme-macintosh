@@ -447,8 +447,10 @@ const McSprite = {
 //      会话行 div role="treeitem" + aria-selected（选中=true）
 //  - dsh-client-ui-sidebar/lib/client.js —— SidebarRoot：logoRow/brand 全哈希 class、aria-label 走 i18n（不可用）
 const MC_MAP = {
-  // appRoot = 三列 frame（AppFrame 根 div）。无 data-* → 结构位（#root 唯一子div）
-  appRoot: '#root > div', /* DRIFT-RISK: structural */
+  // appRoot = 三列 frame grid（AppFrame 根 div）。注意：#root 与 frame 之间隔着一层
+  // display:contents 的透传包装 div（padding 打在它上面无效）——真 grid 是 #root > div > div。
+  // 无 data-* → 结构位。display:contents 包装经 probe-dom 实测（2026-08-30）。
+  appRoot: '#root > div > div', /* DRIFT-RISK: structural */
   // mainColumn = 会话根（header + 滚动口 + composer 都在其内，正好是"主窗"区域）
   mainColumn: 'div[data-phase]',
   // sessionHeader = ConversationSessionHeader 的 <header>；无 data-* → 会话根内结构位
@@ -456,14 +458,14 @@ const MC_MAP = {
   scrollport: '[data-conversation-scroll]',
   composerCard: '[data-composer-card]',
   // —— 以下供 Task 7 侧栏使用（Task 7 已对部署包复核，出处行号如下） ——
-  // sidebar = 网格首列 sidebarCol。复核：dsh-client-ui-layout/lib/client.js L218-232 ——
-  //   AppFrame 根 div（frame，即 #root 唯一子 div）children[0] 恒为 sidebarCol div
-  //   （L226-232，无 data-*，class 为哈希 pI_x6G_sidebarCol）。结构位成立但随宿主改版漂移。
-  sidebar: '#root > div > div:first-child', /* DRIFT-RISK: structural */
+  // sidebar = 网格首列 sidebarCol。frame children 顺序：sidebarCol / centerCol / detailsCol /
+  //   overlayLayer / handle（后两者 absolute）。注意选择器要越过 display:contents 包装层。
+  //   复核：dsh-client-ui-layout/lib/client.js L218-232；probe-dom 实测（2026-08-30）。
+  sidebar: '#root > div > div > div:first-child', /* DRIFT-RISK: structural */
   // sidebarBrand = 侧栏列内首个 button。复核：dsh-client-ui-sidebar/lib/client.js L156-201 ——
   //   logoRow 首子 = 品牌 button（L158-181，仅 wide 形态渲染）；rail 收起时首个 button 变为
   //   折叠钮（L185-200）。aria-label 走 i18n（L161/188）不可依赖。样式覆写宽态命中品牌、窄态命中折叠钮，可接受。
-  sidebarBrand: '#root > div > div:first-child button', /* DRIFT-RISK: structural */
+  sidebarBrand: '#root > div > div > div:first-child button', /* DRIFT-RISK: structural */
   // sessionRow / sessionRowSelected。复核：dsh-client-ui-workspace/lib/client.js L718-721 ——
   //   SessionNodeItem 行 div role="treeitem" + aria-selected（selected 时 "true"），稳定语义锚点。
   sessionRow: 'div[role="treeitem"]',
@@ -476,15 +478,17 @@ const MC_MAP = {
 // 纪律：选择器字符串一律来自 map.js 的 MC_MAP（本文件只做插值）；无 :hover、无 transition。
 const McChrome = {
   css: [
-    // frame 底色让位：AppFrame 根自带实底 background(--dsw-alias-bg-base)，不清掉会盖住桌面噪点；
-    // 各列（sidebarCol/detailsCol/主窗）自有实底，不受影响
-    `${MC_MAP.appRoot}{background:transparent}`,
-    // 主列 = 会话窗（.win 语汇）：surface 底 + 1px 边 + 3px 硬投影。
-    // 桌面两大窗 = 直角（原型 .desk > .win{border-radius:0}）；margin 留出桌面缝隙（两侧窗浮在噪点桌面上）。
+    // frame 底色让位 + 桌面缝隙容器化：AppFrame 根自带实底 background（不清掉会盖住桌面噪点）。
+    // 缝隙做在 grid 容器上（padding 四周 12px + 列间 gap 12px）——官方 grid 行高固定 100vh，
+    // 给列加 margin 只会溢出屏幕（实测 bottom=914>900），容器 padding 才能真正收进视口。
+    `${MC_MAP.appRoot}{background:transparent;box-sizing:border-box;padding:12px;gap:12px}`,
+    // 主列 = 会话窗（.win 语汇）：surface 底 + 1px 边 + 3px 硬投影；桌面两大窗 = 直角（原型 .desk > .win）。
     // 刻意不收 overflow —— 宿主自管滚动（centerCol overflow:hidden + data-conversation-scroll）
-    `${MC_MAP.mainColumn}{background:var(--mc-surface);border:1px solid var(--mc-border);border-radius:0;box-shadow:var(--mc-shadow-panel);margin:12px}`,
-    // 会话头部条：surface-3 + 1px 底线（宿主 header::after 线已由 token 别名染成 --mc-border，视觉重叠成加重底线）
-    `${MC_MAP.sessionHeader}{background:var(--mc-surface-3);border-bottom:1px solid var(--mc-border)}`,
+    `${MC_MAP.mainColumn}{background:var(--mc-surface);border:1px solid var(--mc-border);border-radius:0;box-shadow:var(--mc-shadow-panel)}`,
+    // 会话头部条 = 装饰 titlebar（pinstripe 条纹面 + 顶缘 accent 高亮线，原型 §3 .titlebar 语汇；
+    // close/zoom 方块与交互属三期结构级，此处只做 CSS 染色）。浅色条纹加深、深色条纹提亮。
+    `${MC_MAP.sessionHeader}{background:repeating-linear-gradient(180deg,rgba(255,255,255,.10) 0 1px,transparent 1px 3px),var(--mc-surface-2);border-bottom:1px solid var(--mc-border);box-shadow:inset 0 1px 0 var(--mc-accent)}`,
+    `html[data-theme="light"] ${MC_MAP.sessionHeader}{background:repeating-linear-gradient(180deg,rgba(0,0,0,.20) 0 1px,transparent 1px 3px),var(--mc-surface-2)}`,
     // 滚动口：最小干预 —— 只给深一档底色（窗内"文档区"），滚动条走 tokens 已有的全局 15px 经典款
     `${MC_MAP.scrollport}{background:var(--mc-bg-deep)}`,
     // composer 卡：surface 底 + 1px 边 + 小一级硬投影（方角，.mc-field 语汇）
@@ -519,9 +523,9 @@ let mcThemeOrig = undefined;
 
 const McSidebar = {
   css: [
-    // 侧栏列 = Finder 窗（.win 语汇完整版）：rail-1 底 + 四边 1px 黑边 + 3px 硬投影 + 直角；
-    // margin 让窗浮在桌面噪点上（上/下/左各 12px，右边线由 border 提供）。整窗字体 --font-sb（§7.1）
-    `${MC_MAP.sidebar}{background:var(--mc-rail-1);border:1px solid var(--mc-border);border-radius:0;box-shadow:var(--mc-shadow-panel);margin:12px 0 12px 12px;font-family:var(--font-sb)}`,
+    // 侧栏列 = Finder 窗（.win 语汇完整版）：rail-1 底 + 四边 1px 黑边 + 3px 硬投影 + 直角。
+    // 桌面缝隙由容器 padding/gap 提供（见 chrome 段 appRoot 规则）。整窗字体 --font-sb（§7.1）
+    `${MC_MAP.sidebar}{background:var(--mc-rail-1);border:1px solid var(--mc-border);border-radius:0;box-shadow:var(--mc-shadow-panel);font-family:var(--font-sb)}`,
     // 品牌行：字号 17px（finder 图标 24px 经 sidebar.brand.mark 席位注入，见 slots）；
     // 名称经 sidebar.brand.name 席位注入 "Deepseek + Harness" 反色标签（原型 sb-head §4）
     `${MC_MAP.sidebarBrand}{font:400 17px/1 var(--font-sb);color:var(--mc-fg)}`,

@@ -16,8 +16,10 @@
 //      会话行 div role="treeitem" + aria-selected（选中=true）
 //  - dsh-client-ui-sidebar/lib/client.js —— SidebarRoot：logoRow/brand 全哈希 class、aria-label 走 i18n（不可用）
 const MC_MAP = {
-  // appRoot = 三列 frame（AppFrame 根 div）。无 data-* → 结构位（#root 唯一子div）
-  appRoot: '#root > div', /* DRIFT-RISK: structural */
+  // appRoot = 三列 frame grid（AppFrame 根 div）。注意：#root 与 frame 之间隔着一层
+  // display:contents 的透传包装 div（padding 打在它上面无效）——真 grid 是 #root > div > div。
+  // 无 data-* → 结构位。display:contents 包装经 probe-dom 实测（2026-08-30）。
+  appRoot: '#root > div > div', /* DRIFT-RISK: structural */
   // mainColumn = 会话根（header + 滚动口 + composer 都在其内，正好是"主窗"区域）
   mainColumn: 'div[data-phase]',
   // sessionHeader = ConversationSessionHeader 的 <header>；无 data-* → 会话根内结构位
@@ -25,14 +27,14 @@ const MC_MAP = {
   scrollport: '[data-conversation-scroll]',
   composerCard: '[data-composer-card]',
   // —— 以下供 Task 7 侧栏使用（Task 7 已对部署包复核，出处行号如下） ——
-  // sidebar = 网格首列 sidebarCol。复核：dsh-client-ui-layout/lib/client.js L218-232 ——
-  //   AppFrame 根 div（frame，即 #root 唯一子 div）children[0] 恒为 sidebarCol div
-  //   （L226-232，无 data-*，class 为哈希 pI_x6G_sidebarCol）。结构位成立但随宿主改版漂移。
-  sidebar: '#root > div > div:first-child', /* DRIFT-RISK: structural */
+  // sidebar = 网格首列 sidebarCol。frame children 顺序：sidebarCol / centerCol / detailsCol /
+  //   overlayLayer / handle（后两者 absolute）。注意选择器要越过 display:contents 包装层。
+  //   复核：dsh-client-ui-layout/lib/client.js L218-232；probe-dom 实测（2026-08-30）。
+  sidebar: '#root > div > div > div:first-child', /* DRIFT-RISK: structural */
   // sidebarBrand = 侧栏列内首个 button。复核：dsh-client-ui-sidebar/lib/client.js L156-201 ——
   //   logoRow 首子 = 品牌 button（L158-181，仅 wide 形态渲染）；rail 收起时首个 button 变为
   //   折叠钮（L185-200）。aria-label 走 i18n（L161/188）不可依赖。样式覆写宽态命中品牌、窄态命中折叠钮，可接受。
-  sidebarBrand: '#root > div > div:first-child button', /* DRIFT-RISK: structural */
+  sidebarBrand: '#root > div > div > div:first-child button', /* DRIFT-RISK: structural */
   // sessionRow / sessionRowSelected。复核：dsh-client-ui-workspace/lib/client.js L718-721 ——
   //   SessionNodeItem 行 div role="treeitem" + aria-selected（selected 时 "true"），稳定语义锚点。
   sessionRow: 'div[role="treeitem"]',

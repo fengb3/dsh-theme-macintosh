@@ -7,9 +7,9 @@ let mcThemeOrig = undefined;
 
 const McSidebar = {
   css: [
-    // 侧栏列 = Finder 窗（.win 语汇完整版）：rail-1 底 + 四边 1px 黑边 + 3px 硬投影 + 直角；
-    // margin 让窗浮在桌面噪点上（上/下/左各 12px，右边线由 border 提供）。整窗字体 --font-sb（§7.1）
-    `${MC_MAP.sidebar}{background:var(--mc-rail-1);border:1px solid var(--mc-border);border-radius:0;box-shadow:var(--mc-shadow-panel);margin:12px 0 12px 12px;font-family:var(--font-sb)}`,
+    // 侧栏列 = Finder 窗（.win 语汇完整版）：rail-1 底 + 四边 1px 黑边 + 3px 硬投影 + 直角。
+    // 桌面缝隙由容器 padding/gap 提供（见 chrome 段 appRoot 规则）。整窗字体 --font-sb（§7.1）
+    `${MC_MAP.sidebar}{background:var(--mc-rail-1);border:1px solid var(--mc-border);border-radius:0;box-shadow:var(--mc-shadow-panel);font-family:var(--font-sb)}`,
     // 品牌行：字号 17px（finder 图标 24px 经 sidebar.brand.mark 席位注入，见 slots）；
     // 名称经 sidebar.brand.name 席位注入 "Deepseek + Harness" 反色标签（原型 sb-head §4）
     `${MC_MAP.sidebarBrand}{font:400 17px/1 var(--font-sb);color:var(--mc-fg)}`,

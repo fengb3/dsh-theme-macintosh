@@ -5,7 +5,7 @@ const p = await b.newPage({ viewport: { width: 1440, height: 900 } });
 await p.goto('http://127.0.0.1:3080', { waitUntil: 'domcontentloaded' });
 await p.waitForTimeout(6000);
 const r = await p.evaluate(() => {
-  const sb = document.querySelector('#root > div > div:first-child');
+  const sb = document.querySelector('#root > div > div > div:first-child');
   const cs = getComputedStyle(sb);
   const moon = document.querySelector('[aria-label="切换深浅主题"]');
   const msvg = moon && moon.querySelector('svg');
