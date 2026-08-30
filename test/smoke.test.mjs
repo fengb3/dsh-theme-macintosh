@@ -91,3 +91,19 @@ test('assemble 产出含 tokens/primitives 全集与 kit 检视页', () => {
   assert.ok(!/:hover\b/.test(cssChunk), '全主题不得出现 :hover');
   assert.ok(!/(?<!-)transition\s*:/.test(cssChunk), '全主题不得出现 transition 声明');
 });
+
+test('assemble 产出含侧栏 Finder 覆写与主题月牙钮', () => {
+  execFileSync(process.execPath, [path.join(ROOT, 'tools', 'assemble.mjs')], { cwd: ROOT });
+  const out = require('node:fs').readFileSync(path.join(ROOT, 'dist', 'client-body.js'), 'utf8');
+  // sprite 新增月牙符号（24×24 像素网格 crescent）
+  assert.ok(out.includes('i-moon'), 'sprite 应含 i-moon 月牙符号');
+  // sidebar：经 MC_MAP 插值 + footer 席位月牙钮
+  assert.ok(out.includes('McSidebar'), '应装配 McSidebar 模块');
+  assert.ok(out.includes('MC_MAP.sessionRow'), 'sidebar css 应经 MC_MAP.sessionRow 插值');
+  assert.ok(out.includes('MC_MAP.sessionRowSelected'), '选中反色应经 MC_MAP.sessionRowSelected 插值');
+  assert.ok(out.includes('MC_MAP.sidebar'), '侧栏列应经 MC_MAP.sidebar 插值');
+  assert.ok(out.includes("'mc-theme-toggle'"), '应注册 mc-theme-toggle 席位');
+  assert.ok(out.includes('sidebar.footer.action'), '月牙钮应占 sidebar.footer.action 席');
+  assert.ok(out.includes('var(--font-sb)'), '侧栏应使用 --font-sb 五族回退链');
+  assert.ok(out.includes('data-theme'), '月牙钮应翻转 data-theme');
+});

@@ -24,11 +24,17 @@ const MC_MAP = {
   sessionHeader: 'div[data-phase] > header', /* DRIFT-RISK: structural */
   scrollport: '[data-conversation-scroll]',
   composerCard: '[data-composer-card]',
-  // —— 以下供 Task 7 侧栏使用，本轮一并回填 ——
-  // sidebar = 网格首列 sidebarCol（无 data-* → 结构位）
+  // —— 以下供 Task 7 侧栏使用（Task 7 已对部署包复核，出处行号如下） ——
+  // sidebar = 网格首列 sidebarCol。复核：dsh-client-ui-layout/lib/client.js L218-232 ——
+  //   AppFrame 根 div（frame，即 #root 唯一子 div）children[0] 恒为 sidebarCol div
+  //   （L226-232，无 data-*，class 为哈希 pI_x6G_sidebarCol）。结构位成立但随宿主改版漂移。
   sidebar: '#root > div > div:first-child', /* DRIFT-RISK: structural */
-  // sidebarBrand = logoRow 内首个 button（品牌/折叠钮；aria-label 走 i18n 不可依赖）
+  // sidebarBrand = 侧栏列内首个 button。复核：dsh-client-ui-sidebar/lib/client.js L156-201 ——
+  //   logoRow 首子 = 品牌 button（L158-181，仅 wide 形态渲染）；rail 收起时首个 button 变为
+  //   折叠钮（L185-200）。aria-label 走 i18n（L161/188）不可依赖。样式覆写宽态命中品牌、窄态命中折叠钮，可接受。
   sidebarBrand: '#root > div > div:first-child button', /* DRIFT-RISK: structural */
+  // sessionRow / sessionRowSelected。复核：dsh-client-ui-workspace/lib/client.js L718-721 ——
+  //   SessionNodeItem 行 div role="treeitem" + aria-selected（selected 时 "true"），稳定语义锚点。
   sessionRow: 'div[role="treeitem"]',
   sessionRowSelected: 'div[role="treeitem"][aria-selected="true"]',
 };
