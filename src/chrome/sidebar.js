@@ -1,13 +1,11 @@
-// src/chrome/sidebar.js —— 侧栏 Finder 窗覆写 + 主题月牙钮（Task 7）
-// 协议：{ css, slots(ctx) }。样式参考 prototype/component-dev-notes.md §7（侧栏 Finder 窗）。
-// 纪律：宿主选择器一律取自 MC_MAP（本文件只做插值）；无 :hover、无 transition。
-// src/chrome/sidebar.js —— 侧栏 Finder 窗覆写 + 主题月牙钮（Task 7）
-// 协议：{ css, slots(ctx) }。样式参考 prototype/component-dev-notes.md §7（侧栏 Finder 窗）。
-// 纪律：宿主选择器一律取自 MC_MAP（本文件只做插值）；无 :hover、无 transition；
+// src/chrome/sidebar.js —— 侧栏 Finder 窗覆写 + 真 DOM 标题栏 + 折叠迷你态 + 官方主题通道（Task 7 + 轮6）
+// 协议：{ css, mount(ctx), slots(ctx) }。样式参考 prototype/component-dev-notes.md §7（侧栏 Finder 窗）。
+// 纪律：宿主选择器一律取自 MC_MAP（本文件只做插值）；无 :hover、无 transition（官方的也压平）；
 // 席位注册沿用 kit.js 在 Task 5 运行期验证过的 register(meta, render) 形态。
-// teardown 用：首次 flip 前的 data-theme 原值（undefined = 从未 flip，null = 原本无属性）
-let mcThemeOrig = undefined;
-
+// 轮6 改造：
+//   ① ::before 假标题栏 → mount 注入真 DOM .mc-titlebar（左 tclose=折叠/展开，点官方隐藏钮保状态持久化）；
+//   ② 官方折叠/展开过渡（frame 300ms grid + 根 150ms fade/rail-in）全压 0，过场靠 flashIn 白闪；
+//   ③ 去月牙钮：主题改走官方通道 body[data-ds-dark-theme] → html[data-theme]（初始同步 + observer 跟随）。
 const McSidebar = {
   css: [
     // 侧栏列 = Finder 窗（.win 语汇完整版）：rail-1 底 + 四边 1px 黑边 + 3px 硬投影 + 直角。
@@ -15,6 +13,12 @@ const McSidebar = {
     `${MC_MAP.sidebar}{background:var(--mc-rail-1);border:1px solid var(--mc-border);border-radius:0;box-shadow:var(--mc-shadow-panel);font-family:var(--font-sb)}`,
     // 官方侧栏根自带 padding:6px 12px —— 清零，窗内内容顶格（行级间距由各自行自带）
     `${MC_MAP.sidebarRoot}{padding:0}`,
+    // —— 官方过渡压平（纪律：无 transition，官方的也压掉）：frame 的 grid-template-columns 300ms
+    //    滑轨与 sidebarRoot 内 fading/railIn 淡入滑入全归零 —— 折叠/展开宽度瞬切，过场全靠
+    //    tclose 的 flashIn 白闪遮罩。appRoot 带 ID 特异性必胜官方哈希类。animation:none 只打
+    //    直接子元素/logoRow 钮（官方动画宿主），不殃及 McFinder 深处的 mc-pulse 脉冲点。 ——
+    `${MC_MAP.appRoot}{transition-duration:0s}`,
+    `${MC_MAP.sidebarRoot}>*,${MC_MAP.sidebarLogoRow} button{transition-duration:0s;animation:none}`,
     // 品牌行：字号 17px（finder 图标 24px 经 sidebar.brand.mark 席位注入，见 slots）；
     // 名称经 sidebar.brand.name 席位注入 "Deepseek + Harness" 反色标签（原型 sb-head §4）
     // :not([data-mc-finder]) —— 该 ID 级选择器命中侧栏列内一切 button（含 McFinder 自有钮），
@@ -54,20 +58,34 @@ const McSidebar = {
     // 选中（aria-selected 语义）：整行反色 + 方角（§7.2 —— 漏 border-radius:0 会出"胶囊"破形）
     `${MC_MAP.sessionRowSelected}{background:var(--mc-fg);color:var(--mc-surface);border-radius:0}`,
     `${MC_MAP.sessionRowSelected} *{color:inherit}`,
-    // —— 侧栏元素级 Finder 语汇（原型 §4 sb-head/sb-actions/sb-tree/sb-foot）——
-    // System 7 窗标题栏（CSS 装饰版）：20px pinstripe 条纹面 + 居中 "Sessions" 标题 + 顶缘 accent 线 +
-    // 左右 13px 像素方块（pixelarticons close/zoom data-URI，fill 深浅两组固定色，见 MC_TBOX；
-    // 交互属三期）。经 ::before 作首 flex 子。
-    `${MC_MAP.sidebarRoot}::before{content:'Sessions';display:flex;align-items:center;justify-content:center;` +
-      `height:20px;flex:none;font:600 12px/1 var(--font-sb);letter-spacing:.03em;color:var(--mc-fg);` +
-      `background:${MC_TBOX.bg(MC_TBOX.closeDark, MC_TBOX.zoomDark, 'rgba(255,255,255,.10)')};` +
-      `border-bottom:1px solid var(--mc-border);box-shadow:inset 0 1px 0 var(--mc-accent)}`,
-    `html[data-theme="light"] ${MC_MAP.sidebarRoot}::before{background:` +
-      MC_TBOX.bg(MC_TBOX.closeLight, MC_TBOX.zoomLight, 'rgba(0,0,0,.20)') + '}',
-    // 品牌行 sb-head：padding + 软底线（logoRow 官方 60px 定高放开为内容高）
-    `${MC_MAP.sidebarLogoRow}{height:auto;min-height:0;padding:10px 12px 8px;background:var(--mc-rail-1);border-bottom:1px solid var(--mc-border-soft)}`,
-    // New Session 钮 = .btn.primary 双内环语汇（§5）：accent 底 + 外 1px 线 + 2px 面缝双环；14px 图标
-    `${MC_MAP.sidebarNewSession}{display:flex;align-items:center;justify-content:center;gap:7px;` +
+    // —— 真 DOM 标题栏（mount 注入 .mc-titlebar 为 sidebarRoot 首子；pinstripe 样式自旧 ::before 迁移）——
+    // 20px 条纹面 + 居中 "Sessions" 标题 + 顶缘 accent 线 + 左右 13px 方块钮（sprite #i-close/#i-zoom，
+    // 多色位 var(--box-line/--box-face) 随 html[data-theme] 自动反色，无需 data-URI 双份）。
+    '.mc-titlebar{position:relative;display:flex;align-items:center;justify-content:center;' +
+      'height:20px;flex:none;font:600 12px/1 var(--font-sb);letter-spacing:.03em;color:var(--mc-fg);' +
+      'background:repeating-linear-gradient(180deg,rgba(255,255,255,.10) 0 1px,transparent 1px 3px),var(--mc-surface-2);' +
+      'border-bottom:1px solid var(--mc-border);box-shadow:inset 0 1px 0 var(--mc-accent)}',
+    'html[data-theme="light"] .mc-titlebar{background:' +
+      'repeating-linear-gradient(180deg,rgba(0,0,0,.20) 0 1px,transparent 1px 3px),var(--mc-surface-2)}',
+    '.mc-title{max-width:60%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
+    '.mc-tbox{position:absolute;top:50%;transform:translateY(-50%);width:13px;height:13px;' +
+      'display:grid;place-items:center;padding:0;border:none;background:none;cursor:pointer}',
+    '.mc-tclose{left:5px}',
+    '.mc-tzoom{right:5px}',
+    '.mc-tbox svg{width:13px;height:13px;display:block}',
+    '.mc-tbox:active svg{opacity:.55}',
+    // 折叠态标题栏只留 tclose：56px 轨道里放不下标题与 zoom
+    `${MC_MAP.appRootRail} .mc-title,` +
+      `${MC_MAP.appRootRail} .mc-tzoom{display:none}`,
+    // 官方折叠钮：展开态隐藏（折叠/展开动作由 tclose 程序化触发，保官方行为与持久化）；
+    // 折叠态保留官方钮 = rail 首钮（渲染我们的品牌 mark），作展开的双保险入口
+    `${MC_MAP.sidebarCollapseBtnWide}{display:none}`,
+    // 品牌行 sb-head：padding + 软底线（logoRow 官方 60px 定高放开为内容高）——仅展开态
+    // （折叠态 logoRow 36px 官方轨：官方折叠钮独占，padding/底线交给官方 rail 布局）
+    `${MC_MAP.sidebarLogoRowWide}{height:auto;min-height:0;padding:10px 12px 8px;background:var(--mc-rail-1);border-bottom:1px solid var(--mc-border-soft)}`,
+    // New Session 钮 = .btn.primary 双内环语汇（§5）——仅展开态（折叠态官方图标钮隐藏，
+    // 新建走 McFinderMini 的迷你加号钮，程序化点同一个官方钮保行为）
+    `${MC_MAP.sidebarNewSessionWide}{display:flex;align-items:center;justify-content:center;gap:7px;` +
       `width:calc(100% - 20px);height:28px;margin:8px 10px;padding:0 16px;min-width:72px;` +
       `border-radius:var(--mc-r-btn);border:1px solid var(--mc-border);` +
       `box-shadow:inset 0 0 0 1px var(--mc-accent),inset 0 0 0 2px var(--mc-border);` +
@@ -82,7 +100,8 @@ const McSidebar = {
       `mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M11%204h2v7h7v2h-7v7h-2v-7H4v-2h7V4z' fill='black'/%3E%3C/svg%3E") center/contain no-repeat}`,
     `${MC_MAP.sidebarNewSession}:active{background:var(--mc-border);color:var(--mc-surface);` +
       `box-shadow:inset 0 0 0 1px var(--mc-border),inset 0 0 0 2px var(--mc-surface)}`,
-    // 工作区树容器 sb-tree：内衬 8px（§4 .sb-tree padding:8px）
+    `${MC_MAP.sidebarNewSessionRail}{display:none}`,
+    // 工作区树容器 sb-tree：随根 padding 清零，内衬也清零（用户要求侧栏完全无 padding）
     `${MC_MAP.sidebarRegion}{padding:0;min-width:0;overflow:hidden;width:auto;align-self:stretch;margin:0}`,
     // —— 像素图标替换（pixelarticons 24 栅格）：官方细轮廓 path 藏起，svg 本体 currentColor + 像素 mask 重绘 ——
     // 锚点 aria-label 为 zh i18n 文案（DRIFT-RISK：随语言/官方文案漂移，失配=回退官方轮廓图标，不破版）
@@ -107,27 +126,93 @@ const McSidebar = {
     // 页脚设置行 = 原型 sb-pref 纯文字钮（"Preferences…"语汇）：藏官方齿轮轮廓图标，文字 600 12px
     `${MC_MAP.sidebarFoot} button:not([aria-label]) svg{display:none}`,
     `${MC_MAP.sidebarFoot} button:not([aria-label]){font:600 12px/1.4 var(--font-sb);letter-spacing:.02em;color:var(--mc-fg)}`,
-    // 品牌行侧栏折叠钮 → 像素 menu（首钮是品牌 Finder，只掩 last-child；圆角轮廓是最后的平滑残留）
-    `${MC_MAP.sidebarLogoRow} button:last-child svg *{visibility:hidden}`,
-    `${MC_MAP.sidebarLogoRow} button:last-child svg{background:currentColor;` +
+    // 折叠轨页脚：设置钮是纯图标钮（无文字位），把上面藏 svg 的规则在轨内翻回来
+    `${MC_MAP.sidebarFootRail} button:not([aria-label]) svg{display:block}`,
+    // 品牌行侧栏折叠钮 → 像素 menu（首钮是品牌 Finder，只掩 last-child）——仅展开态
+    // （展开态官方折叠钮本就 display:none，此规则是隐藏失败的兜底；折叠态留给官方 rail 布局）
+    `${MC_MAP.sidebarCollapseBtnWide} svg *{visibility:hidden}`,
+    `${MC_MAP.sidebarCollapseBtnWide} svg{background:currentColor;` +
       `-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M4%206h16v2H4V6zm0%205h16v2H4v-2zm16%205H4v2h16v-2z' fill='black'/%3E%3C/svg%3E") center/contain no-repeat;` +
       `mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M4%206h16v2H4V6zm0%205h16v2H4v-2zm16%205H4v2h16v-2z' fill='black'/%3E%3C/svg%3E") center/contain no-repeat}`,
   ].join('\n'),
 
-  // 撤除恢复：装配器先调 mount 再调 slots，此处抢在首次 flip 前捕获 data-theme 原值
+  // mount：①主题走官方通道（初始同步 + observer 跟随）②真 DOM 标题栏注入（自愈重插）。
+  // 全部副作用可逆：teardown 断开 observer、移除标题栏 DOM、移除我们拥有的 html[data-theme]。
   mount() {
-    if (mcThemeOrig === undefined) {
-      mcThemeOrig = document.documentElement.getAttribute('data-theme');
-      // 默认主题跟随宿主深浅：宿主浅色时补 data-theme=light，避免"浅色宿主 × 深色 mc 值"的对比度穿帮
-      if (mcThemeOrig === null && !document.body.hasAttribute('data-ds-dark-theme')) {
-        document.documentElement.setAttribute('data-theme', 'light');
-        mcThemeOrig = null; // 仍记 null：卸载时移除属性，回到宿主原生
-      }
-    }
+    const disposers = [];
+
+    // —— 官方外观信号：ui-layout ThemePresenter 按解析快照 toggle body[data-ds-dark-theme]
+    //    （部署源 dsh-client-ui-theme/lib/index.js L36，随官方设置→外观切换实时变化）。
+    //    html[data-theme] 全程由本主题拥有：初始按信号同步，MutationObserver 跟随后续翻转；
+    //    overrideTokens 双色对全指向 var(--mc-*)，html[data-theme] 走对了整套主题即正确跟随。 ——
+    const syncTheme = function () {
+      try {
+        const dark = document.body.hasAttribute('data-ds-dark-theme');
+        document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+      } catch (e) { /* body 缺席（理论不可达）静默 */ }
+    };
+    syncTheme();
+    const themeObs = new MutationObserver(syncTheme);
+    themeObs.observe(document.body, { attributes: true, attributeFilter: ['data-ds-dark-theme'] });
+    disposers.push(function () { themeObs.disconnect(); });
+
+    // —— 真 DOM 标题栏：.mc-titlebar 插为 sidebarRoot 首子（React 容器内外来节点，
+    //    MutationObserver 监听 childList 自愈重插；sidebarRoot 晚于 apply 出现时经
+    //    CLOCK 100ms 栅格轮询定位，上限 ~10s）。tclose = 折叠/展开：flashIn 白闪包裹
+    //    官方隐藏钮的程序化 click（保官方行为与状态持久化）。 ——
+    let stopped = false;
+    let bar = null;
+    let heal = null;
+    let cancelPoll = null;
+    let tries = 0;
+    const onTclose = function () {
+      const btn = document.querySelector(MC_MAP.sidebarCollapseBtn);
+      if (!btn) return;
+      const col = document.querySelector(MC_MAP.sidebar);
+      // 折叠/展开过场：ghost 下瞬切宽度 → 白闪 → 撤（官方 300ms/150ms 过渡已压 0）
+      if (col) flashIn(col, function () { btn.click(); });
+      else btn.click();
+    };
+    const build = function () {
+      const el = document.createElement('div');
+      el.className = 'mc-titlebar';
+      // innerHTML 全静态字面量（零动态插值，不违反 esc 纪律）；方块钮走 sprite 多色位
+      el.innerHTML = '<span class="mc-title">Sessions</span>' +
+        '<button type="button" class="mc-tbox mc-tclose" aria-label="折叠或展开侧栏" title="折叠或展开侧栏">' +
+        '<svg aria-hidden="true"><use href="#i-close"/></svg></button>' +
+        '<button type="button" class="mc-tbox mc-tzoom" aria-label="缩放（二期）" title="二期" tabindex="-1">' +
+        '<svg aria-hidden="true"><use href="#i-zoom"/></svg></button>';
+      el.querySelector('.mc-tclose').addEventListener('click', onTclose);
+      return el;
+    };
+    const watch = function (root) {
+      heal = new MutationObserver(function () {
+        if (stopped || !bar || bar.isConnected) return;
+        if (root && root.isConnected) root.insertBefore(bar, root.firstChild);
+      });
+      heal.observe(root, { childList: true });
+    };
+    const find = function () {
+      if (stopped) return;
+      if (tries++ > 100) return; // ~10s 上限：侧栏始终未出现即放弃（静默，不抛错）
+      const root = document.querySelector(MC_MAP.sidebarRoot);
+      if (!root) { cancelPoll = CLOCK ? CLOCK.next(find, 100) : null; return; }
+      bar = build();
+      root.insertBefore(bar, root.firstChild);
+      watch(root);
+    };
+    find();
+
+    disposers.push(function () {
+      stopped = true;
+      try { if (cancelPoll) cancelPoll(); } catch (e) { /* 忽略 */ }
+      try { if (heal) heal.disconnect(); } catch (e) { /* 忽略 */ }
+      try { if (bar) bar.remove(); } catch (e) { /* 忽略 */ }
+    });
+
     return function teardown() {
-      if (mcThemeOrig === undefined) return; // 从未捕获（未进入 mount）→ 不动
-      if (mcThemeOrig === null) document.documentElement.removeAttribute('data-theme');
-      else document.documentElement.setAttribute('data-theme', mcThemeOrig);
+      for (const d of disposers) { try { d(); } catch (e) { /* 忽略 */ } }
+      try { document.documentElement.removeAttribute('data-theme'); } catch (e) { /* 忽略 */ }
     };
   },
 
@@ -137,32 +222,9 @@ const McSidebar = {
     if (!S || typeof S.register !== 'function' || typeof S.inject !== 'function') return;
     const reg = S.register.bind(S);
     const wait = S.inject.bind(S);
-    // 月牙主题钮：sidebar.footer.action（list 席）。ctx.slots.inject 等席位声明就绪后注册，
-    // 返回的 disposer 经 ctx.effect 归入本 fiber（卸载即撤席位）。
-    ctx.effect(() => wait('sidebar.footer.action', () => reg({
-      name: 'sidebar.footer.action',
-      id: 'mc-theme-toggle',
-      order: 50,
-      label: () => '切换深浅主题',
-    }, function MoonToggle() {
-      if (typeof React === 'undefined') return null;
-      const flip = function () {
-        const el = document.documentElement;
-        if (mcThemeOrig === undefined) mcThemeOrig = el.getAttribute('data-theme');
-        const cur = el.getAttribute('data-theme');
-        el.setAttribute('data-theme', cur === 'light' ? 'dark' : 'light'); // 缺省视为 dark → light
-      };
-      return React.createElement('button', {
-        type: 'button',
-        className: 'mc-icon-btn',
-        'aria-label': '切换深浅主题',
-        title: '切换深浅主题',
-        onClick: flip,
-        style: { background: 'none', border: 'none', padding: 0, margin: 0, width: '18px', height: '18px', display: 'grid', placeItems: 'center', color: 'var(--mc-muted)', cursor: 'pointer' },
-      }, React.createElement('svg', { width: 15, height: 15, 'aria-hidden': true, style: { display: 'block' } }, React.createElement('use', { href: '#i-moon' })));
-    })));
     // 品牌图标：Finder 24px 换掉宿主 FishLogo。single 槽必须以更低 priority 遮蔽注册
     // （官方占位 priority 0，lowest renders —— 同 0 会抛 "already has a registration"）。
+    // 展开态品牌行与折叠轨 railMark 渲染同一席位：两处都是 Finder 标。
     ctx.effect(() => wait('sidebar.brand.mark', () => reg({
       name: 'sidebar.brand.mark',
       priority: -1,
@@ -189,4 +251,3 @@ const McSidebar = {
     })));
   },
 };
-

@@ -102,18 +102,27 @@ test('assemble 产出含 tokens/primitives 全集与 kit 检视页', () => {
   assert.ok(!/(?<!-)transition\s*:/.test(cssScan), '全主题不得出现 transition 声明');
 });
 
-test('assemble 产出含侧栏 Finder 覆写与主题月牙钮', () => {
+test('assemble 产出含侧栏 Finder 覆写与官方主题通道（轮6：去月牙钮）', () => {
   execFileSync(process.execPath, [path.join(ROOT, 'tools', 'assemble.mjs')], { cwd: ROOT });
   const out = require('node:fs').readFileSync(path.join(ROOT, 'dist', 'client-body.js'), 'utf8');
-  // sprite 新增月牙符号（24×24 像素网格 crescent）
-  assert.ok(out.includes('i-moon'), 'sprite 应含 i-moon 月牙符号');
-  // sidebar：经 MC_MAP 插值 + footer 席位月牙钮
+  // sidebar：经 MC_MAP 插值 + 真标题栏 + 官方折叠钮锚点
   assert.ok(out.includes('McSidebar'), '应装配 McSidebar 模块');
   assert.ok(out.includes('MC_MAP.sessionRow'), 'sidebar css 应经 MC_MAP.sessionRow 插值');
   assert.ok(out.includes('MC_MAP.sessionRowSelected'), '选中反色应经 MC_MAP.sessionRowSelected 插值');
   assert.ok(out.includes('MC_MAP.sidebar'), '侧栏列应经 MC_MAP.sidebar 插值');
-  assert.ok(out.includes("'mc-theme-toggle'"), '应注册 mc-theme-toggle 席位');
-  assert.ok(out.includes('sidebar.footer.action'), '月牙钮应占 sidebar.footer.action 席');
-  assert.ok(out.includes('var(--font-sb)'), '侧栏应使用 --font-sb 五族回退链');
-  assert.ok(out.includes('data-theme'), '月牙钮应翻转 data-theme');
+  assert.ok(out.includes('MC_MAP.sidebarCollapseBtn'), '官方折叠钮应经 MC_MAP.sidebarCollapseBtn 插值');
+  assert.ok(out.includes("var(--font-sb)"), '侧栏应使用 --font-sb 五族回退链');
+  // 轮6：真 DOM 标题栏（.mc-titlebar / tclose）
+  assert.ok(out.includes('mc-titlebar'), '应注入真 DOM 标题栏 .mc-titlebar');
+  assert.ok(out.includes('mc-tclose'), '标题栏应有 tclose 折叠钮');
+  assert.ok(out.includes('#i-close'), 'tclose 应使用 sprite i-close');
+  // 轮6：主题走官方通道（body[data-ds-dark-theme] → html[data-theme]）
+  assert.ok(out.includes('data-ds-dark-theme'), '主题应跟随官方 body[data-ds-dark-theme] 信号');
+  assert.ok(out.includes('data-theme'), '应写 html[data-theme]');
+  assert.ok(!out.includes('mc-theme-toggle'), '月牙钮席位注册应已删除');
+  assert.ok(!out.includes('sidebar.footer.action'), '不应再占 sidebar.footer.action 席');
+  assert.ok(!out.includes('切换深浅主题'), '月牙钮组件应已删除');
+  // 轮6：折叠迷你态
+  assert.ok(out.includes('mc-sb-mini'), 'McFinder 应有折叠迷你态 .mc-sb-mini');
+  assert.ok(out.includes('props.wide === false'), '应以官方 wide:false 信号切换迷你形态');
 });

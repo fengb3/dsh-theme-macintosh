@@ -108,6 +108,37 @@ function McFinderListbar(props) {
       btn('添加新工作区（二期）', '#i-px-plus')));
 }
 
+// —— 折叠态迷你条（原型 .sb-mini）：官方 sidebar.workspaces 席位在折叠轨（wide:false）时的形态。
+// 只渲染一列 26px 图标钮：新建（程序化点官方 newSession 钮保行为/状态持久化）+ 搜索（展开侧栏后过滤）。
+// 搜索词经模块级 MC_FINDER_QUERY + 自定义事件 mcx-finder-query 传给展开态 McFinderTree
+// （折叠/展开是组件形态切换=remount，state 不跨形态存活）。 ——
+let MC_FINDER_QUERY = '';
+
+function McFinderMini(props) {
+  const h = React.createElement;
+  const expand = typeof props.expandSidebar === 'function' ? props.expandSidebar : null;
+  const onNew = function () {
+    const btn = document.querySelector(MC_MAP.sidebarNewSession);
+    if (btn) { btn.click(); return; } // 官方新建钮（折叠态被我们 CSS 隐藏，click 仍生效）
+    if (expand) expand();
+  };
+  const onSearch = function () {
+    if (expand) expand(); // 先展开侧栏再搜（轨内放不下输入行）
+    if (typeof window === 'undefined' || typeof window.prompt !== 'function') return;
+    const v = window.prompt('搜索会话（按标题过滤，留空清除）', MC_FINDER_QUERY);
+    if (v === null) return;
+    MC_FINDER_QUERY = v;
+    try { window.dispatchEvent(new CustomEvent('mcx-finder-query', { detail: v })); } catch (e) { /* 忽略 */ }
+  };
+  const btn = function (cls, title, icon, onClick) {
+    return h('button', { className: cls, type: 'button', title: title, 'aria-label': title, 'data-mc-finder': '', onClick: onClick },
+      h('svg', { viewBox: '0 0 24 24', 'aria-hidden': true }, h('use', { href: icon })));
+  };
+  return h('div', { className: 'mc-sb-mini' },
+    btn('mc-mini-btn mc-mini-new', '新建会话', '#i-px-plus', onNew),
+    btn('mc-mini-btn', '搜索会话', '#i-px-search', onSearch));
+}
+
 // 会话行：状态槽（run=脉冲点 / done=✓ / wait=空占位）+ 标题 + 三点菜单钮。
 // 选中行 .on 整行反色方角；onClick 走 flashIn 三拍（ghost→show→白闪→撤，100ms×2 走 CLOCK）。
 function McFinderSess(props) {
@@ -188,7 +219,7 @@ function McFinderTree(props) {
   const sel = live ? current : selState[0];
   const openState = React.useState(null); // null = 默认全开；记录开合覆盖 {gid:bool}
   const expState = React.useState({});
-  const qState = React.useState('');
+  const qState = React.useState(MC_FINDER_QUERY); // 迷你态搜索词跨形态接力（惰性初值）
   const q = qState[0].trim().toLowerCase();
   const root = React.useRef(null);
   React.useEffect(function () {
@@ -212,6 +243,12 @@ function McFinderTree(props) {
       ? root.current.querySelector('.mc-sb-tree') : null;
     if (tree) flashOut(tree, function () { flashIn(tree, function () {}); });
   }, [sig]);
+  // 迷你态搜索接力：折叠轨里 prompt 的结果经 mcx-finder-query 事件送达（展开完成后应用过滤词）
+  React.useEffect(function () {
+    const onQ = function (e) { qState[1](String((e && e.detail) || '')); };
+    window.addEventListener('mcx-finder-query', onQ);
+    return function () { window.removeEventListener('mcx-finder-query', onQ); };
+  }, []);
   const onToggle = function (gid) {
     openState[1](function (o) { const n = Object.assign({}, o || {}); n[gid] = !(o ? o[gid] : true); return n; });
   };
@@ -295,7 +332,16 @@ const McFinder = {
   border:none;background:none;cursor:pointer;text-align:left;
   color:var(--mc-accent);font:400 12px/1.6 var(--font-sb);border-radius:var(--mc-r-tag)}
 .mc-sb-more:active{color:var(--mc-fg)}
-.mc-sb-find .mc-sb-more svg{width:11px;height:11px;flex:none}`,
+.mc-sb-find .mc-sb-more svg{width:11px;height:11px;flex:none}
+/* ===== 折叠态迷你条（原型 .sb-mini；56px 官方轨内一列 26px 图标钮）===== */
+.mc-sb-mini{display:flex;flex-direction:column;align-items:center;gap:6px;flex:1;min-height:0;padding:8px 0}
+.mc-mini-btn{display:grid;place-items:center;width:26px;height:26px;flex:none;
+  border:1px solid var(--mc-border);border-radius:var(--mc-r-tag);
+  background:var(--mc-surface-2);color:var(--mc-fg);cursor:pointer}
+.mc-mini-btn:active{background:var(--mc-border);color:var(--mc-surface)}
+.mc-mini-btn svg{width:14px;height:14px}
+.mc-mini-new{background:var(--mc-accent);color:var(--mc-accent-ink)}
+.mc-mini-new:active{background:var(--mc-border);color:var(--mc-surface)}`,
 
   slots(ctx) {
     // 可选读取 'slots' 服务（ctx.slots 常驻直达；勿属性访问未声明服务）
@@ -310,6 +356,8 @@ const McFinder = {
       { name: 'sidebar.workspaces', priority: -1, registrant: 'macintosh' },
       function McFinderHost(props) {
         if (typeof React === 'undefined') return null;
+        // 官方折叠信号：席位 props.wide=false 即 56px 轨道 → 渲染迷你图标条（McFinderTree 会挤爆窄轨）
+        if (props && props.wide === false) return React.createElement(McFinderMini, props);
         const p = Object.assign({}, props);
         p.openSession = sessionsSvc && typeof sessionsSvc.open === 'function'
           ? function (id) { try { sessionsSvc.open(id); } catch (e) { try { console.error('[mcx] open session failed:', e && e.message); } catch (e2) {} } }

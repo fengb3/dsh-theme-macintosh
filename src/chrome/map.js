@@ -37,6 +37,9 @@ const MC_MAP = {
   // display:contents 的透传包装 div（padding 打在它上面无效）——真 grid 是 #root > div > div。
   // 无 data-* → 结构位。display:contents 包装经 probe-dom 实测（2026-08-30）。
   appRoot: '#root > div > div', /* DRIFT-RISK: structural */
+  // appRootRail = 折叠态的 frame（官方 AppFrame 折叠时挂 data-sidebar-collapsed 属性，
+  // 稳定 data-* 锚；供折叠态专属样式/检测引用）
+  appRootRail: '#root > div > div[data-sidebar-collapsed]', /* stable: official data-attr */
   // mainColumn = 会话根（header + 滚动口 + composer 都在其内，正好是"主窗"区域）
   mainColumn: 'div[data-phase]',
   // sessionHeader = ConversationSessionHeader 的 <header>；无 data-* → 会话根内结构位
@@ -63,13 +66,29 @@ const MC_MAP = {
   sessionRowFolder: 'div[role="treeitem"][aria-expanded] > svg:first-of-type', /* DRIFT-RISK: structural */
   sessionStatusIcon: 'div[role="treeitem"]:not([aria-expanded]) > svg:first-of-type', /* DRIFT-RISK: structural */
   // —— 侧栏内部结构位（精修2：元素级 Finder 语汇）。经 probe-session 实测（2026-08-30）——
-  //   sidebarCol > div(h0 包装) > .hHd-Xa_root，root children 恒序：
+  //   sidebarCol > div(h0 包装) > .hHd-Xa_root，root 官方 children 恒序：
   //   [1]logoRow(DIV) [2]newSession(BUTTON) [3]regionArea(DIV 工作区树) [4]footArea(DIV)。
+  //   我们在首位插入 .mc-titlebar 真标题栏（McSidebar.mount，自愈重插）→ 官方子元素整体后移一位，
+  //   nth-child 序号 +1（titlebar 万一缺席则失配=回退官方样式，不破版）。
   //   全无 data-*，nth-child 结构位（DRIFT-RISK：随官方侧栏改版漂移，失配=回退底色不破版）。
   sidebarRoot: '#root > div > div > div:first-child > div > div', /* DRIFT-RISK: structural */
-  sidebarLogoRow: '#root > div > div > div:first-child > div > div > div:nth-child(1)', /* DRIFT-RISK: structural */
-  sidebarNewSession: '#root > div > div > div:first-child > div > div > button:nth-child(2)', /* DRIFT-RISK: structural */
-  sidebarRegion: '#root > div > div > div:first-child > div > div > div:nth-child(3)', /* DRIFT-RISK: structural */
-  sidebarFoot: '#root > div > div > div:first-child > div > div > div:nth-child(4)', /* DRIFT-RISK: structural */
+  sidebarLogoRow: '#root > div > div > div:first-child > div > div > div:nth-child(2)', /* DRIFT-RISK: structural (+1 标题栏占位) */
+  sidebarNewSession: '#root > div > div > div:first-child > div > div > button:nth-child(3)', /* DRIFT-RISK: structural (+1 标题栏占位) */
+  sidebarRegion: '#root > div > div > div:first-child > div > div > div:nth-child(4)', /* DRIFT-RISK: structural (+1 标题栏占位) */
+  sidebarFoot: '#root > div > div > div:first-child > div > div > div:nth-child(5)', /* DRIFT-RISK: structural (+1 标题栏占位) */
+  // 官方折叠钮 = logoRow 末钮（wide 态 logoRow=[品牌钮, 折叠钮]；collapsed 态只剩折叠钮=首=末）。
+  // 注意 nth-child(2)：我们注入的 .mc-titlebar 占了第 1 位（官方子元素整体后移）。
+  // 折叠机制（部署源探明 2026-08-30 + probe-round6-pre 实测）：钮 onClick → panels.sidebar=0 ↔ 280；
+  // frame 内联 gridTemplateColumns 280px→56px（官方 300ms grid 过渡，我们以 transition-duration:0s 压平）；
+  // frame 带 data-sidebar-collapsed 属性（稳定 data-* 锚 = 折叠态检测）；sidebarRoot 在 150ms settle 后
+  // 加 collapsed 类并给 sidebar.workspaces 席位传 {wide:false, expandSidebar}（迷你形态的官方信号）。
+  sidebarCollapseBtn: '#root > div > div > div:first-child > div > div > div:nth-child(2) button:last-child', /* DRIFT-RISK: structural */
+  // 展开态/折叠态限定版（:not()/:attr 打在链中 frame 一级，不能前缀整串——否则造出嵌套 #root 的死选择器）：
+  // *Wide 仅展开态命中（frame 无 data-sidebar-collapsed）；*Rail 仅折叠轨命中。
+  sidebarLogoRowWide: '#root > div > div:not([data-sidebar-collapsed]) > div:first-child > div > div > div:nth-child(2)', /* DRIFT-RISK: structural */
+  sidebarNewSessionWide: '#root > div > div:not([data-sidebar-collapsed]) > div:first-child > div > div > button:nth-child(3)', /* DRIFT-RISK: structural */
+  sidebarCollapseBtnWide: '#root > div > div:not([data-sidebar-collapsed]) > div:first-child > div > div > div:nth-child(2) button:last-child', /* DRIFT-RISK: structural */
+  sidebarNewSessionRail: '#root > div > div[data-sidebar-collapsed] > div:first-child > div > div > button:nth-child(3)', /* DRIFT-RISK: structural */
+  sidebarFootRail: '#root > div > div[data-sidebar-collapsed] > div:first-child > div > div > div:nth-child(5)', /* DRIFT-RISK: structural */
 };
 

@@ -31,6 +31,7 @@ async function probe(label) {
       backgroundImage: cs.backgroundImage,
       sprite, desk, styleTag,
       themeAttr: document.documentElement.getAttribute('data-theme'),
+      bodyDark: document.body.hasAttribute('data-ds-dark-theme'),
       htmlClass: document.documentElement.className,
     };
   });
@@ -74,6 +75,10 @@ for (const [label, r] of [['first', first], ['reload', second]]) {
   check(`${label}: style[data-mc-root] 在册`, r.styleTag);
 }
 check('字体真实加载含 ChiKareGo', fonts.some((f) => /ChiKareGo/i.test(f)));
+// 轮6：主题走官方通道 —— 月牙钮已删，html[data-theme] 应跟随官方 body[data-ds-dark-theme] 信号
+check('月牙钮不存在', await page.evaluate(() => document.querySelector('[aria-label="切换深浅主题"]') === null));
+check('官方外观通道跟随：data-theme 与 body[data-ds-dark-theme] 一致',
+  (first.themeAttr === 'dark') === first.bodyDark && first.themeAttr !== null);
 console.log('--- [mcx] console lines (tail 10) ---');
 for (const l of logs.slice(-10)) console.log(l);
 await browser.close();

@@ -55,26 +55,15 @@ const mods = {
   MC_MAP: MC_MAP,
   McChrome: McChrome,
   McSidebar: McSidebar,
+  McFinder: McFinder,
   McKit: McKit,
 };
-const order = ["McTokens","McClock","McMcfx","McSprite","MC_MAP","McChrome","McSidebar","McKit"];
+const order = ["McTokens","McClock","McMcfx","McSprite","MC_MAP","McChrome","McSidebar","McFinder","McKit"];
 
 return {
-  inject: ["slots", "theme"],
+  inject: ["slots", "theme", "sessions"],
   apply(ctx) {
     try { console.log('[mcx] apply — 主题注入开始（persistent）'); } catch (e) {}
-    try { window.__MC_LOADED_AT = Date.now(); } catch (e) {}
-    // 心跳：每 10s 报一次存活。常驻半优先 ctx.interval（timer mixin，fiber 拆卸自动回收），
-    // 不可用时回退 window.setInterval（dispose 时手动 clear）。
-    let stopBeat = null;
-    let hb = null;
-    try {
-      if (typeof ctx.interval === 'function') {
-        stopBeat = ctx.interval(() => { try { console.log('[mcx] alive t+' + Math.round((Date.now() - window.__MC_LOADED_AT) / 1000) + 's'); } catch (e) {} }, 10000);
-      } else {
-        hb = window.setInterval(() => { try { console.log('[mcx] alive t+' + Math.round((Date.now() - window.__MC_LOADED_AT) / 1000) + 's'); } catch (e) {} }, 10000);
-      }
-    } catch (e) { try { console.error('[mcx] heartbeat init failed:', e && e.message); } catch (e2) {} }
     const style = document.createElement('style');
     style.setAttribute('data-mc-root','');
     // @font-face ×5 —— 宿主静态路由（index.js 前缀路由 /mcx-assets/ → 本包 assets/）
@@ -87,7 +76,7 @@ return {
     style.textContent = css; document.head.appendChild(style);
     // 正规主题通道：宿主 ThemePresenter 把活动主题 token 以 inline style 写在 body 上，
     // CSS 选择器永远压不过 —— 必须经 theme.overrideTokens 叠层（值用 var(--mc-*) 间接引用，
-    // 月牙钮翻转 html[data-theme] 时随 --mc-* 动态跟随）。卸载时撤层。
+    // html[data-theme] 跟随官方 body[data-ds-dark-theme] 信号时随 --mc-* 动态跟随）。卸载时撤层。
     // 常驻插件直达：ctx.theme（inject:['theme'] 声明已生效）。
     try {
       const T = ctx.theme;
@@ -117,8 +106,6 @@ return {
     } catch (e) { console.error('[mcx] overrideTokens failed:', e && e.message); }
     try { console.log('[mcx] apply 完成，样式已入 head'); } catch (e) {}
     ctx.effect(() => () => {
-      try { if (typeof stopBeat === 'function') stopBeat(); } catch (e) {}
-      try { if (hb !== null) window.clearInterval(hb); } catch (e) {}
       style.remove();
     });
   },
@@ -130,7 +117,7 @@ return {
 const out = header + body + tail;
 // 写盘断言：非空 + 关键标记齐全
 if (out.length < 1000) throw new Error('assembled output suspiciously small');
-for (const mark of ['__ModuleLoader__.load', 'dsh-theme-macintosh', '/mcx-assets/fonts/ChiKareGo.ttf', 'inject: ["slots", "theme"]', 'McKit: McKit', 'return {\n  inject']) {
+for (const mark of ['__ModuleLoader__.load', 'dsh-theme-macintosh', '/mcx-assets/fonts/ChiKareGo.ttf', 'inject: ["slots", "theme", "sessions"]', 'McFinder: McFinder', 'return {\n  inject']) {
   if (!out.includes(mark)) throw new Error('marker missing in output: ' + mark);
 }
 writeFileSync(OUT, out);
