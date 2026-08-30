@@ -1,0 +1,7 @@
+{
+  "name": "dsh-theme-macintosh",
+  "private": true,
+  "scripts": {
+    "test": "node --test \"test/*.test.mjs\" && node tools/audit.mjs"
+  }
+}
