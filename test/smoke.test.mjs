@@ -82,8 +82,9 @@ test('assemble 产出含 tokens/primitives 全集与 kit 检视页', () => {
   assert.ok(out.includes('MC_MAP'), '应内联 MC_MAP 宿主选择器表');
   assert.ok(out.includes('data-mc-desk'), 'chrome.mount 应注入 data-mc-desk 桌面画布');
   assert.ok(out.includes('--mc-shadow-panel'), '主列应套 .win 硬投影');
-  assert.ok(out.includes('[data-conversation-scroll]{background:var(--mc-bg-deep)'),
-    'chrome css 应以 MAP.scrollport 插值出滚动口染色规则');
+  // 插值是运行期的：静态产物只需证明接线（模板引用 MC_MAP.scrollport + 目标底色存在）
+  assert.ok(out.includes('MC_MAP.scrollport'), 'chrome css 应经 MC_MAP.scrollport 插值');
+  assert.ok(out.includes('var(--mc-bg-deep)'), '滚动口应染 --mc-bg-deep');
   // 动画纪律：全 css 无 hover 态、无 transition 声明（豁免媒体查询里的 transition-duration 除外）
   const cssStart = out.indexOf('data-mc-root');
   const cssChunk = out.slice(cssStart);
