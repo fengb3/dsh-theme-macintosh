@@ -54,6 +54,8 @@ html[data-theme="light"]{
   --mc-scroll-track:#e0e0e0; --mc-scroll-box:#c0c0c0;
   /* --mc-desktop-pattern 刻意不覆盖：浅色沿用同一噪点瓦片，靠 --mc-bg 底色区分 */
   --dsw-specific-sidebar-fill:var(--mc-surface);
+  /* 侧栏 Finder 白窗：rail 系浅色覆盖（System 7 白窗黑线；rail-1 与 --mc-surface 同为 #fff，无冲突） */
+  --mc-rail-1:#fff; --mc-rail-2:#eee;
 }
 /* mcfx 闪烁类（照《笔记》§0.3）：只管遮罩本体，几何（定位/尺寸）由消费方给 */
 .mc-ghost{opacity:0;pointer-events:none}

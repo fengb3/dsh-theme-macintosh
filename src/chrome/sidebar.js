@@ -23,7 +23,7 @@ const McSidebar = {
     if (!ctx || !ctx.slot) return;
     // 月牙主题钮：sidebar.footer.action（list 席，宿主 dsh-client-ui-sidebar L307-310 注册）
     const seat = ctx.slot.sidebar && ctx.slot.sidebar.footer && ctx.slot.sidebar.footer.action;
-    if (!seat || typeof seat.register !== 'function') return; // 席位缺席 → 静默跳过
+    if (seat && typeof seat.register === 'function') { // 席位缺席 → 静默跳过（不短路 brand.mark）
     seat.register(
       { id: 'mc-theme-toggle', order: 50, label: () => '切换深浅主题' },
       function moonToggle() {
@@ -42,6 +42,7 @@ const McSidebar = {
         }, React.createElement('svg', null, React.createElement('use', { href: '#i-moon' })));
       },
     );
+    }
     // 品牌图标：Finder 24px 换掉宿主 FishLogo（single 席，宿主 L170 renderSlot fallback）
     const mark = ctx.slot.sidebar && ctx.slot.sidebar.brand && ctx.slot.sidebar.brand.mark;
     if (mark && typeof mark.register === 'function') {
