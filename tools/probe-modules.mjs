@@ -18,6 +18,10 @@ const info = await page.evaluate(() => {
   };
   walk(boot, 'boot', 0);
   out.macintoshHits = hits.slice(0, 20);
+  const row = boot && boot.entries && boot.entries.find((e) => /macintosh/i.test(String(e.id || '')));
+  out.ourRow = row;
+  const cmpRows = (boot && boot.entries || []).filter((e) => /doubao|genui|session-icons|hot-reload/i.test(String(e.id || '')));
+  out.compareRows = cmpRows;
   const scripts = [...document.querySelectorAll('script[src]')].map((s) => s.src).filter((s) => /plugin|macintosh/i.test(s));
   out.pluginScripts = scripts;
   return out;
