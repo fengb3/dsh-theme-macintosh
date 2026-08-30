@@ -556,8 +556,11 @@ let mcThemeOrig = undefined;
 const McSidebar = {
   css: [
     // 侧栏列 = Finder 窗（.win 语汇完整版）：rail-1 底 + 四边 1px 黑边 + 3px 硬投影 + 直角。
-    // 桌面缝隙由容器 padding/gap 提供（见 chrome 段 appRoot 规则）。整窗字体 --font-sb（§7.1）
-    `${MC_MAP.sidebar}{background:var(--mc-rail-1);border:1px solid var(--mc-border);border-radius:0;box-shadow:var(--mc-shadow-panel);font-family:var(--font-sb)}`,
+    // 负 margin 抵消容器 padding（-12px 上/下/左）：侧栏贴满视口顶边与左缘，标题栏真正顶格；
+    // 与主窗之间仍留 12px 桌面缝隙（容器 gap）。整窗字体 --font-sb（§7.1）
+    `${MC_MAP.sidebar}{background:var(--mc-rail-1);border:1px solid var(--mc-border);border-radius:0;box-shadow:var(--mc-shadow-panel);margin:-12px 0 -12px -12px;font-family:var(--font-sb)}`,
+    // 官方侧栏根自带 padding:6px 12px —— 清零，窗内内容顶格（行级间距由各自行自带）
+    `${MC_MAP.sidebarRoot}{padding:0}`,
     // 品牌行：字号 17px（finder 图标 24px 经 sidebar.brand.mark 席位注入，见 slots）；
     // 名称经 sidebar.brand.name 席位注入 "Deepseek + Harness" 反色标签（原型 sb-head §4）
     `${MC_MAP.sidebarBrand}{font:400 17px/1 var(--font-sb);color:var(--mc-fg)}`,
@@ -630,8 +633,8 @@ const McSidebar = {
       `mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M11%204h2v7h7v2h-7v7h-2v-7H4v-2h7V4z' fill='black'/%3E%3C/svg%3E") center/contain no-repeat}`,
     `${MC_MAP.sidebarNewSession}:active{background:var(--mc-border);color:var(--mc-surface);` +
       `box-shadow:inset 0 0 0 1px var(--mc-border),inset 0 0 0 2px var(--mc-surface)}`,
-    // 工作区树容器 sb-tree：内衬 8px（§4 .sb-tree padding:8px）
-    `${MC_MAP.sidebarRegion}{padding:8px}`,
+    // 工作区树容器 sb-tree：随根 padding 清零，内衬也清零（用户要求侧栏完全无 padding）
+    `${MC_MAP.sidebarRegion}{padding:0}`,
     // —— 像素图标替换（pixelarticons 24 栅格）：官方细轮廓 path 藏起，svg 本体 currentColor + 像素 mask 重绘 ——
     // 锚点 aria-label 为 zh i18n 文案（DRIFT-RISK：随语言/官方文案漂移，失配=回退官方轮廓图标，不破版）
     `${MC_MAP.sidebarRegion} button svg *{visibility:hidden}`,
