@@ -479,9 +479,10 @@ const McChrome = {
     // frame 底色让位：AppFrame 根自带实底 background(--dsw-alias-bg-base)，不清掉会盖住桌面噪点；
     // 各列（sidebarCol/detailsCol/主窗）自有实底，不受影响
     `${MC_MAP.appRoot}{background:transparent}`,
-    // 主列 = 会话窗（.win 语汇）：surface 底 + 1px 边 + 5px 圆角 + 3px 硬投影。
+    // 主列 = 会话窗（.win 语汇）：surface 底 + 1px 边 + 3px 硬投影。
+    // 桌面两大窗 = 直角（原型 .desk > .win{border-radius:0}）；margin 留出桌面缝隙（两侧窗浮在噪点桌面上）。
     // 刻意不收 overflow —— 宿主自管滚动（centerCol overflow:hidden + data-conversation-scroll）
-    `${MC_MAP.mainColumn}{background:var(--mc-surface);border:1px solid var(--mc-border);border-radius:var(--mc-r-window);box-shadow:var(--mc-shadow-panel)}`,
+    `${MC_MAP.mainColumn}{background:var(--mc-surface);border:1px solid var(--mc-border);border-radius:0;box-shadow:var(--mc-shadow-panel);margin:12px}`,
     // 会话头部条：surface-3 + 1px 底线（宿主 header::after 线已由 token 别名染成 --mc-border，视觉重叠成加重底线）
     `${MC_MAP.sessionHeader}{background:var(--mc-surface-3);border-bottom:1px solid var(--mc-border)}`,
     // 滚动口：最小干预 —— 只给深一档底色（窗内"文档区"），滚动条走 tokens 已有的全局 15px 经典款
@@ -518,11 +519,18 @@ let mcThemeOrig = undefined;
 
 const McSidebar = {
   css: [
-    // 侧栏列 = Finder 窗：rail-1 底 + 1px 右边线；整窗字体 --font-sb（§7.1）
-    `${MC_MAP.sidebar}{background:var(--mc-rail-1);border-right:1px solid var(--mc-border);font-family:var(--font-sb)}`,
-    // 品牌行：字号 17px（finder 图标 24px 经 sidebar.brand.mark 席位注入，见 slots）
+    // 侧栏列 = Finder 窗（.win 语汇完整版）：rail-1 底 + 四边 1px 黑边 + 3px 硬投影 + 直角；
+    // margin 让窗浮在桌面噪点上（上/下/左各 12px，右边线由 border 提供）。整窗字体 --font-sb（§7.1）
+    `${MC_MAP.sidebar}{background:var(--mc-rail-1);border:1px solid var(--mc-border);border-radius:0;box-shadow:var(--mc-shadow-panel);margin:12px 0 12px 12px;font-family:var(--font-sb)}`,
+    // 品牌行：字号 17px（finder 图标 24px 经 sidebar.brand.mark 席位注入，见 slots）；
+    // 名称经 sidebar.brand.name 席位注入 "Deepseek + Harness" 反色标签（原型 sb-head §4）
     `${MC_MAP.sidebarBrand}{font:400 17px/1 var(--font-sb);color:var(--mc-fg)}`,
     `${MC_MAP.sidebarBrand} svg{width:24px;height:24px;flex:none}`,
+    '.mc-sb-name{display:inline-flex;align-items:center;min-width:0}',
+    '.mc-sb-brand{font:700 17px/1.2 var(--font-sb);letter-spacing:.02em;color:var(--mc-fg)}',
+    '.mc-sb-tag{font:600 14px/1.2 var(--font-sb);background:var(--mc-fg);color:var(--mc-rail-1);padding:1px 5px;margin-left:5px;flex:none}',
+    // 会话树图标统一 15px（原型 group-head svg 15px；行内小钮 12px 走 18px 容器）
+    `${MC_MAP.sessionRow} svg{width:15px;height:15px;flex:none}`,
     // 会话行：26px 细长条、单行 ellipsis、13px --font-sb、左缩进 20px（§7.2 行序）
     `${MC_MAP.sessionRow}{height:26px;display:flex;align-items:center;padding-left:20px;` +
       `overflow:hidden;white-space:nowrap;text-overflow:ellipsis;` +
@@ -577,7 +585,8 @@ const McSidebar = {
         'aria-label': '切换深浅主题',
         title: '切换深浅主题',
         onClick: flip,
-      }, React.createElement('svg', null, React.createElement('use', { href: '#i-moon' })));
+        style: { background: 'none', border: 'none', padding: 0, margin: 0, width: '18px', height: '18px', display: 'grid', placeItems: 'center', color: 'var(--mc-muted)', cursor: 'pointer' },
+      }, React.createElement('svg', { width: 15, height: 15, 'aria-hidden': true, style: { display: 'block' } }, React.createElement('use', { href: '#i-moon' })));
     })));
     // 品牌图标：Finder 24px 换掉宿主 FishLogo。single 槽必须以更低 priority 遮蔽注册
     // （官方占位 priority 0，lowest renders —— 同 0 会抛 "already has a registration"）。
@@ -592,6 +601,18 @@ const McSidebar = {
         width: 24, height: 24, 'aria-hidden': true,
         style: { color: 'var(--mc-fg)', display: 'block' },
       }, React.createElement('use', { href: '#i-finder' }));
+    })));
+    // 品牌名：sb-head 语汇 —— "Deepseek" 17px 粗体 + "Harness" 反色小标签（原型 §4 sb-name）。
+    // single 槽同样以 priority:-1 遮蔽官方 wordmark。
+    ctx.effect(() => wait('sidebar.brand.name', () => reg({
+      name: 'sidebar.brand.name',
+      priority: -1,
+      label: () => 'Deepseek Harness',
+    }, function BrandName() {
+      if (typeof React === 'undefined') return null;
+      return React.createElement('span', { className: 'mc-sb-name' },
+        React.createElement('span', { className: 'mc-sb-brand' }, 'Deepseek'),
+        React.createElement('span', { className: 'mc-sb-tag' }, 'Harness'));
     })));
   },
 };

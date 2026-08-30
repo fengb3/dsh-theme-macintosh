@@ -7,9 +7,10 @@ const McChrome = {
     // frame 底色让位：AppFrame 根自带实底 background(--dsw-alias-bg-base)，不清掉会盖住桌面噪点；
     // 各列（sidebarCol/detailsCol/主窗）自有实底，不受影响
     `${MC_MAP.appRoot}{background:transparent}`,
-    // 主列 = 会话窗（.win 语汇）：surface 底 + 1px 边 + 5px 圆角 + 3px 硬投影。
+    // 主列 = 会话窗（.win 语汇）：surface 底 + 1px 边 + 3px 硬投影。
+    // 桌面两大窗 = 直角（原型 .desk > .win{border-radius:0}）；margin 留出桌面缝隙（两侧窗浮在噪点桌面上）。
     // 刻意不收 overflow —— 宿主自管滚动（centerCol overflow:hidden + data-conversation-scroll）
-    `${MC_MAP.mainColumn}{background:var(--mc-surface);border:1px solid var(--mc-border);border-radius:var(--mc-r-window);box-shadow:var(--mc-shadow-panel)}`,
+    `${MC_MAP.mainColumn}{background:var(--mc-surface);border:1px solid var(--mc-border);border-radius:0;box-shadow:var(--mc-shadow-panel);margin:12px}`,
     // 会话头部条：surface-3 + 1px 底线（宿主 header::after 线已由 token 别名染成 --mc-border，视觉重叠成加重底线）
     `${MC_MAP.sessionHeader}{background:var(--mc-surface-3);border-bottom:1px solid var(--mc-border)}`,
     // 滚动口：最小干预 —— 只给深一档底色（窗内"文档区"），滚动条走 tokens 已有的全局 15px 经典款
