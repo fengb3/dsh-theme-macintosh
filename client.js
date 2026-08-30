@@ -523,6 +523,7 @@ const MC_MAP = {
   sidebarCollapseBtnWide: '#root > div > div:not([data-sidebar-collapsed]) > div:first-child > div > div > div:nth-child(2) button:last-child', /* DRIFT-RISK: structural */
   sidebarNewSessionRail: '#root > div > div[data-sidebar-collapsed] > div:first-child > div > div > button:nth-child(3)', /* DRIFT-RISK: structural */
   sidebarFootRail: '#root > div > div[data-sidebar-collapsed] > div:first-child > div > div > div:nth-child(5)', /* DRIFT-RISK: structural */
+  sidebarLogoRowRail: '#root > div > div[data-sidebar-collapsed] > div:first-child > div > div > div:nth-child(2)', /* DRIFT-RISK: structural */
 };
 
 
@@ -676,6 +677,8 @@ const McSidebar = {
     `${MC_MAP.appRootRail} .mc-titlebar{display:none}`,
     // 折叠态页脚：原型 .rail-mini .sb-foot —— 纵排居中（设置图标钮单列）
     `${MC_MAP.sidebarFootRail}{display:flex;flex-direction:column;justify-content:center;align-items:center;gap:8px;padding:8px 0}`,
+    // 折叠态品牌行：原型 .rail-mini .sb-head{justify-content:center} —— Finder 图标在 56px 轨内水平居中
+    `${MC_MAP.sidebarLogoRowRail}{justify-content:center}`,
     // 官方折叠钮：展开态隐藏（折叠/展开动作由 tclose 程序化触发，保官方行为与持久化）；
     // 折叠态保留官方钮 = rail 首钮（渲染我们的品牌 mark），作展开的双保险入口
     `${MC_MAP.sidebarCollapseBtnWide}{display:none}`,
