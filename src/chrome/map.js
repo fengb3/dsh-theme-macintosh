@@ -39,4 +39,13 @@ const MC_MAP = {
   //   SessionNodeItem 行 div role="treeitem" + aria-selected（selected 时 "true"），稳定语义锚点。
   sessionRow: 'div[role="treeitem"]',
   sessionRowSelected: 'div[role="treeitem"][aria-selected="true"]',
+  // —— 侧栏内部结构位（精修2：元素级 Finder 语汇）。经 probe-session 实测（2026-08-30）——
+  //   sidebarCol > div(h0 包装) > .hHd-Xa_root，root children 恒序：
+  //   [1]logoRow(DIV) [2]newSession(BUTTON) [3]regionArea(DIV 工作区树) [4]footArea(DIV)。
+  //   全无 data-*，nth-child 结构位（DRIFT-RISK：随官方侧栏改版漂移，失配=回退底色不破版）。
+  sidebarRoot: '#root > div > div > div:first-child > div > div', /* DRIFT-RISK: structural */
+  sidebarLogoRow: '#root > div > div > div:first-child > div > div > div:nth-child(1)', /* DRIFT-RISK: structural */
+  sidebarNewSession: '#root > div > div > div:first-child > div > div > button:nth-child(2)', /* DRIFT-RISK: structural */
+  sidebarRegion: '#root > div > div > div:first-child > div > div > div:nth-child(3)', /* DRIFT-RISK: structural */
+  sidebarFoot: '#root > div > div > div:first-child > div > div > div:nth-child(4)', /* DRIFT-RISK: structural */
 };

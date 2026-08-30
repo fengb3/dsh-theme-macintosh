@@ -27,6 +27,23 @@ const McSidebar = {
     // 选中（aria-selected 语义）：整行反色 + 方角（§7.2 —— 漏 border-radius:0 会出"胶囊"破形）
     `${MC_MAP.sessionRowSelected}{background:var(--mc-fg);color:var(--mc-surface);border-radius:0}`,
     `${MC_MAP.sessionRowSelected} *{color:inherit}`,
+    // —— 侧栏元素级 Finder 语汇（原型 §4 sb-head/sb-actions/sb-tree/sb-foot）——
+    // 品牌行 sb-head：padding + 软底线（logoRow 官方 60px 定高放开为内容高）
+    `${MC_MAP.sidebarLogoRow}{height:auto;min-height:0;padding:10px 12px 8px;background:var(--mc-rail-1);border-bottom:1px solid var(--mc-border-soft)}`,
+    // New Session 钮 = .btn.primary 双内环语汇（§5）：accent 底 + 外 1px 线 + 2px 面缝双环；14px 图标
+    `${MC_MAP.sidebarNewSession}{display:flex;align-items:center;justify-content:center;gap:7px;` +
+      `width:calc(100% - 20px);height:28px;margin:8px 10px;padding:0 16px;min-width:72px;` +
+      `border-radius:var(--mc-r-btn);border:1px solid var(--mc-border);` +
+      `box-shadow:inset 0 0 0 1px var(--mc-accent),inset 0 0 0 2px var(--mc-border);` +
+      `background:var(--mc-accent);color:var(--mc-accent-ink);` +
+      `font:600 13px/1 var(--font-sb);letter-spacing:.04em;cursor:pointer}`,
+    `${MC_MAP.sidebarNewSession} svg{width:14px;height:14px;flex:none}`,
+    `${MC_MAP.sidebarNewSession}:active{background:var(--mc-border);color:var(--mc-surface);` +
+      `box-shadow:inset 0 0 0 1px var(--mc-border),inset 0 0 0 2px var(--mc-surface)}`,
+    // 工作区树容器 sb-tree：内衬 8px（§4 .sb-tree padding:8px）
+    `${MC_MAP.sidebarRegion}{padding:8px}`,
+    // 页脚 sb-foot：rail-2 面 + 顶线（§4）
+    `${MC_MAP.sidebarFoot}{background:var(--mc-rail-2);border-top:1px solid var(--mc-border-soft)}`,
   ].join('\n'),
 
   // 撤除恢复：装配器先调 mount 再调 slots，此处抢在首次 flip 前捕获 data-theme 原值
