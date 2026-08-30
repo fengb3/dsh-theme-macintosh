@@ -579,9 +579,11 @@ const McSidebar = {
         onClick: flip,
       }, React.createElement('svg', null, React.createElement('use', { href: '#i-moon' })));
     })));
-    // 品牌图标：Finder 24px 换掉宿主 FishLogo（single 席；动态条目优先于出厂件，实现换标）
+    // 品牌图标：Finder 24px 换掉宿主 FishLogo。single 槽必须以更低 priority 遮蔽注册
+    // （官方占位 priority 0，lowest renders —— 同 0 会抛 "already has a registration"）。
     ctx.effect(() => wait('sidebar.brand.mark', () => reg({
       name: 'sidebar.brand.mark',
+      priority: -1,
       label: () => 'Finder',
     }, function FinderMark() {
       if (typeof React === 'undefined') return null;
@@ -791,18 +793,8 @@ return {
   inject: ["slots", "theme"],
   apply(ctx) {
     try { console.log('[mcx] apply — 主题注入开始（persistent）'); } catch (e) {}
-    try { window.__MC_LOADED_AT = Date.now(); } catch (e) {}
-    // 心跳：每 10s 报一次存活。常驻半优先 ctx.interval（timer mixin，fiber 拆卸自动回收），
-    // 不可用时回退 window.setInterval（dispose 时手动 clear）。
-    let stopBeat = null;
-    let hb = null;
-    try {
-      if (typeof ctx.interval === 'function') {
-        stopBeat = ctx.interval(() => { try { console.log('[mcx] alive t+' + Math.round((Date.now() - window.__MC_LOADED_AT) / 1000) + 's'); } catch (e) {} }, 10000);
-      } else {
-        hb = window.setInterval(() => { try { console.log('[mcx] alive t+' + Math.round((Date.now() - window.__MC_LOADED_AT) / 1000) + 's'); } catch (e) {} }, 10000);
-      }
-    } catch (e) { try { console.error('[mcx] heartbeat init failed:', e && e.message); } catch (e2) {} }
+    // 注意：不使用 ctx.interval 心跳 —— timer mixin 需 inject:['timer'] 声明，
+    // 未声明时抛 "cannot get property timer without inject"（已验证）。
     const style = document.createElement('style');
     style.setAttribute('data-mc-root','');
     // @font-face ×5 —— 宿主静态路由（index.js 前缀路由 /mcx-assets/ → 本包 assets/）
@@ -845,8 +837,6 @@ return {
     } catch (e) { console.error('[mcx] overrideTokens failed:', e && e.message); }
     try { console.log('[mcx] apply 完成，样式已入 head'); } catch (e) {}
     ctx.effect(() => {
-      try { if (typeof stopBeat === 'function') stopBeat(); } catch (e) {}
-      try { if (hb !== null) window.clearInterval(hb); } catch (e) {}
       try { console.log('[mcx] fiber dispose — 样式/叠层移除'); } catch (e) {}
       style.remove();
     });
