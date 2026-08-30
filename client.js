@@ -27,8 +27,8 @@ const McTokens = {
   --mc-desktop-pattern:url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAYAAADED76LAAAACXBIWXMAAAWJAAAFiQFtaJ36AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAA2SURBVHgB1Y+xDQAgDMNacURvykVZ+SprPitiYYIDmDxYsuQk2QBCUtyYtvslN0dVzV8LZ30Buytmvd+9eVsAAAAASUVORK5CYII=");
   /* titlebar close/zoom box 多色位（sprite 引用原型名 --box-line/--box-face，别名见下） */
   --mc-box-line:#9d9dcf; --mc-box-face:#31314f;
-  /* 硬投影（无模糊单偏移） */
-  --mc-shadow-panel:3px 3px 0 0 rgba(0,0,0,.55);
+  /* 硬投影（无模糊单偏移）——原型 §4：深 .85 / 浅 .55（此前两处装反） */
+  --mc-shadow-panel:3px 3px 0 0 rgba(0,0,0,.85);
   --mc-shadow-pop:3px 3px 0 0 rgba(0,0,0,.7);
   --mc-shadow-field:2px 2px 0 0 rgba(0,0,0,.35);
   /* 标题栏条纹 / 滚动条 */
@@ -53,11 +53,11 @@ html[data-theme="light"]{
   --mc-bg:#8f8f8f; --mc-surface:#fff; --mc-surface-2:#eee; --mc-surface-3:#ddd;
   --mc-fg:#0a0a0a; --mc-muted:#333; --mc-faint:#555; --mc-border:#0a0a0a;
   --mc-accent:#8f8fc0; --mc-sel-bg:#dadaff; --mc-warn:#8a6a1f;
-  --mc-bg-deep:#7c7c7c; --mc-accent-strong:#75759f; --mc-accent-dim:rgba(143,143,192,.42); --mc-accent-ink:#ffffff;
+  --mc-bg-deep:#ffffff; --mc-accent-strong:#75759f; --mc-accent-dim:rgba(143,143,192,.42); --mc-accent-ink:#ffffff;
   --mc-spark:#a8720e; --mc-success:#2e7d32; --mc-danger:#c23a34; --mc-danger-ink:#ffffff;
   --mc-border-soft:rgba(10,10,10,.5);
   --mc-box-line:#545487; --mc-box-face:#dadaff;
-  --mc-shadow-panel:3px 3px 0 0 rgba(0,0,0,.85);
+  --mc-shadow-panel:3px 3px 0 0 rgba(0,0,0,.72);
   --mc-shadow-pop:3px 3px 0 0 #000;
   --mc-shadow-field:2px 2px 0 0 rgba(0,0,0,.5);
   --mc-title-stripe:rgba(0,0,0,.5);
@@ -470,6 +470,12 @@ const MC_MAP = {
   //   SessionNodeItem 行 div role="treeitem" + aria-selected（selected 时 "true"），稳定语义锚点。
   sessionRow: 'div[role="treeitem"]',
   sessionRowSelected: 'div[role="treeitem"][aria-selected="true"]',
+  // 会话树行细分（probe-tree 实测 2026-08-30）：工作区行带 aria-expanded（直系 svg = 文件夹 + 折叠箭头
+  // [class*="arrow"] 哈希子串）；会话行无 expanded（首个直系 svg = 状态图标）。行内"操作/新建"按钮走 aria-label。
+  sessionRowWorkspace: 'div[role="treeitem"][aria-expanded]', /* DRIFT-RISK: structural */
+  sessionRowArrow: 'div[role="treeitem"][aria-expanded] > svg[class*="arrow"]', /* DRIFT-RISK: hashed-substring */
+  sessionRowFolder: 'div[role="treeitem"][aria-expanded] > svg:first-of-type', /* DRIFT-RISK: structural */
+  sessionStatusIcon: 'div[role="treeitem"]:not([aria-expanded]) > svg:first-of-type', /* DRIFT-RISK: structural */
   // —— 侧栏内部结构位（精修2：元素级 Finder 语汇）。经 probe-session 实测（2026-08-30）——
   //   sidebarCol > div(h0 包装) > .hHd-Xa_root，root children 恒序：
   //   [1]logoRow(DIV) [2]newSession(BUTTON) [3]regionArea(DIV 工作区树) [4]footArea(DIV)。
@@ -498,6 +504,23 @@ const McChrome = {
     // close/zoom 方块与交互属三期结构级，此处只做 CSS 染色）。浅色条纹加深、深色条纹提亮。
     `${MC_MAP.sessionHeader}{background:repeating-linear-gradient(180deg,rgba(255,255,255,.10) 0 1px,transparent 1px 3px),var(--mc-surface-2);border-bottom:1px solid var(--mc-border);box-shadow:inset 0 1px 0 var(--mc-accent)}`,
     `html[data-theme="light"] ${MC_MAP.sessionHeader}{background:repeating-linear-gradient(180deg,rgba(0,0,0,.20) 0 1px,transparent 1px 3px),var(--mc-surface-2)}`,
+    // hero/inert 阶段官方无 header —— 主窗补同款装饰 titlebar（标题 DeepSeek Harness；
+    // active 阶段由真 header 吃 pinstripe 规则，不叠加）。::before 作首 flex 子，条纹+方块同侧栏。
+    `div[data-phase="hero"]::before,div[data-phase="inert"]::before{content:'DeepSeek Harness';` +
+      `display:flex;align-items:center;justify-content:center;flex:none;` +
+      `height:20px;font:600 12px/1 var(--font-sb);letter-spacing:.03em;color:var(--mc-fg);` +
+      `background:linear-gradient(var(--mc-surface-2),var(--mc-surface-2)) 6px center/11px 11px no-repeat,` +
+        `linear-gradient(var(--mc-border),var(--mc-border)) 5px center/13px 13px no-repeat,` +
+        `linear-gradient(var(--mc-surface-2),var(--mc-surface-2)) right 6px center/11px 11px no-repeat,` +
+        `linear-gradient(var(--mc-border),var(--mc-border)) right 5px center/13px 13px no-repeat,` +
+        `repeating-linear-gradient(180deg,rgba(255,255,255,.10) 0 1px,transparent 1px 3px),var(--mc-surface-2);` +
+      `border-bottom:1px solid var(--mc-border);box-shadow:inset 0 1px 0 var(--mc-accent)}`,
+    `html[data-theme="light"] div[data-phase="hero"]::before,html[data-theme="light"] div[data-phase="inert"]::before{background:` +
+      `linear-gradient(var(--mc-surface-2),var(--mc-surface-2)) 6px center/11px 11px no-repeat,` +
+      `linear-gradient(var(--mc-border),var(--mc-border)) 5px center/13px 13px no-repeat,` +
+      `linear-gradient(var(--mc-surface-2),var(--mc-surface-2)) right 6px center/11px 11px no-repeat,` +
+      `linear-gradient(var(--mc-border),var(--mc-border)) right 5px center/13px 13px no-repeat,` +
+      `repeating-linear-gradient(180deg,rgba(0,0,0,.20) 0 1px,transparent 1px 3px),var(--mc-surface-2)}`,
     // 滚动口：最小干预 —— 只给深一档底色（窗内"文档区"），滚动条走 tokens 已有的全局 15px 经典款
     `${MC_MAP.scrollport}{background:var(--mc-bg-deep)}`,
     // composer 卡：surface 底 + 1px 边 + 小一级硬投影（方角，.mc-field 语汇）
@@ -544,6 +567,26 @@ const McSidebar = {
     '.mc-sb-tag{font:600 14px/1.2 var(--font-sb);background:var(--mc-fg);color:var(--mc-rail-1);padding:1px 5px;margin-left:5px;flex:none}',
     // 会话树图标统一 15px（原型 group-head svg 15px；行内小钮 12px 走 18px 容器）
     `${MC_MAP.sessionRow} svg{width:15px;height:15px;flex:none}`,
+    // —— 会话树像素图标（15px 起步：24 栅格像素画在 12px 下退化为细线，15px 才读得出像素块）——
+    `${MC_MAP.sessionRowWorkspace} svg *{visibility:hidden}`,
+    `${MC_MAP.sessionStatusIcon} *{visibility:hidden}`,
+    `${MC_MAP.sessionRowWorkspace} svg,${MC_MAP.sessionStatusIcon}{background:currentColor}`,
+    // 文件夹（工作区行首图标）
+    `${MC_MAP.sessionRowFolder}{` +
+      `-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M4%204h8v2h10v14H2V4h2zm16%204H10V6H4v12h16V8z' fill='black'/%3E%3C/svg%3E") center/contain no-repeat;` +
+      `mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M4%204h8v2h10v14H2V4h2zm16%204H10V6H4v12h16V8z' fill='black'/%3E%3C/svg%3E") center/contain no-repeat}`,
+    // 折叠箭头 → 像素 chev-down
+    `${MC_MAP.sessionRowArrow}{` +
+      `-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M7%208H5v2h2v2h2v2h2v2h2v-2h2v-2h2v-2h2V8h-2v2h-2v2h-2v2h-2v-2H9v-2H7V8z' fill='black'/%3E%3C/svg%3E") center/contain no-repeat;` +
+      `mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M7%208H5v2h2v2h2v2h2v2h2v-2h2v-2h2v-2h2V8h-2v2h-2v2h-2v2h-2v-2H9v-2H7V8z' fill='black'/%3E%3C/svg%3E") center/contain no-repeat}`,
+    // 会话行状态图标 → 像素 doc（通用占位；气泡/垃圾桶等异形后续按需映射）
+    `${MC_MAP.sessionStatusIcon}{` +
+      `-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M3%2022h18V8h-2V6h-2v2h-2V6h2V4h-2V2H3v20zm2-2V4h8v6h6v10H5z' fill='black'/%3E%3C/svg%3E") center/contain no-repeat;` +
+      `mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M3%2022h18V8h-2V6h-2v2h-2V6h2V4h-2V2H3v20zm2-2V4h8v6h6v10H5z' fill='black'/%3E%3C/svg%3E") center/contain no-repeat}`,
+    // 工作区行内"新建会话"加号 → 像素 plus
+    `${MC_MAP.sidebarRegion} button[aria-label$="中新建会话"] svg{` +
+      `-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M11%204h2v7h7v2h-7v7h-2v-7H4v-2h7V4z' fill='black'/%3E%3C/svg%3E") center/contain no-repeat;` +
+      `mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M11%204h2v7h7v2h-7v7h-2v-7H4v-2h7V4z' fill='black'/%3E%3C/svg%3E") center/contain no-repeat}`,
     // 会话行：26px 细长条、单行 ellipsis、13px --font-sb、左缩进 20px（§7.2 行序）
     `${MC_MAP.sessionRow}{height:26px;display:flex;align-items:center;padding-left:20px;` +
       `overflow:hidden;white-space:nowrap;text-overflow:ellipsis;` +
@@ -553,6 +596,22 @@ const McSidebar = {
     `${MC_MAP.sessionRowSelected}{background:var(--mc-fg);color:var(--mc-surface);border-radius:0}`,
     `${MC_MAP.sessionRowSelected} *{color:inherit}`,
     // —— 侧栏元素级 Finder 语汇（原型 §4 sb-head/sb-actions/sb-tree/sb-foot）——
+    // System 7 窗标题栏（CSS 装饰版）：20px pinstripe 条纹面 + 居中 "Sessions" 标题 + 顶缘 accent 线 +
+    // 左右 13px 描边方块（close/zoom 暗示，双层背景近似描边；交互属三期）。经 ::before 作首 flex 子。
+    `${MC_MAP.sidebarRoot}::before{content:'Sessions';display:flex;align-items:center;justify-content:center;` +
+      `height:20px;flex:none;font:600 12px/1 var(--font-sb);letter-spacing:.03em;color:var(--mc-fg);` +
+      `background:linear-gradient(var(--mc-surface-2),var(--mc-surface-2)) 6px center/11px 11px no-repeat,` +
+        `linear-gradient(var(--mc-border),var(--mc-border)) 5px center/13px 13px no-repeat,` +
+        `linear-gradient(var(--mc-surface-2),var(--mc-surface-2)) right 6px center/11px 11px no-repeat,` +
+        `linear-gradient(var(--mc-border),var(--mc-border)) right 5px center/13px 13px no-repeat,` +
+        `repeating-linear-gradient(180deg,rgba(255,255,255,.10) 0 1px,transparent 1px 3px),var(--mc-surface-2);` +
+      `border-bottom:1px solid var(--mc-border);box-shadow:inset 0 1px 0 var(--mc-accent)}`,
+    `html[data-theme="light"] ${MC_MAP.sidebarRoot}::before{background:` +
+      `linear-gradient(var(--mc-surface-2),var(--mc-surface-2)) 6px center/11px 11px no-repeat,` +
+      `linear-gradient(var(--mc-border),var(--mc-border)) 5px center/13px 13px no-repeat,` +
+      `linear-gradient(var(--mc-surface-2),var(--mc-surface-2)) right 6px center/11px 11px no-repeat,` +
+      `linear-gradient(var(--mc-border),var(--mc-border)) right 5px center/13px 13px no-repeat,` +
+      `repeating-linear-gradient(180deg,rgba(0,0,0,.20) 0 1px,transparent 1px 3px),var(--mc-surface-2)}`,
     // 品牌行 sb-head：padding + 软底线（logoRow 官方 60px 定高放开为内容高）
     `${MC_MAP.sidebarLogoRow}{height:auto;min-height:0;padding:10px 12px 8px;background:var(--mc-rail-1);border-bottom:1px solid var(--mc-border-soft)}`,
     // New Session 钮 = .btn.primary 双内环语汇（§5）：accent 底 + 外 1px 线 + 2px 面缝双环；14px 图标
@@ -563,12 +622,42 @@ const McSidebar = {
       `background:var(--mc-accent);color:var(--mc-accent-ink);` +
       `font:600 13px/1 var(--font-sb);letter-spacing:.04em;cursor:pointer}`,
     `${MC_MAP.sidebarNewSession} svg{width:14px;height:14px;flex:none}`,
+    // New Session 图标换像素风：官方轮廓 path 藏起，svg 元素本体以 currentColor + 像素加号 mask 重绘
+    //（pixelarticons plus 24 栅格；mask 只吃 alpha，随主题 accent-ink 自动反色）
+    `${MC_MAP.sidebarNewSession} svg *{visibility:hidden}`,
+    `${MC_MAP.sidebarNewSession} svg{background:currentColor;` +
+      `-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M11%204h2v7h7v2h-7v7h-2v-7H4v-2h7V4z' fill='black'/%3E%3C/svg%3E") center/contain no-repeat;` +
+      `mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M11%204h2v7h7v2h-7v7h-2v-7H4v-2h7V4z' fill='black'/%3E%3C/svg%3E") center/contain no-repeat}`,
     `${MC_MAP.sidebarNewSession}:active{background:var(--mc-border);color:var(--mc-surface);` +
       `box-shadow:inset 0 0 0 1px var(--mc-border),inset 0 0 0 2px var(--mc-surface)}`,
     // 工作区树容器 sb-tree：内衬 8px（§4 .sb-tree padding:8px）
     `${MC_MAP.sidebarRegion}{padding:8px}`,
+    // —— 像素图标替换（pixelarticons 24 栅格）：官方细轮廓 path 藏起，svg 本体 currentColor + 像素 mask 重绘 ——
+    // 锚点 aria-label 为 zh i18n 文案（DRIFT-RISK：随语言/官方文案漂移，失配=回退官方轮廓图标，不破版）
+    `${MC_MAP.sidebarRegion} button svg *{visibility:hidden}`,
+    `${MC_MAP.sidebarRegion} button svg{background:currentColor}`,
+    `${MC_MAP.sidebarRegion} button[aria-label="搜索会话"] svg{` +
+      `-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M6%202h8v2H6V2zM4%206V4h2v2H4zm0%208H2V6h2v8zm2%202H4v-2h2v2zm8%200v2H6v-2h8zm2-2h-2v2h2v2h2v2h2v2h2v-2h-2v-2h-2v-2h-2v-2zm0-8h2v8h-2V6zm0%200V4h-2v2h2z' fill='black'/%3E%3C/svg%3E") center/contain no-repeat;` +
+      `mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M6%202h8v2H6V2zM4%206V4h2v2H4zm0%208H2V6h2v8zm2%202H4v-2h2v2zm8%200v2H6v-2h8zm2-2h-2v2h2v2h2v2h2v2h2v-2h-2v-2h-2v-2h-2v-2zm0-8h2v8h-2V6zm0%200V4h-2v2h2z' fill='black'/%3E%3C/svg%3E") center/contain no-repeat}`,
+    `${MC_MAP.sidebarRegion} button[aria-label="视图选项"] svg{` +
+      `-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M17%204h2v10h-2V4zm0%2012h-2v2h2v2h2v-2h2v-2h-4zm-4-6h-2v10h2V10zm-8%202H3v2h2v6h2v-6h2v-2H5zm8-8h-2v2H9v2h6V6h-2V4zM5%204h2v6H5V4z' fill='black'/%3E%3C/svg%3E") center/contain no-repeat;` +
+      `mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M17%204h2v10h-2V4zm0%2012h-2v2h2v2h2v-2h2v-2h-4zm-4-6h-2v10h2V10zm-8%202H3v2h2v6h2v-6h2v-2H5zm8-8h-2v2H9v2h6V6h-2V4zM5%204h2v6H5V4z' fill='black'/%3E%3C/svg%3E") center/contain no-repeat}`,
+    `${MC_MAP.sidebarRegion} button[aria-label="添加工作区"] svg{` +
+      `-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M11%204h2v7h7v2h-7v7h-2v-7H4v-2h7V4z' fill='black'/%3E%3C/svg%3E") center/contain no-repeat;` +
+      `mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M11%204h2v7h7v2h-7v7h-2v-7H4v-2h7V4z' fill='black'/%3E%3C/svg%3E") center/contain no-repeat}`,
+    `${MC_MAP.sidebarRegion} button[aria-label$="的操作"] svg{` +
+      `-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M1%209h6v6H1V9zm2%202v2h2v-2H3zm6-2h6v6H9V9zm2%202v2h2v-2h-2zm6-2h6v6h-6V9zm2%202v2h2v-2h-2z' fill='black'/%3E%3C/svg%3E") center/contain no-repeat;` +
+      `mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M1%209h6v6H1V9zm2%202v2h2v-2H3zm6-2h6v6H9V9zm2%202v2h2v-2h-2zm6-2h6v6h-6V9zm2%202v2h2v-2h-2z' fill='black'/%3E%3C/svg%3E") center/contain no-repeat}`,
     // 页脚 sb-foot：rail-2 面 + 顶线（§4）
     `${MC_MAP.sidebarFoot}{background:var(--mc-rail-2);border-top:1px solid var(--mc-border-soft)}`,
+    // 页脚设置行 = 原型 sb-pref 纯文字钮（"Preferences…"语汇）：藏官方齿轮轮廓图标，文字 600 12px
+    `${MC_MAP.sidebarFoot} button:not([aria-label]) svg{display:none}`,
+    `${MC_MAP.sidebarFoot} button:not([aria-label]){font:600 12px/1.4 var(--font-sb);letter-spacing:.02em;color:var(--mc-fg)}`,
+    // 品牌行侧栏折叠钮 → 像素 menu（首钮是品牌 Finder，只掩 last-child；圆角轮廓是最后的平滑残留）
+    `${MC_MAP.sidebarLogoRow} button:last-child svg *{visibility:hidden}`,
+    `${MC_MAP.sidebarLogoRow} button:last-child svg{background:currentColor;` +
+      `-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M4%206h16v2H4V6zm0%205h16v2H4v-2zm16%205H4v2h16v-2z' fill='black'/%3E%3C/svg%3E") center/contain no-repeat;` +
+      `mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M4%206h16v2H4V6zm0%205h16v2H4v-2zm16%205H4v2h16v-2z' fill='black'/%3E%3C/svg%3E") center/contain no-repeat}`,
   ].join('\n'),
 
   // 撤除恢复：装配器先调 mount 再调 slots，此处抢在首次 flip 前捕获 data-theme 原值

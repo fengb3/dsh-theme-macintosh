@@ -1,4 +1,5 @@
 // src/chrome/chrome.js —— chrome 染色 + 桌面画布
+// src/chrome/chrome.js —— chrome 染色 + 桌面画布
 // 协议：{ css, mount(ctx) }。RULING：桌面画布走 mount（body 首元素 data-mc-desk，z-index:-1），
 // 不占 shell.overlay 席（该席 z-index:20 在 React 树内、叠在内容之上，只适合 kit 检视页那种浮层）。
 // 纪律：选择器字符串一律来自 map.js 的 MC_MAP（本文件只做插值）；无 :hover、无 transition。
@@ -15,6 +16,23 @@ const McChrome = {
     // close/zoom 方块与交互属三期结构级，此处只做 CSS 染色）。浅色条纹加深、深色条纹提亮。
     `${MC_MAP.sessionHeader}{background:repeating-linear-gradient(180deg,rgba(255,255,255,.10) 0 1px,transparent 1px 3px),var(--mc-surface-2);border-bottom:1px solid var(--mc-border);box-shadow:inset 0 1px 0 var(--mc-accent)}`,
     `html[data-theme="light"] ${MC_MAP.sessionHeader}{background:repeating-linear-gradient(180deg,rgba(0,0,0,.20) 0 1px,transparent 1px 3px),var(--mc-surface-2)}`,
+    // hero/inert 阶段官方无 header —— 主窗补同款装饰 titlebar（标题 DeepSeek Harness；
+    // active 阶段由真 header 吃 pinstripe 规则，不叠加）。::before 作首 flex 子，条纹+方块同侧栏。
+    `div[data-phase="hero"]::before,div[data-phase="inert"]::before{content:'DeepSeek Harness';` +
+      `display:flex;align-items:center;justify-content:center;flex:none;` +
+      `height:20px;font:600 12px/1 var(--font-sb);letter-spacing:.03em;color:var(--mc-fg);` +
+      `background:linear-gradient(var(--mc-surface-2),var(--mc-surface-2)) 6px center/11px 11px no-repeat,` +
+        `linear-gradient(var(--mc-border),var(--mc-border)) 5px center/13px 13px no-repeat,` +
+        `linear-gradient(var(--mc-surface-2),var(--mc-surface-2)) right 6px center/11px 11px no-repeat,` +
+        `linear-gradient(var(--mc-border),var(--mc-border)) right 5px center/13px 13px no-repeat,` +
+        `repeating-linear-gradient(180deg,rgba(255,255,255,.10) 0 1px,transparent 1px 3px),var(--mc-surface-2);` +
+      `border-bottom:1px solid var(--mc-border);box-shadow:inset 0 1px 0 var(--mc-accent)}`,
+    `html[data-theme="light"] div[data-phase="hero"]::before,html[data-theme="light"] div[data-phase="inert"]::before{background:` +
+      `linear-gradient(var(--mc-surface-2),var(--mc-surface-2)) 6px center/11px 11px no-repeat,` +
+      `linear-gradient(var(--mc-border),var(--mc-border)) 5px center/13px 13px no-repeat,` +
+      `linear-gradient(var(--mc-surface-2),var(--mc-surface-2)) right 6px center/11px 11px no-repeat,` +
+      `linear-gradient(var(--mc-border),var(--mc-border)) right 5px center/13px 13px no-repeat,` +
+      `repeating-linear-gradient(180deg,rgba(0,0,0,.20) 0 1px,transparent 1px 3px),var(--mc-surface-2)}`,
     // 滚动口：最小干预 —— 只给深一档底色（窗内"文档区"），滚动条走 tokens 已有的全局 15px 经典款
     `${MC_MAP.scrollport}{background:var(--mc-bg-deep)}`,
     // composer 卡：surface 底 + 1px 边 + 小一级硬投影（方角，.mc-field 语汇）
@@ -39,3 +57,4 @@ const McChrome = {
     return function teardown() { desk.remove(); };
   },
 };
+

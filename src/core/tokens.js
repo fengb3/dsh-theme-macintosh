@@ -12,8 +12,8 @@ const McTokens = {
   --mc-desktop-pattern:url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAYAAADED76LAAAACXBIWXMAAAWJAAAFiQFtaJ36AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAA2SURBVHgB1Y+xDQAgDMNacURvykVZ+SprPitiYYIDmDxYsuQk2QBCUtyYtvslN0dVzV8LZ30Buytmvd+9eVsAAAAASUVORK5CYII=");
   /* titlebar close/zoom box 多色位（sprite 引用原型名 --box-line/--box-face，别名见下） */
   --mc-box-line:#9d9dcf; --mc-box-face:#31314f;
-  /* 硬投影（无模糊单偏移） */
-  --mc-shadow-panel:3px 3px 0 0 rgba(0,0,0,.55);
+  /* 硬投影——原型 §4：深 .85 / 浅 .72（此前两处装反） */
+  --mc-shadow-panel:3px 3px 0 0 rgba(0,0,0,.85);
   --mc-shadow-pop:3px 3px 0 0 rgba(0,0,0,.7);
   --mc-shadow-field:2px 2px 0 0 rgba(0,0,0,.35);
   /* 标题栏条纹 / 滚动条 */
@@ -38,11 +38,11 @@ html[data-theme="light"]{
   --mc-bg:#8f8f8f; --mc-surface:#fff; --mc-surface-2:#eee; --mc-surface-3:#ddd;
   --mc-fg:#0a0a0a; --mc-muted:#333; --mc-faint:#555; --mc-border:#0a0a0a;
   --mc-accent:#8f8fc0; --mc-sel-bg:#dadaff; --mc-warn:#8a6a1f;
-  --mc-bg-deep:#7c7c7c; --mc-accent-strong:#75759f; --mc-accent-dim:rgba(143,143,192,.42); --mc-accent-ink:#ffffff;
+  --mc-bg-deep:#ffffff; --mc-accent-strong:#75759f; --mc-accent-dim:rgba(143,143,192,.42); --mc-accent-ink:#ffffff;
   --mc-spark:#a8720e; --mc-success:#2e7d32; --mc-danger:#c23a34; --mc-danger-ink:#ffffff;
   --mc-border-soft:rgba(10,10,10,.5);
   --mc-box-line:#545487; --mc-box-face:#dadaff;
-  --mc-shadow-panel:3px 3px 0 0 rgba(0,0,0,.85);
+  --mc-shadow-panel:3px 3px 0 0 rgba(0,0,0,.72);
   --mc-shadow-pop:3px 3px 0 0 #000;
   --mc-shadow-field:2px 2px 0 0 rgba(0,0,0,.5);
   --mc-title-stripe:rgba(0,0,0,.5);
