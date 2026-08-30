@@ -42,18 +42,19 @@ test('esc 转义四种字符（& 最先）', () => {
   assert.equal(esc('plain 中文 ✓'), 'plain 中文 ✓');
 });
 
-test('flashIn 三拍：ghost → show+flash → 撤两类，各 100ms', () => {
+test('flashIn 三拍（原型 §909-918）：ghost+show 同拍0 → flash 拍1 → 撤两类拍2，各 100ms', () => {
   const el = fakeEl();
   let shown = 0;
   flashIn(el, () => { shown++; });
-  // 拍0：同步加 mc-ghost
-  assert.equal(shown, 0);
+  // 拍0：同步加 mcfx+mc-ghost，内容在遮罩下瞬换
+  assert.equal(shown, 1);
+  assert.ok(el.classList.contains('mcfx'));
   assert.ok(el.classList.contains('mc-ghost'));
   assert.ok(!el.classList.contains('mc-flash'));
-  // 拍1：show() + 换 mc-flash
+  // 拍1：换 mc-flash（::after 覆盖遮罩）
   clock.flush();
   assert.equal(shown, 1);
-  assert.ok(!el.classList.contains('mc-ghost'));
+  assert.ok(el.classList.contains('mc-ghost'));
   assert.ok(el.classList.contains('mc-flash'));
   // 拍2：撤两类
   clock.flush();
@@ -78,15 +79,17 @@ test('flashOut 镜像：flash → hide+撤 → 完', () => {
   assert.deepEqual(clock.calls, [100]);
 });
 
-test('flashIn 中途断连则停拍不再执行 show', () => {
+test('flashIn 拍0 后断连则后续拍停走（类残留在已销毁元素上无害）', () => {
   const el = fakeEl();
   let shown = 0;
   flashIn(el, () => { shown++; });
+  assert.equal(shown, 1); // 拍0 已瞬换
   el.isConnected = false;
   clock.flush();
-  assert.equal(shown, 0);
+  assert.ok(!el.classList.contains('mc-flash'), '断连后不再加 flash');
+  assert.equal(clock.pending(), 0, 'beat1 早退 return，嵌套拍2 未再调度');
   clock.flush();
-  assert.equal(shown, 0);
+  assert.equal(clock.pending(), 0);
 });
 
 test('flashIn 回调抛错不向外传播（每拍 try/catch）', () => {

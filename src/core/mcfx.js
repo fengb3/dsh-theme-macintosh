@@ -17,13 +17,12 @@ function esc(s) {
 function flashIn(el, show) {
   try {
     if (!el || !el.isConnected) return;
-    el.classList.add('mc-ghost');
+    el.classList.add('mcfx', 'mc-ghost');
+    show(); // 拍0：内容在 ghost 遮罩下瞬换（原型 §910-912）
   } catch (e) { /* 单元素失败不拖垮调用方 */ }
   mcfxSchedule(() => {
     try {
       if (!el || !el.isConnected) return;
-      show();
-      el.classList.remove('mc-ghost');
       el.classList.add('mc-flash');
     } catch (e) { /* 同上 */ }
     mcfxSchedule(() => {
@@ -36,12 +35,12 @@ function flashIn(el, show) {
   }, 100);
 }
 
-// 退场镜像：flash → hide()（DOM 移除/隐藏）→ 撤两类
+// 退场镜像（原型 §919-927）：拍0 flash 白块 → 拍1 hide() + 撤类
 function flashOut(el, hide) {
   try {
     if (!el || !el.isConnected) return;
-    el.classList.add('mc-flash');
-  } catch (e) { /* 单元素失败不拖垮调用方 */ }
+    el.classList.add('mcfx', 'mc-flash');
+  } catch (e) { /* 同上 */ }
   mcfxSchedule(() => {
     try {
       if (!el || !el.isConnected) return;
@@ -59,7 +58,7 @@ function accToggle(card, fn) {
     if (!card || !card.isConnected) return;
     if (card.dataset.busy) return; // 防重入
     card.dataset.busy = '1';
-    card.classList.add('mc-ghost');
+    card.classList.add('mcfx', 'mc-ghost');
   } catch (e) { return; }
   const done = () => { try { delete card.dataset.busy; } catch (e) { /* 忽略 */ } };
   mcfxSchedule(() => {

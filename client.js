@@ -78,15 +78,19 @@ html body, html body[data-ds-dark-theme]{
   --dsw-specific-sidebar-fill:var(--mc-rail-1);
   --dsw-font-family:var(--font-ui);
 }
-/* mcfx 闪烁类（照《笔记》§0.3）：只管遮罩本体，几何（定位/尺寸）由消费方给 */
-.mc-ghost{opacity:0;pointer-events:none}
-.mc-flash{background:#fff;pointer-events:none;position:relative}
-.mc-flash::after{ /* 扫描线：单条 1px 硬边，随遮罩全宽 */
-  content:'';position:absolute;left:0;right:0;top:0;height:1px;
-  background:rgba(0,0,0,.35);
-}
-html[data-theme="light"] .mc-flash{background:#0a0a0a}
-html[data-theme="light"] .mc-flash::after{background:rgba(255,255,255,.35)}
+/* mcfx 闪烁类（照原型 interactive §172-183 逐行）：flash = ::after 全覆盖遮罩（z-index:3 盖住
+   子内容——元素自身 background 会被子元素压住导致图标/文字露出的 bug 即由此起）；ghost = 边框透明
+   + 子内容透明（保留盒位）。使用方须同时挂 'mcfx' 类（flashIn/flashOut/accToggle 已自动加）。 */
+.mcfx{position:relative}
+.mcfx::after{content:'';position:absolute;inset:0;pointer-events:none;opacity:0;z-index:3;
+  background:#fff;
+  background-image:repeating-linear-gradient(0deg,transparent 0 2px,rgba(0,0,0,.06) 2px 3px)}
+.mcfx.mc-flash::after{opacity:1}
+.mcfx.mc-ghost{border-color:transparent}
+.mcfx.mc-ghost>*{opacity:0}
+html[data-theme="light"] .mcfx::after{
+  background:#000;
+  background-image:repeating-linear-gradient(0deg,transparent 0 2px,rgba(255,255,255,.07) 2px 3px)}
 /* ===== §4.1 补全：画布 / selection / focus / 滚动条 / 动画豁免 ===== */
 body{background-color:var(--mc-bg);
   background-image:var(--mc-desktop-pattern);
@@ -247,13 +251,12 @@ function esc(s) {
 function flashIn(el, show) {
   try {
     if (!el || !el.isConnected) return;
-    el.classList.add('mc-ghost');
+    el.classList.add('mcfx', 'mc-ghost');
+    show(); // 拍0：内容在 ghost 遮罩下瞬换（原型 §910-912）
   } catch (e) { /* 单元素失败不拖垮调用方 */ }
   mcfxSchedule(() => {
     try {
       if (!el || !el.isConnected) return;
-      show();
-      el.classList.remove('mc-ghost');
       el.classList.add('mc-flash');
     } catch (e) { /* 同上 */ }
     mcfxSchedule(() => {
@@ -270,7 +273,7 @@ function flashIn(el, show) {
 function flashOut(el, hide) {
   try {
     if (!el || !el.isConnected) return;
-    el.classList.add('mc-flash');
+    el.classList.add('mcfx', 'mc-flash');
   } catch (e) { /* 单元素失败不拖垮调用方 */ }
   mcfxSchedule(() => {
     try {
@@ -289,7 +292,7 @@ function accToggle(card, fn) {
     if (!card || !card.isConnected) return;
     if (card.dataset.busy) return; // 防重入
     card.dataset.busy = '1';
-    card.classList.add('mc-ghost');
+    card.classList.add('mcfx', 'mc-ghost');
   } catch (e) { return; }
   const done = () => { try { delete card.dataset.busy; } catch (e) { /* 忽略 */ } };
   mcfxSchedule(() => {
@@ -636,7 +639,7 @@ const McSidebar = {
     `${MC_MAP.sidebarNewSession}:active{background:var(--mc-border);color:var(--mc-surface);` +
       `box-shadow:inset 0 0 0 1px var(--mc-border),inset 0 0 0 2px var(--mc-surface)}`,
     // 工作区树容器 sb-tree：随根 padding 清零，内衬也清零（用户要求侧栏完全无 padding）
-    `${MC_MAP.sidebarRegion}{padding:0}`,
+    `${MC_MAP.sidebarRegion}{padding:0;min-width:0;overflow:hidden;width:auto;align-self:stretch;margin:0}`,
     // —— 像素图标替换（pixelarticons 24 栅格）：官方细轮廓 path 藏起，svg 本体 currentColor + 像素 mask 重绘 ——
     // 锚点 aria-label 为 zh i18n 文案（DRIFT-RISK：随语言/官方文案漂移，失配=回退官方轮廓图标，不破版）
     // :not([data-mc-finder]) —— McFinder 遮蔽成功时本区内容是自有组件（按钮带 data-mc-finder），
