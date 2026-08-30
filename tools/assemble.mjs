@@ -77,6 +77,35 @@ ${modsInit}
         if (m.slots) try { m.slots(ctx) } catch(e) { try { console.error('[mcx] slots ' + k + ' failed:', e && e.message); } catch (e2) {} }
       }
       style.textContent = css; document.head.appendChild(style);
+      // 正规主题通道：宿主 ThemePresenter 把活动主题 token 以 inline style 写在 body 上，
+      // CSS 选择器永远压不过 —— 必须经 theme.overrideTokens 叠层（值用 var(--mc-*) 间接引用，
+      // 月牙钮翻转 html[data-theme] 时随 --mc-* 动态跟随）。卸载时撤层。
+      try {
+        const T = ctx.get('theme');
+        if (T && typeof T.overrideTokens === 'function') {
+          const pair = (v) => ({ light: v, dark: v });
+          const off = T.overrideTokens('mcx-1', {
+            '--dsw-alias-bg-base': pair('var(--mc-bg)'),
+            '--dsw-alias-bg-layer-1': pair('var(--mc-surface)'),
+            '--dsw-alias-bg-layer-2': pair('var(--mc-surface-2)'),
+            '--dsw-alias-bg-overlay': pair('var(--mc-surface-3)'),
+            '--dsw-alias-border-l1': pair('var(--mc-border)'),
+            '--dsw-alias-border-l2': pair('var(--mc-border)'),
+            '--dsw-alias-brand-primary': pair('var(--mc-accent)'),
+            '--dsw-alias-label-primary': pair('var(--mc-fg)'),
+            '--dsw-alias-label-secondary': pair('var(--mc-muted)'),
+            '--dsw-alias-state-error-primary': pair('var(--mc-danger)'),
+            '--dsw-alias-state-success-primary': pair('var(--mc-success)'),
+            '--dsw-alias-state-warn-primary': pair('var(--mc-warn)'),
+            '--dsw-specific-sidebar-fill': pair('var(--mc-rail-1)'),
+            '--dsw-font-family': pair('var(--font-ui)'),
+          });
+          ctx.effect(() => { try { off(); } catch (e) {} });
+          console.log('[mcx] theme.overrideTokens 已叠层');
+        } else {
+          console.warn('[mcx] theme 服务不可用，仅 CSS 层生效');
+        }
+      } catch (e) { console.error('[mcx] overrideTokens failed:', e && e.message); }
       try { console.log('[mcx] apply 完成，样式已入 head'); } catch (e) {}
       ctx.effect(() => style.remove());
     },
