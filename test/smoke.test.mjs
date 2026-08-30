@@ -56,3 +56,31 @@ test('sprite 无残留 inkscape/inkpad 元数据属性', () => {
   const out = require('node:fs').readFileSync(path.join(ROOT, 'dist', 'client-body.js'), 'utf8');
   assert.ok(!/inkscape:|inkpad:/.test(out), 'sprite 不应含 inkscape/inkpad 属性');
 });
+
+test('assemble 产出含 tokens/primitives 全集与 kit 检视页', () => {
+  execFileSync(process.execPath, [path.join(ROOT, 'tools', 'assemble.mjs')], { cwd: ROOT });
+  const out = require('node:fs').readFileSync(path.join(ROOT, 'dist', 'client-body.js'), 'utf8');
+  // §4.1 补全 token
+  for (const tok of ['--mc-desktop-pattern', '--mc-shadow-panel', '--mc-shadow-pop', '--mc-shadow-field',
+    '--mc-title-stripe', '--mc-scroll-track', '--mc-scroll-box', '--mc-rail-w', '--mc-menubar-h',
+    '--mc-titlebar-h', '--mc-r-window', '--mc-r-card', '--mc-r-btn', '--mc-r-tag', '--mc-bw',
+    '--mc-t-fast', '--mc-t-mid', '--mc-ease', '--mc-ease-sweep', '--mc-box-line', '--mc-box-face']) {
+    assert.ok(out.includes(tok), `tokens 应含 ${tok}`);
+  }
+  // primitives + keyframes + 画布/selection/focus/滚动条/动画豁免
+  for (const sel of ['.mc-btn', '.mc-icon-btn', '.mc-pill', '.mc-field', '.mc-tri',
+    '@keyframes mc-pulse', '@keyframes mc-sweep', '::selection', ':focus-visible',
+    '::-webkit-scrollbar', 'prefers-reduced-motion', '--mc-desktop-pattern)']) {
+    assert.ok(out.includes(sel), `css 应含 ${sel}`);
+  }
+  // kit 检视页：默认关闭 + shell.overlay 席位 + kit- 前缀布局
+  assert.ok(out.includes('kit-scrim'), 'kit 应含 kit-scrim 点阵幕');
+  assert.ok(out.includes('__MC_KIT_OPEN__'), 'kit 开关应走 window.__MC_KIT_OPEN__');
+  assert.ok(out.includes("'mc-kit'"), 'kit 应注册 mc-kit 席位');
+  assert.ok(out.includes('shell.overlay'), 'kit 应占 shell.overlay');
+  // 动画纪律：全 css 无 hover 态、无 transition 声明（豁免媒体查询里的 transition-duration 除外）
+  const cssStart = out.indexOf('data-mc-root');
+  const cssChunk = out.slice(cssStart);
+  assert.ok(!/:hover\b/.test(cssChunk), '全主题不得出现 :hover');
+  assert.ok(!/(?<!-)transition\s*:/.test(cssChunk), '全主题不得出现 transition 声明');
+});
