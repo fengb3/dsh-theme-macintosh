@@ -9,6 +9,7 @@ screenshots/
 
 # 构建产物
 dist/
+src-build/
 
 # 系统杂项
 Thumbs.db

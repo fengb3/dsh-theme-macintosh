@@ -22,7 +22,7 @@ const modules = present
   .map((n) => readFileSync(path.join(ROOT, 'src-build', `${n}.js`), 'utf8'))
   .join('\n');
 const modsInit = present
-  .map((n) => `  ${n}: typeof ${n} !== 'undefined' ? ${n} : undefined,`)
+  .map((n) => `  ${n}: ${n},`)
   .join('\n');
 
 const body = `${modules}
@@ -38,7 +38,7 @@ ${modsInit}
       let css = '';
       for (const k of order) { const m = mods[k]; if (!m) continue;
         if (m.css) css += m.css + '\\n';
-        if (m.mount) try { ctx.effect(() => m.mount(ctx) && m.mountTeardown && m.mountTeardown()) } catch(e) { /* 模块失败不拖垮其余 */ }
+        if (m.mount) try { const td = m.mount(ctx); if (typeof td === 'function') ctx.effect(() => td()); } catch(e) { /* 模块失败不拖垮其余 */ }
         if (m.slots) try { m.slots(ctx) } catch(e) {}
       }
       style.textContent = css; document.head.appendChild(style);
