@@ -1,0 +1,6 @@
+# dsh-theme-macintosh bundle：Macintosh 复古主题（双面包）。
+# 声明在 package.json 的 dsh.bundle.patch，随 dsh.profile.bundles 清单挂载为
+# profile 的 bundle 层（与 dsh-theme-aurum 同形）。
+- insert:
+    - id: theme-macintosh
+      name: dsh-theme-macintosh

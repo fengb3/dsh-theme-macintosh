@@ -1,10 +1,9 @@
 // test/clock.test.mjs — CLOCK 纯函数量化逻辑（模块文件无 ESM export，走 createRequire）
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createRequire } from 'node:module';
+import { loadSrc } from './load-src.mjs';
 
-const require = createRequire(import.meta.url);
-const { computeNext } = require('../src/core/clock.js');
+const { computeNext } = loadSrc('src/core/clock.js');
 
 test('computeNext 量化到最近栅格沿(向上)', () => {
   assert.equal(computeNext(1000, 1050, 100), 1100); // now=1000,ms=50 → ≥1050 的沿

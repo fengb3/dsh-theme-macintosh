@@ -1,10 +1,9 @@
 // test/mcfx.test.mjs — esc 纯函数 + 三拍/四拍时序（假 CLOCK 注入 + 假 el）
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
-import { createRequire } from 'node:module';
+import { loadSrc } from './load-src.mjs';
 
-const require = createRequire(import.meta.url);
-const { esc, flashIn, flashOut, accToggle, __setSchedulerForTest } = require('../src/core/mcfx.js');
+const { esc, flashIn, flashOut, accToggle, __setSchedulerForTest } = loadSrc('src/core/mcfx.js');
 
 // 假调度器：收集 (fn, ms)，flush() 按入队顺序同步执行一拍
 function makeFakeClock() {
