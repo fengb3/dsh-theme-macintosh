@@ -27,11 +27,6 @@ const McTokens = {
   /* sprite 多色位别名（McSprite.markup 沿用原型变量名） */
   --box-line:var(--mc-box-line); --box-face:var(--mc-box-face);
   --surface:var(--mc-surface); --surface-2:var(--mc-surface-2); --surface-3:var(--mc-surface-3);
-  --dsw-alias-bg-base:var(--mc-bg); --dsw-alias-bg-layer-1:var(--mc-surface); --dsw-alias-bg-layer-2:var(--mc-surface-2);
-  --dsw-alias-bg-overlay:var(--mc-surface-3); --dsw-alias-border-l1:var(--mc-border); --dsw-alias-border-l2:var(--mc-border);
-  --dsw-alias-brand-primary:var(--mc-accent); --dsw-alias-label-primary:var(--mc-fg); --dsw-alias-label-secondary:var(--mc-muted);
-  --dsw-alias-state-error-primary:var(--mc-danger); --dsw-alias-state-success-primary:var(--mc-success); --dsw-alias-state-warn-primary:var(--mc-warn);
-  --dsw-specific-sidebar-fill:var(--mc-rail-1);
   /* 五族回退链（照《笔记》§4.2；@font-face 由 assemble 时 base64 内联注入本 css 头部） */
   --font-display:'ChiKareGo','Pixelify Sans','Fusion Pixel 12px monospaced zh','Noto Sans SC',sans-serif;
   --font-ui:'ChiKareGo','Fusion Pixel 12px monospaced zh','Noto Sans SC',sans-serif;
@@ -53,9 +48,20 @@ html[data-theme="light"]{
   --mc-title-stripe:rgba(0,0,0,.5);
   --mc-scroll-track:#e0e0e0; --mc-scroll-box:#c0c0c0;
   /* --mc-desktop-pattern 刻意不覆盖：浅色沿用同一噪点瓦片，靠 --mc-bg 底色区分 */
-  --dsw-specific-sidebar-fill:var(--mc-surface);
   /* 侧栏 Finder 白窗：rail 系浅色覆盖（System 7 白窗黑线；rail-1 与 --mc-surface 同为 #fff，无冲突） */
   --mc-rail-1:#fff; --mc-rail-2:#eee;
+}
+/* 官方 token 别名（层1）：宿主 ui-theme 把 --dsw-alias-* 定义在 body（深色 body[data-ds-dark-theme]），
+   :root 上的同名声明会被 body 覆盖 → 别名必须落在 body 上；用双选择器拿足特异性（0-1-1），
+   同特异性下我们的 style 更晚注入即胜出。值全部经 var(--mc-*) 间接引用，月牙钮翻转 html[data-theme]
+   时别名随 --mc-* 动态跟随。全局字体一并接到像素链（--dsw-font-family 是官方正文字体位）。 */
+body, body[data-ds-dark-theme]{
+  --dsw-alias-bg-base:var(--mc-bg); --dsw-alias-bg-layer-1:var(--mc-surface); --dsw-alias-bg-layer-2:var(--mc-surface-2);
+  --dsw-alias-bg-overlay:var(--mc-surface-3); --dsw-alias-border-l1:var(--mc-border); --dsw-alias-border-l2:var(--mc-border);
+  --dsw-alias-brand-primary:var(--mc-accent); --dsw-alias-label-primary:var(--mc-fg); --dsw-alias-label-secondary:var(--mc-muted);
+  --dsw-alias-state-error-primary:var(--mc-danger); --dsw-alias-state-success-primary:var(--mc-success); --dsw-alias-state-warn-primary:var(--mc-warn);
+  --dsw-specific-sidebar-fill:var(--mc-rail-1);
+  --dsw-font-family:var(--font-ui);
 }
 /* mcfx 闪烁类（照《笔记》§0.3）：只管遮罩本体，几何（定位/尺寸）由消费方给 */
 .mc-ghost{opacity:0;pointer-events:none}
