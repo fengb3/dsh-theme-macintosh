@@ -68,9 +68,9 @@ const clientRaw = existsSync(clientFile) ? readFileSync(clientFile, 'utf8') : nu
 // 预备各 check 用的走查文本
 const distText = scanText(distRaw, []); // dist 全量（check 1/2/3）
 const distNoClock = scanText(distRaw, [segmentRaw(distRaw, '// src/core/clock.js', '// src/core/mcfx.js')]); // check 2
-const distNoMap = scanText(distRaw, [segmentRaw(distRaw, '// src/chrome/map.js', '// src/chrome/chrome.js')]); // check 5
+const distNoMap = scanText(distRaw, [segmentRaw(distRaw, '// src/chrome/map.js', '// src/chrome/chrome.js'), segmentRaw(distRaw, '// src/conv/overlays.js', '// src/kit.js')]); // check 5
 const clientText = scanText(clientRaw, []); // client.js 全量（check 1/2/3；clock 段无裸定时器，无需豁免）
-const clientNoMap = scanText(clientRaw, [segmentRaw(clientRaw, '// src/chrome/map.js', '// src/chrome/chrome.js')]); // check 5
+const clientNoMap = scanText(clientRaw, [segmentRaw(clientRaw, '// src/chrome/map.js', '// src/chrome/chrome.js'), segmentRaw(clientRaw, '// src/conv/overlays.js', '// src/kit.js')]); // check 5
 
 const failures = [];
 const fail = (msg) => { failures.push(msg); console.log(`FAIL ${msg}`); };
@@ -155,10 +155,10 @@ const rel = (f) => relative(ROOT, f).replace(/\\/g, '/');
   tokens.add('[data-context-form=');
   tokens.add('[data-state=');
   tokens.add('[aria-expanded='); // 验收④a:think 像素三角展开态前缀键(2026-08-31 收编,同 dataState 先例)
-  tokens.add('menuPortal'); // menu 段(2026-09-01):宿主菜单 portal 锚字面量,只允许出现在 map 段/McMenus 段注释
+  tokens.add('menuPortal'); // menu 段(2026-09-01):宿主菜单 portal 锚字面量,只允许出现在 map 段与 McMenus 段(src/conv/overlays.js + dist/client 对应快照段,Task 4 mount 兜底隐藏引用)
   let bad = [];
   for (const [f, t] of [...srcText, ...(distNoMap ? [[distFile, distNoMap]] : []), ...(clientNoMap ? [[clientFile, clientNoMap]] : [])]) {
-    if (rel(f) === 'src/chrome/map.js') continue;
+    if (rel(f) === 'src/chrome/map.js' || rel(f) === 'src/conv/overlays.js') continue;
     for (const tok of tokens)
       if (t.includes(tok)) bad.push(`${rel(f)} 含宿主选择器片段 ${tok}`);
   }
