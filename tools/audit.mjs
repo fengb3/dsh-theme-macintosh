@@ -68,21 +68,25 @@ const fail = (msg) => { failures.push(msg); console.log(`FAIL ${msg}`); };
 const pass = (msg) => console.log(`PASS ${msg}`);
 const rel = (f) => relative(ROOT, f).replace(/\\/g, '/');
 
-// ── 1. 无 :hover；无 transition:（唯一豁免：reduced-motion 块内 transition-duration:.01ms!important）──
+// ── 1. 无 :hover;无 transition:(豁免:纯压平声明 transition:none(!important) 与
+//     reduced-motion 块内 transition-duration:.01ms!important——spec flow §3「宿主自带的
+//     transition 以 transition:none 压平保持硬切」,压平即关闭过渡、不新增动画)──
 // 范围：src 全部 + dist 全量。
 {
   let bad = [];
   for (const [f, t] of [...srcText, ...(distText ? [[distFile, distText]] : [])]) {
-    for (const line of t.split('\n')) {
+    for (let line of t.split('\n')) {
       if (/:hover/.test(line)) bad.push(`${rel(f)}: ${line.trim()}`);
-      // 唯一豁免：reduced-motion 块内的 transition-duration:.01ms!important（tokens.js）
-      if (/transition\s*:/.test(line) &&
-          !/transition-duration\s*:\s*\.01ms!important/.test(line))
+      // 豁免：纯压平声明不新增动画——transition:none(!important)(flow T5 think 卡)与
+      // reduced-motion 块内的 transition-duration:.01ms!important(tokens.js)。剥压平项后再扫。
+      const scan = line.replace(/transition\s*:\s*none(\s*!important)?/g, 'FLAT');
+      if (/transition\s*:/.test(scan) &&
+          !/transition-duration\s*:\s*\.01ms!important/.test(scan))
         bad.push(`${rel(f)}: ${line.trim()}`);
     }
   }
   bad.length ? fail(`hover/transition 违禁 ${bad.length} 处:\n  ` + bad.join('\n  '))
-              : pass('无 :hover、无 transition（src 全部 + dist 全量；唯一豁免 reduced-motion .01ms）');
+              : pass('无 :hover、无 transition(src 全部 + dist 全量；豁免压平声明 none(!important) 与 reduced-motion .01ms)');
 }
 
 // ── 2. setTimeout/setInterval 直调仅限 clock 模块段 ──

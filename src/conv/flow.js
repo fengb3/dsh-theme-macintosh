@@ -70,6 +70,14 @@ var McFlow = {
       // §9:TurnStatus(宿主运行中状态行)
       MC_MAP.flowColumn + ' [role="status"]{display:flex;align-items:center;gap:8px;font:400 12px/1.6 var(--font-ui);color:var(--mc-muted)}',
       MC_MAP.flowColumn + ' [role="status"]::before{content:"";flex:none;width:6px;height:6px;background:var(--mc-spark);clip-path:polygon(33% 0,67% 0,100% 33%,100% 67%,67% 100%,33% 100%,0 67%,0 33%);animation:mc-pulse 2600ms steps(1,end) infinite;animation-delay:var(--pulse-delay,0ms)}',
+      // §4-5:reasoning think 卡(spec §4 行5;原型 L506-526;双锚 [data-state=running|ok],任意深度)
+      MC_MAP.thinkCard + '{background:var(--mc-surface-3);border:1px solid var(--mc-border);border-radius:var(--mc-r-card);overflow:hidden;transition:none}',
+      MC_MAP.thinkCard + ' *{transition:none!important}',
+      MC_MAP.thinkCard + '[data-state="running"]{background:color-mix(in oklab,var(--mc-spark) 9%,var(--mc-surface-3))}',
+      MC_MAP.thinkCard + ' [class*="thinkBody"]{font:400 12px/1.8 var(--font-ui);color:var(--mc-muted);white-space:pre-wrap}',
+      // 宿主 shimmer 移除(原型 run 态信号=琥珀染;标题染 spark 由行内继承,faint 摘要):
+      MC_MAP.thinkCard + '[data-state="running"]::after{content:none}',
+      MC_MAP.thinkCard + '[data-state="running"] *::after{animation:none!important}',
     ].join('\n');
   })(),
   mount: function (ctx) {
