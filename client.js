@@ -1562,6 +1562,9 @@ const McThink = {
     /* 用户/steering 行重写(验收六轮):原型 .msg.user .bubble L316-321 语汇;右对齐纵栈 */
     '.mc-user-row{display:flex;flex-direction:column;align-items:flex-end;gap:6px;max-width:100%}',
     '.mc-user-bubble{max-width:520px;padding:7px 12px;background:var(--mc-accent);color:var(--mc-accent-ink);border:1px solid var(--mc-border);border-radius:8px;font:400 14px/1.7 var(--font-ui);white-space:pre-wrap;word-break:break-word;text-align:left}',
+    /* 六轮排查:宿主 MessageText 根结点自带 border+padding(_text_* 双边框元凶)——气泡内一律剥净 */
+    '.mc-user-bubble>*{border:none!important;padding:0!important;margin:0!important;background:none!important}',
+    '.mc-user-copy{flex:none;align-self:flex-end;border:1px solid var(--mc-border);border-radius:var(--mc-r-btn);padding:1px 7px;background:var(--mc-surface-2);color:var(--mc-muted);font:500 10px/1.6 var(--font-mono);cursor:pointer}',
     '.mc-user-chip{border:1px solid var(--mc-border);border-radius:var(--mc-r-tag);padding:0 4px;background:var(--mc-accent-strong);font:500 12px var(--font-mono)}',
     '.mc-user-attach{max-width:360px;display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap}',
     '.mc-user-ref{font:400 12px/1.6 var(--font-ui);color:var(--mc-muted)}',
@@ -1767,11 +1770,18 @@ const McThink = {
         if (el) flashIn(el, function () {});
       }, []);
       var refs = data.referenceLabels;
+      var copied = React.useState(false), setCopied = copied[1];
+      function doCopy() { // 六轮:复制钮(用户输入内容可一键复制;反馈回落走 CLOCK)
+        try { navigator.clipboard.writeText(text); } catch (e) {}
+        setCopied(true);
+        CLOCK.next(function () { setCopied(false); }, 1200);
+      }
       return h('div', { className: 'mc-user-row' },
         images.length ? h('div', { className: 'mc-user-attach' }, renderMessageImages({ images: images, align: 'end' })) : null,
         (text !== '' || rest.length) ? h('div', { className: 'mc-user-bubble', ref: bubbleRef },
           mcProjectUserText(h, MessageText, text, refs),
           rest.map(function (b2, j) { return h(JsonBlock, { key: 'r' + j, label: 'extra', payload: b2 }); })) : null,
+        text !== '' ? h('button', { className: 'mc-user-copy', type: 'button', onClick: doCopy }, copied[0] ? '已复制' : '复制') : null,
         refs && refs.length ? h('div', { className: 'mc-user-ref' }, '引用 · ' + refs.join(' · ')) : null);
     }
     ctx.effect(() => S.inject('conversation.chat.node', () => S.register({
