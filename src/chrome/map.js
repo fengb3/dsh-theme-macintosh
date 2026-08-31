@@ -91,5 +91,28 @@ const MC_MAP = {
   sidebarNewSessionRail: '#root > div > div[data-sidebar-collapsed] > div:first-child > div > div > button:nth-child(3)', /* DRIFT-RISK: structural */
   sidebarFootRail: '#root > div > div[data-sidebar-collapsed] > div:first-child > div > div > div:nth-child(5)', /* DRIFT-RISK: structural */
   sidebarLogoRowRail: '#root > div > div[data-sidebar-collapsed] > div:first-child > div > div > div:nth-child(2)', /* DRIFT-RISK: structural */
+  // —— flow 段(会话流;探针 2026-08-31,host 0.1.1-rc.2;dsh-client-ui-conversation 行号)——
+  flowScroll: '[data-conversation-scroll]',                    // stable(L7276)
+  flowColumn: '[data-chat-flow]',                             // stable(L5829)
+  flowItem: '[data-chat-flow-kind]',                          // stable(L5506-5510)
+  kindUser: '[data-chat-flow-kind="user"]',
+  kindSteering: '[data-chat-flow-kind="steering"]',
+  kindContext: '[data-chat-flow-kind="context"]',
+  kindAssistantStep: '[data-chat-flow-kind="assistant-step"]',
+  kindCommand: '[data-chat-flow-kind="command"]',
+  kindCompaction: '[data-chat-flow-kind="compaction"]',
+  kindManualCompaction: '[data-chat-flow-kind="manual-compaction"]',
+  kindModelRetry: '[data-chat-flow-kind="model-retry"]',
+  kindTurnError: '[data-chat-flow-kind="turn-error"]',
+  kindTurnMaxTokens: '[data-chat-flow-kind="turn-max-tokens"]',
+  kindTurnTail: '[data-chat-flow-kind="turn-tail"]',
+  kindUnknown: '[data-chat-flow-kind="unknown"]',
+  bubbleUser: ':is([data-chat-flow-kind="user"],[data-chat-flow-kind="steering"])>div>div', /* DRIFT-RISK: structural(哈希三件套 gdEzaW_*,L5332-5361) */
+  userGallery: '[data-align="end"] [data-variant]',            // stable(ATT L705-746)
+  refChip: '[data-ref-chip]',                                 // stable(L5315-5324)
+  mdRoot: '[data-chat-flow-kind="assistant-step"] > div',      /* DRIFT-RISK: structural(Sxvs8a_*,L9461-9521) */
+  thinkCard: '[data-variant="think"]',                        // stable;双锚 [data-state](L9389-9439)
+  ctxBody: '[data-context-injection-body]',                   // stable(L4863-4907)
+  turnTailBar: '[data-turn-tail]',                            // stable(L9715-9752)
 };
 
