@@ -1,8 +1,8 @@
 // src/conv/overlays.js —— 弹出菜单体系(spec 2026-09-01 菜单批)
-// 协议 { css, mount(ctx) }。自绘菜单挂触发钮容器(自有 DOM);无 :hover 无 transition。
+// 协议 { css, mount(ctx) }。自绘菜单 body 挂载 fixed 定位(宿主官方菜单 portal 先例);无 :hover 无 transition。
 // 菜单原语(原型 §9 L789-810 直抄;token 换 --mc-*)
 const MC_MENUS_CSS = [
-  '.mc-menu{position:absolute;display:flex;flex-direction:column;min-width:210px;padding:4px;',
+  '.mc-menu{position:fixed;display:flex;flex-direction:column;min-width:210px;padding:4px;',
   ' background:var(--mc-surface);border:1px solid var(--mc-border);border-radius:var(--mc-r-card);',
   ' box-shadow:var(--mc-shadow-pop);z-index:70;font-family:var(--font-sb)}',
   '.mc-menu .m-group{padding:5px 9px 3px;font:600 10px/1.6 var(--font-display);letter-spacing:.1em;',
@@ -17,7 +17,6 @@ const MC_MENUS_CSS = [
   '.mc-menu .m-opt.on .mo-ic{color:var(--mc-accent-ink)}',
   '.mc-menu .m-opt.danger .mo-ic{color:inherit}',
   '.mc-menu .m-sep{height:1px;margin:4px 5px;background:var(--mc-border-soft)}',
-  '.mc-anchor{position:relative}',
 ].join('');
 function mcMenuItems(def, wiring) {
   return (def && def.items ? def.items : []).filter(function (it) {
@@ -27,6 +26,14 @@ function mcMenuItems(def, wiring) {
 function mcMenuAlign(anchorRect, viewportW, menuW) {
   if (!anchorRect) return 'left';
   return anchorRect.left + menuW > viewportW - 8 ? 'right' : 'left';
+}
+// 垂直定位纯函数(body 挂载 fixed,视口直算):默认钮下方 bottom+6;
+// 下方放不下(top+menuH > viewportH-8)→ 翻到钮上方 top-6-menuH。无锚安全回退 0。
+function mcMenuTop(hostRect, menuH, viewportH) {
+  if (!hostRect) return 0;
+  var top = hostRect.bottom + 6;
+  if (top + menuH > viewportH - 8) return hostRect.top - 6 - menuH;
+  return top;
 }
 function mcMenuState(state, ev) {
   var s = state || { open: null };
@@ -151,19 +158,17 @@ var McMenus = {
       state = mcMenuState(state, { t: 'close' });
       flashOut(w, function () { try { w.remove(); } catch (e) {} });
     }
-    function openMenu(id, host, ctxData) { // host=触发钮(button);菜单挂其 offsetParent;ctxData={sess,ws} 触发上下文
-      var def = MC_MENU_DEFS[id]; if (!def) return;
+    function openMenu(id, host, ctxData) { // host=触发钮(button);菜单 body 挂载 fixed 定位;ctxData={sess,ws} 触发上下文
+      var def = MC_MENU_DEFS[id]; if (!def || !host) return;
       // M1 toggle 守卫：外点捕获段 closeMenu 刚关掉本钮的同 id 菜单 → React 冒泡段 onClick 迟到的
       // 重开忽略（同钮同 id 且 <50ms——半个 CLOCK 栅格内；纯 Date.now 比较，无定时器）
       if (lastClose && lastClose.id === id && lastClose.host === host
         && Date.now() - lastClose.ts < 50) { lastClose = null; return; }
-      var anchor = host.offsetParent || host.parentElement; if (!anchor) return;
       closeMenu();
       openHost = host; // closeMenu 之后才刷新（lastClose 须记被关菜单的 host）
       wiringCtx.ctxData = ctxData || null; // 供 WIRING 内读取会话/工作区 id
       var items = mcMenuItems(def, MC_MENU_WIRING);
       if (!items.length) return; // 控制器裁定:无可见项静默 no-op,不渲染空壳
-      anchor.classList.add('mc-anchor');
       wrap = document.createElement('div');
       wrap.className = 'mc-menu';
       var html = '';
@@ -172,30 +177,25 @@ var McMenus = {
         html += it.sep ? '<span class="m-sep"></span>'
           : '<button type="button" class="m-opt' + (it.danger ? ' danger' : '') + (it.on ? ' on' : '') +
             '" data-mc-mi="' + esc(it.id) + '">' +
-            (it.icon ? '<svg class="mo-ic" viewBox="0 0 24 24" aria-hidden="true"><use href="' + esc(it.icon) + '"/></svg>' : '') +
+            (it.icon ? '<svg class="mo-ic" viewBox="0 0 24 24" aria-hidden="true"><use href="' + esc(it.icon) + '"/></svg>' :
+              '') +
             '<span>' + esc(it.label) + '</span></button>';
       }
       wrap.innerHTML = html; // 全动态段经 esc
-      // Task 7 浅色 QA 修复：对齐参照从视口收紧到最近裁剪容器右缘 —— .mc-sb-tree 等
-      // overflow 容器会把向左溢出的菜单右缘裁掉（首跑实证：group 菜单 r=467 > tree r=293
-      // 被拦腰截断）→ 靠右触发钮（分组头 dots/新建/listbar 钮）翻转为 right 对齐收进容器。
-      // mcMenuAlign 纯函数签名不变，只是传入更严的 limit（tests/menus.test.mjs 不动）。
-      var limit = window.innerWidth;
-      try {
-        for (var pel = host.parentElement; pel && pel !== document.body; pel = pel.parentElement) {
-          var pc = getComputedStyle(pel);
-          if (pc.overflowX !== 'visible' || pc.overflowY !== 'visible') {
-            var pr = pel.getBoundingClientRect();
-            if (pr.right < limit) limit = pr.right;
-          }
-        }
-      } catch (e) { /* 计算失败退回视口宽（原行为） */ }
-      var side = mcMenuAlign(host.getBoundingClientRect(), limit, 220);
-      wrap.style.left = side === 'right' ? 'auto' : '0';
-      wrap.style.right = side === 'right' ? '0' : 'auto';
-      wrap.style.top = 'calc(100% + 6px)';
-      anchor.appendChild(wrap);
-      state = mcMenuState(state, { t: 'open', id: id, anchor: anchor }); // M2:anchor 传真实锚（原恒 null）
+      // v2 改 body 挂载,裁剪祖先收紧退役(裁剪 bug 修复)——旧 absolute 挂 offsetParent 被
+      // 4 层裁剪祖先(.mc-group-body/.mc-sb-tree/.mc-sb-find/sidebarCol)截断;fixed 定位无祖先裁剪。
+      // 先 append 到 body 测实宽高再定位(比 220 常量准);visibility 隐藏防定位前闪现。
+      wrap.style.visibility = 'hidden';
+      document.body.appendChild(wrap);
+      var rect = host.getBoundingClientRect();
+      var menuW = wrap.offsetWidth || 220;
+      var menuH = wrap.offsetHeight || 0;
+      var side = mcMenuAlign(rect, window.innerWidth, menuW);
+      wrap.style.left = (side === 'right' ? rect.right - menuW : rect.left) + 'px';
+      wrap.style.right = 'auto';
+      wrap.style.top = mcMenuTop(rect, menuH, window.innerHeight) + 'px';
+      wrap.style.visibility = '';
+      state = mcMenuState(state, { t: 'open', id: id, anchor: host }); // M2:anchor 传触发钮(body 挂载后无锚容器)
       lastClose = null; // 成功开单后清守卫（后续同钮同 id 重开走正常 toggle 路径）
       flashIn(wrap, function () {});
     }
@@ -211,8 +211,11 @@ var McMenus = {
       } catch (er) {}
     }
     function onKey(e) { try { if (e.key === 'Escape') closeMenu(); } catch (er) {} }
+    // fixed 菜单滚动时与钮脱锚 → 任何滚动直接关(捕获段:scroll 不冒泡,须捕获;passive 只读)
+    function onScroll() { try { if (wrap) closeMenu(); } catch (er) {} }
     document.addEventListener('click', onDocClick, true);
     document.addEventListener('keydown', onKey, true);
+    document.addEventListener('scroll', onScroll, { capture: true, passive: true });
     // 宿主原生菜单兜底隐藏(Task 1 勘定键为空则跳过;藏不删)
     var styleEl = null;
     if (MC_MAP.menuPortal) {
@@ -226,9 +229,10 @@ var McMenus = {
       if (MC_MENU_OPEN === openMenu) MC_MENU_OPEN = null;
       try { document.removeEventListener('click', onDocClick, true); } catch (e) {}
       try { document.removeEventListener('keydown', onKey, true); } catch (e) {}
+      try { document.removeEventListener('scroll', onScroll, { capture: true }); } catch (e) {}
       try { if (styleEl) styleEl.remove(); } catch (e) {}
       try { if (wrap) wrap.remove(); } catch (e) {}
     };
   },
 };
-if (typeof module !== 'undefined') module.exports = { McMenus: McMenus, mcMenuItems: mcMenuItems, mcMenuAlign: mcMenuAlign, mcMenuState: mcMenuState };
+if (typeof module !== 'undefined') module.exports = { McMenus: McMenus, mcMenuItems: mcMenuItems, mcMenuAlign: mcMenuAlign, mcMenuTop: mcMenuTop, mcMenuState: mcMenuState };

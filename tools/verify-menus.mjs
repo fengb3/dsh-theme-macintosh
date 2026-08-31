@@ -6,7 +6,7 @@
 //    本会话仅:node --check 语法 + --dry-run(只 launch+goto+页面可开即退 0)自证可执行。
 //
 // 断言素材勘定(写前实读):
-//   - DOM:.mc-menu / .m-opt[data-mc-mi] / 锚容器 .mc-anchor(src/conv/overlays.js)。
+//   - DOM:.mc-menu / .m-opt[data-mc-mi] / body 挂载 fixed 定位(src/conv/overlays.js v2)。
 //   - 触发钮(src/finder.js 实况):会话行三点 title/aria-label=「会话菜单」class=mc-s-menu;
 //     分组头「工作区菜单」/「新建」与 listbar「视图选项」「添加」均为 mc-gh-btn。
 //   - 样式(tokens.js):--mc-r-card:4px;深 --mc-surface:#3d3d3d=rgb(61,61,61),
@@ -91,7 +91,10 @@ async function menuProbe() {
       optFont: oc ? oc.fontSize : null,
       mi: opt ? opt.getAttribute('data-mc-mi') : null,
       count: document.querySelectorAll('.mc-menu').length,
-      anchor: !!m.parentElement && m.parentElement.classList.contains('mc-anchor'),
+      // v2 裁剪 bug 修复:body 挂载 fixed(旧 .mc-anchor offsetParent 锚退役)
+      bodyMount: m.parentElement === document.body,
+      fixed: c.position === 'fixed',
+      inViewport: m.getBoundingClientRect().bottom <= window.innerHeight + 1,
     };
   });
 }
@@ -99,7 +102,8 @@ async function menuProbe() {
 function assertMenuStyle(label, p, exp) {
   console.log(`[${label}-menuProbe] ` + JSON.stringify(p));
   check(`${label}: .mc-menu 唯一(单例)`, !!p && p.count === 1);
-  check(`${label}: 菜单挂 .mc-anchor 锚容器`, !!p && p.anchor);
+  check(`${label}: 菜单 body 挂载 fixed 定位`, !!p && p.bodyMount && p.fixed);
+  check(`${label}: 菜单不超视口底缘(裁剪修复)`, !!p && p.inViewport);
   check(`${label}: 背景 var(--mc-surface)(${exp.menuBg})`, !!p && p.bg === exp.menuBg);
   check(`${label}: backgroundImage none(纯色无图)`, !!p && p.bgImage === 'none');
   check(`${label}: border 1px`, !!p && p.btw === '1px');
@@ -133,8 +137,7 @@ const fallback = await page.evaluate((t) =>
 if (fallback) info('Finder 降级假数据在场 → 归档断言 deferred(archive 对假 id 静默 no-op)', null);
 
 // 归档标靶:取首个非当前选中行(避免归档当前会话干扰后续断言)。
-// 取「首」不取「末」:近底部行的菜单会被 .mc-sb-tree 滚动容器底缘裁剪致不可点
-// (首跑实证:末行菜单 element not visible;属标靶选择,非代码错——锚定设计即挂按钮容器)。
+// 取「首」不取「末」:保守标靶选择(v2 垂直翻转已修底部裁剪,末行菜单亦应可点,此约束可放宽留证)。
 const target = await page.evaluate(() => {
   const r = document.querySelector('.mc-sess:not(.on)');
   return r ? { title: r.getAttribute('title') } : null;

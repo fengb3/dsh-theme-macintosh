@@ -362,11 +362,9 @@ const McFinder = {
   color:var(--mc-accent);font:400 12px/1.6 var(--font-sb);border-radius:var(--mc-r-tag)}
 .mc-sb-more:active{color:var(--mc-fg)}
 .mc-sb-find .mc-sb-more svg{width:11px;height:11px;flex:none}
-/* Task 5 菜单锚定：触发钮的 offsetParent 须收敛到按钮近旁容器（否则 .mc-menu 挂到侧栏大容器）——
-   五处触发钮的容器（listbar 按钮组/分组头按钮组/会话行）预置 position:relative，
-   openMenu 里 host.offsetParent 即命中这些容器，菜单出现在其正下方 */
+/* Task 5 菜单锚定(v2 裁剪 bug 修复后仅存样式作用)：按钮组/会话行容器预置 position:relative——
+   菜单已改 body 挂载 fixed 定位不再依赖 offsetParent,.mc-anchor 锚类退役删除 */
 .mc-sb-find .mc-sb-la,.mc-sb-find .mc-gh-act,.mc-sb-find .mc-sess{position:relative}
-.mc-sb-find .mc-anchor{position:relative}
 /* ===== 折叠态迷你条（原型 .sb-mini；56px 官方轨内一列 26px 图标钮）===== */
 .mc-sb-mini{display:flex;flex-direction:column;align-items:center;gap:6px;flex:1;min-height:0;padding:8px 0}
 .mc-mini-btn{display:grid;place-items:center;width:34px;height:30px;flex:none;
