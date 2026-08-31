@@ -133,6 +133,10 @@ const rel = (f) => relative(ROOT, f).replace(/\\/g, '/');
   // 从值中提取特征片段：#id、[attr...]、[role=...]、[aria-...]
   const tokens = new Set();
   for (const v of values) for (const t of v.match(/#[\w-]+|\[[^\]]+\]/g) || []) tokens.add(t);
+  // flow 段手动补片段（2026-08-31）：kind 系列任意取值形态 + think 卡双锚——
+  // 前缀级特征（无闭合 ]）不进 map.js 值提取，须手动登记；只允许出现在 map 段。
+  tokens.add('[data-chat-flow-kind=');
+  tokens.add('[data-variant="think"]');
   let bad = [];
   for (const [f, t] of [...srcText, ...(distNoMap ? [[distFile, distNoMap]] : [])]) {
     if (rel(f) === 'src/chrome/map.js') continue;

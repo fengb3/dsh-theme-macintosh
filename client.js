@@ -524,6 +524,29 @@ const MC_MAP = {
   sidebarNewSessionRail: '#root > div > div[data-sidebar-collapsed] > div:first-child > div > div > button:nth-child(3)', /* DRIFT-RISK: structural */
   sidebarFootRail: '#root > div > div[data-sidebar-collapsed] > div:first-child > div > div > div:nth-child(5)', /* DRIFT-RISK: structural */
   sidebarLogoRowRail: '#root > div > div[data-sidebar-collapsed] > div:first-child > div > div > div:nth-child(2)', /* DRIFT-RISK: structural */
+  // —— flow 段(会话流;探针 2026-08-31,host 0.1.1-rc.2;dsh-client-ui-conversation 行号)——
+  flowScroll: '[data-conversation-scroll]',                    // stable(L7276)
+  flowColumn: '[data-chat-flow]',                             // stable(L5829)
+  flowItem: '[data-chat-flow-kind]',                          // stable(L5506-5510)
+  kindUser: '[data-chat-flow-kind="user"]',
+  kindSteering: '[data-chat-flow-kind="steering"]',
+  kindContext: '[data-chat-flow-kind="context"]',
+  kindAssistantStep: '[data-chat-flow-kind="assistant-step"]',
+  kindCommand: '[data-chat-flow-kind="command"]',
+  kindCompaction: '[data-chat-flow-kind="compaction"]',
+  kindManualCompaction: '[data-chat-flow-kind="manual-compaction"]',
+  kindModelRetry: '[data-chat-flow-kind="model-retry"]',
+  kindTurnError: '[data-chat-flow-kind="turn-error"]',
+  kindTurnMaxTokens: '[data-chat-flow-kind="turn-max-tokens"]',
+  kindTurnTail: '[data-chat-flow-kind="turn-tail"]',
+  kindUnknown: '[data-chat-flow-kind="unknown"]',
+  bubbleUser: ':is([data-chat-flow-kind="user"],[data-chat-flow-kind="steering"])>div>div', /* DRIFT-RISK: structural(哈希三件套 gdEzaW_*,L5332-5361) */
+  userGallery: '[data-align="end"] [data-variant]',            // stable(ATT L705-746)
+  refChip: '[data-ref-chip]',                                 // stable(L5315-5324)
+  mdRoot: '[data-chat-flow-kind="assistant-step"] > div',      /* DRIFT-RISK: structural(Sxvs8a_*,L9461-9521) */
+  thinkCard: '[data-variant="think"]',                        // stable;双锚 [data-state](L9389-9439)
+  ctxBody: '[data-context-injection-body]',                   // stable(L4863-4907)
+  turnTailBar: '[data-turn-tail]',                            // stable(L9715-9752)
 };
 
 
@@ -1225,6 +1248,20 @@ const McFinder = {
   },
 };
 
+// src/conv/flow.js —— 会话流覆写(spec 2026-08-31)
+// 协议 { css, mount(ctx) }。选择器一律插值 MC_MAP;无 :hover 无 transition。
+var McFlow = {
+  css: [
+    // §4-1:.flow 列(gap 16→14 原型 L462;padding 16;子项 flex:none 手册 §6.4)
+    MC_MAP.flowColumn + '{gap:14px;padding:16px}',
+    MC_MAP.flowItem + '{flex:none;min-width:0}',
+  ].join('\n'),
+  mount: function (ctx) {
+    // Task 7 实装:MutationObserver 三拍 + syncAnim 相位同步
+    return null;
+  },
+};
+
 // src/kit.js —— 检视页骨架（默认关闭零足迹；控制台 window.__MC_KIT_OPEN__ = true 打开）
 // 布局类全部 kit- 前缀，样式不外泄 kit 根之外；组件类直接复用 mc- 原语
 // 纯顶层声明，无模块系统语法；与 tokens/clock/mcfx/sprite 拼进同一作用域
@@ -1415,9 +1452,10 @@ const mods = {
   McChrome: McChrome,
   McSidebar: McSidebar,
   McFinder: McFinder,
+  McFlow: McFlow,
   McKit: McKit,
 };
-const order = ["McTokens","McClock","McMcfx","McSprite","MC_MAP","McChrome","McSidebar","McFinder","McKit"];
+const order = ["McTokens","McClock","McMcfx","McSprite","MC_MAP","McChrome","McSidebar","McFinder","McFlow","McKit"];
 
 return {
   inject: ["slots", "theme", "sessions"],
