@@ -29,8 +29,10 @@ const McSidebar = {
     '.mc-sb-name{display:inline-flex;align-items:center;min-width:0}',
     '.mc-sb-brand{font:700 17px/1.2 var(--font-sb);letter-spacing:.02em;color:var(--mc-fg)}',
     '.mc-sb-tag{font:600 14px/1.2 var(--font-sb);background:var(--mc-fg);color:var(--mc-rail-1);padding:1px 5px;margin-left:5px;flex:none}',
-    // 会话树图标统一 15px（原型 group-head svg 15px；行内小钮 12px 走 18px 容器）
-    `${MC_MAP.sessionRow} svg{width:15px;height:15px;flex:none}`,
+    // 会话树图标统一 15px（原型 group-head svg 15px；行内小钮 12px 走 18px 容器）。
+    // sessionStatusIcon 一并入选：rc.2 StateDot 非 ongoing 态渲染为 span[data-state]（非 svg），
+    // 不入本规则会以官方 10px 原尺寸出像素 doc —— T10 换锚配套。
+    `${MC_MAP.sessionRow} svg,${MC_MAP.sessionStatusIcon}{width:15px;height:15px;flex:none}`,
     // —— 会话树像素图标（15px 起步：24 栅格像素画在 12px 下退化为细线，15px 才读得出像素块）——
     `${MC_MAP.sessionRowWorkspace} svg *{visibility:hidden}`,
     `${MC_MAP.sessionStatusIcon} *{visibility:hidden}`,
@@ -163,8 +165,8 @@ const McSidebar = {
 
     // —— 真 DOM 标题栏：.mc-titlebar 插为 sidebarRoot 首子（React 容器内外来节点，
     //    MutationObserver 监听 childList 自愈重插；sidebarRoot 晚于 apply 出现时经
-    //    CLOCK 100ms 栅格轮询定位，上限 ~10s）。tclose = 折叠/展开：flashIn 白闪包裹
-    //    官方隐藏钮的程序化 click（保官方行为与状态持久化）。 ——
+    //    CLOCK 100ms 栅格轮询定位，上限 ~10s）。tclose = 折叠/展开：accToggle 四拍包裹
+    //    官方隐藏钮的程序化 click（七轮裁定：状态切换统一走库；保官方行为与状态持久化）。 ——
     let stopped = false;
     let bar = null;
     let heal = null;
@@ -174,8 +176,8 @@ const McSidebar = {
       const btn = document.querySelector(MC_MAP.sidebarCollapseBtn);
       if (!btn) return;
       const col = document.querySelector(MC_MAP.sidebar);
-      // 折叠/展开过场：ghost 下瞬切宽度 → 白闪 → 撤（官方 300ms/150ms 过渡已压 0）
-      if (col) flashIn(col, function () { btn.click(); });
+      // 折叠/展开过场：ghost 下瞬切宽度 → 白块+瞬变 → 揭开（官方 300ms/150ms 过渡已压 0）
+      if (col) accToggle(col, function () { btn.click(); });
       else btn.click();
     };
     const build = function () {

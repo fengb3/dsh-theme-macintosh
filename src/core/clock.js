@@ -33,6 +33,11 @@ const McClock = {
         queue.push(job);
         return () => { queue = queue.filter((j) => j !== job); };
       },
+      // 句柄注销：next 返回的取消句柄经此统一注销（T7 flow mount 轮询 teardown 用）；
+      // dispose 后调用为无害 no-op（句柄闭包只触碰旧 mount 的队列绑定）
+      clear(handle) {
+        if (typeof handle === 'function') { try { handle(); } catch (e) { /* 忽略 */ } }
+      },
       // 负延迟注入：任意时刻挂上的 CSS 动画与全局相位同步
       syncAnim(el, period, prop) {
         if (period === undefined) period = clock.PULSE;
@@ -59,3 +64,7 @@ const McClock = {
     return teardown;
   },
 };
+// CJS 兼容出口（段尾守卫，同 mcfx 尾部模式）：McClock/__clockForTest 供 clear 用例测试；
+// computeNext 早期出口（上方）保留 —— McClock 为 const 声明，出口前移会 TDZ
+if (typeof module !== 'undefined' && module.exports)
+  module.exports = { computeNext, McClock, __clockForTest: function () { return CLOCK; } };

@@ -1,11 +1,14 @@
 // tools/audit.mjs — 静态纪律走查（照《笔记》§13 可静态检查项）
-// 扫描 src/**/*.js + dist/client-body.js（若存在），输出 PASS/FAIL，任一 FAIL 退出码 1。
+// 扫描 src/**/*.js + dist/client-body.js（若存在）+ client.js（运行交付物，若存在），输出 PASS/FAIL，任一 FAIL 退出码 1。
 // 各 check 的扫描范围：
-//   1. hover/transition     —— src 全部 + dist 全量
+//   1. hover/transition     —— src 全部 + dist 全量 + client.js 全量
 //   2. setTimeout/setInterval —— src 除 clock.js + dist 除 clock 快照段（按 '// src/core/clock.js'..'// src/core/mcfx.js' 内容定位）
-//   3. innerHTML+esc        —— src 全部 + dist 全量
+//                                + client.js 全量（clock 段走 mcG.*.bind、loader 样板走 ctx.effect，无裸定时器，不需豁免）
+//   3. innerHTML+esc        —— src 全部 + dist 全量 + client.js 全量
 //   4. 浅色 token 覆盖      —— 仅 src/core/tokens.js
-//   5. 宿主选择器泄漏       —— src 除 map.js + dist 除 map 快照段（按 '// src/chrome/map.js'..'// src/chrome/chrome.js' 内容定位）
+//   5. 宿主选择器泄漏       —— src 除 map.js + dist/client.js 各除 map 快照段（均按 '// src/chrome/map.js'..
+//                             '// src/chrome/chrome.js' 内容定位——client.js 与 dist 同为 src 镜像拼接产物、
+//                             段标记同构；client.js 头尾 loader 样板全量入检不豁免）
 import { readFileSync, existsSync, readdirSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import path from 'node:path';
@@ -36,21 +39,22 @@ function stripComments(text) {
 
 const srcFiles = walk(join(ROOT, 'src'));
 const distFile = join(ROOT, 'dist', 'client-body.js');
+const clientFile = join(ROOT, 'client.js'); // 浏览器真正执行的常驻交付物（终审 F1 并入扫描）
 const srcText = new Map(srcFiles.map((f) => [f, stripComments(readFileSync(f, 'utf8'))]));
 
-// dist 走查文本：先在「原始产物」上按 '// src/...' 注释定位豁免段（stripComments 会剥掉这些标记），
-// 将豁免段整段替换为等长空白后再剥注释 —— 行数不变、豁免内容不参与扫描。
-const distRaw = existsSync(distFile) ? readFileSync(distFile, 'utf8') : null;
-function distSegmentRaw(fromMarker, toMarker) {
-  if (distRaw == null) return null;
-  const from = distRaw.indexOf(fromMarker);
+// 产物走查文本（dist 快照与 client.js 同一套机制）：先在「原始产物」上按 '// src/...' 注释定位
+// 豁免段（stripComments 会剥掉这些标记），将豁免段整段替换为等长空白后再剥注释 —— 行数不变、
+// 豁免内容不参与扫描。
+function segmentRaw(raw, fromMarker, toMarker) {
+  if (raw == null) return null;
+  const from = raw.indexOf(fromMarker);
   if (from < 0) return null;
-  const to = toMarker ? distRaw.indexOf(toMarker, from) : -1;
-  return distRaw.slice(from, to < 0 ? undefined : to);
+  const to = toMarker ? raw.indexOf(toMarker, from) : -1;
+  return raw.slice(from, to < 0 ? undefined : to);
 }
-function distScanText(exemptSegments) {
-  if (distRaw == null) return null;
-  let out = distRaw;
+function scanText(raw, exemptSegments) {
+  if (raw == null) return null;
+  let out = raw;
   for (const seg of exemptSegments) {
     if (seg == null) continue;
     out = out.split(seg).join(' '.repeat(seg.length));
@@ -58,38 +62,49 @@ function distScanText(exemptSegments) {
   return stripComments(out);
 }
 
-// 预备各 check 用的 dist 走查文本
-const distText = distScanText([]); // 全量（check 1/3）
-const distNoClock = distScanText([distSegmentRaw('// src/core/clock.js', '// src/core/mcfx.js')]); // check 2
-const distNoMap = distScanText([distSegmentRaw('// src/chrome/map.js', '// src/chrome/chrome.js')]); // check 5
+const distRaw = existsSync(distFile) ? readFileSync(distFile, 'utf8') : null;
+const clientRaw = existsSync(clientFile) ? readFileSync(clientFile, 'utf8') : null;
+
+// 预备各 check 用的走查文本
+const distText = scanText(distRaw, []); // dist 全量（check 1/2/3）
+const distNoClock = scanText(distRaw, [segmentRaw(distRaw, '// src/core/clock.js', '// src/core/mcfx.js')]); // check 2
+const distNoMap = scanText(distRaw, [segmentRaw(distRaw, '// src/chrome/map.js', '// src/chrome/chrome.js')]); // check 5
+const clientText = scanText(clientRaw, []); // client.js 全量（check 1/2/3；clock 段无裸定时器，无需豁免）
+const clientNoMap = scanText(clientRaw, [segmentRaw(clientRaw, '// src/chrome/map.js', '// src/chrome/chrome.js')]); // check 5
 
 const failures = [];
 const fail = (msg) => { failures.push(msg); console.log(`FAIL ${msg}`); };
 const pass = (msg) => console.log(`PASS ${msg}`);
 const rel = (f) => relative(ROOT, f).replace(/\\/g, '/');
 
-// ── 1. 无 :hover；无 transition:（唯一豁免：reduced-motion 块内 transition-duration:.01ms!important）──
-// 范围：src 全部 + dist 全量。
+// ── 1. 无 :hover;无 transition:(豁免:纯压平声明 transition:none(!important) 与
+//     reduced-motion 块内 transition-duration:.01ms!important——spec flow §3「宿主自带的
+//     transition 以 transition:none 压平保持硬切」,压平即关闭过渡、不新增动画)──
+// 范围：src 全部 + dist 全量 + client.js 全量。
 {
   let bad = [];
-  for (const [f, t] of [...srcText, ...(distText ? [[distFile, distText]] : [])]) {
-    for (const line of t.split('\n')) {
+  for (const [f, t] of [...srcText, ...(distText ? [[distFile, distText]] : []), ...(clientText ? [[clientFile, clientText]] : [])]) {
+    for (let line of t.split('\n')) {
       if (/:hover/.test(line)) bad.push(`${rel(f)}: ${line.trim()}`);
-      // 唯一豁免：reduced-motion 块内的 transition-duration:.01ms!important（tokens.js）
-      if (/transition\s*:/.test(line) &&
-          !/transition-duration\s*:\s*\.01ms!important/.test(line))
+      // 豁免：纯压平声明不新增动画——transition:none(!important)(flow T5 think 卡)与
+      // reduced-motion 块内的 transition-duration:.01ms!important(tokens.js)。剥压平项后再扫。
+      // 右边界断言(?=[;}'"}\s]|$,T10 加固):仅当 none 后随声明边界才剥——防
+      // `transition:nonexistent` 这类前缀撞车被误剥而漏检(应留在线上被下方 transition: 检出)。
+      const scan = line.replace(/transition\s*:\s*none(\s*!important)?(?=[;}'"}\s]|$)/g, 'FLAT');
+      if (/transition\s*:/.test(scan) &&
+          !/transition-duration\s*:\s*\.01ms!important/.test(scan))
         bad.push(`${rel(f)}: ${line.trim()}`);
     }
   }
   bad.length ? fail(`hover/transition 违禁 ${bad.length} 处:\n  ` + bad.join('\n  '))
-              : pass('无 :hover、无 transition（src 全部 + dist 全量；唯一豁免 reduced-motion .01ms）');
+              : pass('无 :hover、无 transition(src 全部 + dist/client.js 全量；豁免压平声明 none(!important) 与 reduced-motion .01ms)');
 }
 
 // ── 2. setTimeout/setInterval 直调仅限 clock 模块段 ──
-// 范围：src 除 src/core/clock.js + dist 除 clock 快照段（内容特征定位，非文件名）。
+// 范围：src 除 src/core/clock.js + dist 除 clock 快照段（内容特征定位，非文件名）+ client.js 全量。
 {
   let bad = [];
-  for (const [f, t] of [...srcText, ...(distNoClock ? [[distFile, distNoClock]] : [])]) {
+  for (const [f, t] of [...srcText, ...(distNoClock ? [[distFile, distNoClock]] : []), ...(clientText ? [[clientFile, clientText]] : [])]) {
     if (rel(f) === 'src/core/clock.js') continue;
     for (let line of t.split('\n')) {
       // window.setInterval/clearInterval 是合规绕法（runner 陷阱只遮蔽裸标识符），放行
@@ -98,21 +113,21 @@ const rel = (f) => relative(ROOT, f).replace(/\\/g, '/');
     }
   }
   bad.length ? fail(`非 clock 段出现定时器直调:\n  ` + bad.join('\n  '))
-              : pass('setTimeout/setInterval 直调仅存在于 clock 段（src/core/clock.js + dist 对应快照段豁免）');
+              : pass('setTimeout/setInterval 直调仅存在于 clock 段（src/core/clock.js + dist 对应快照段豁免；client.js 全量零直调）');
 }
 
 // ── 3. innerHTML：含 ${ 的赋值必须经过 esc()；纯静态字面量放行 ──
-// 范围：src 全部 + dist 全量。
+// 范围：src 全部 + dist 全量 + client.js 全量。
 {
   let bad = [];
-  for (const [f, t] of [...srcText, ...(distText ? [[distFile, distText]] : [])]) {
+  for (const [f, t] of [...srcText, ...(distText ? [[distFile, distText]] : []), ...(clientText ? [[clientFile, clientText]] : [])]) {
     for (const line of t.split('\n')) {
       if (/\.innerHTML\s*=/.test(line) && /\$\{/.test(line) && !/\besc\s*\(/.test(line))
         bad.push(`${rel(f)}: ${line.trim()}`);
     }
   }
   bad.length ? fail(`innerHTML 插值未走 esc()（需人工复核）:\n  ` + bad.join('\n  '))
-              : pass('innerHTML 全部为静态字面量或经 esc() 转义（src 全部 + dist 全量）');
+              : pass('innerHTML 全部为静态字面量或经 esc() 转义（src 全部 + dist/client.js 全量）');
 }
 
 // ── 4. --mc-desktop-pattern 不得在浅色块被覆盖 ──
@@ -125,24 +140,32 @@ const rel = (f) => relative(ROOT, f).replace(/\\/g, '/');
       : fail('--mc-desktop-pattern 出现在 html[data-theme="light"] 块内');
 }
 
-// ── 5. 宿主选择器管制：MC_MAP 的值不得出现在其他 src 文件 / dist 其他段 ──
-// 范围：src 除 src/chrome/map.js + dist 除 map 快照段（内容特征定位，非文件名）。
+// ── 5. 宿主选择器管制：MC_MAP 的值不得出现在其他 src 文件 / 产物其他段 ──
+// 范围：src 除 src/chrome/map.js + dist/client.js 各除 map 快照段（内容特征定位，非文件名）。
 {
   const mapSrc = readFileSync(join(ROOT, 'src', 'chrome', 'map.js'), 'utf8');
   const values = [...mapSrc.matchAll(/:\s*'([^']+)'/g)].map((m) => m[1]);
   // 从值中提取特征片段：#id、[attr...]、[role=...]、[aria-...]
   const tokens = new Set();
   for (const v of values) for (const t of v.match(/#[\w-]+|\[[^\]]+\]/g) || []) tokens.add(t);
+  // flow 段手动补片段（2026-08-31；终审 F2 增补 contextForm/dataState）：kind 系列、context form、
+  // data-state 系列任意取值形态——前缀级特征（无闭合 ]）不进 map.js 值提取，须手动登记；只允许出现在 map 段。
+  tokens.add('[data-chat-flow-kind=');
+  tokens.add('[data-variant="think"]');
+  tokens.add('[data-context-form=');
+  tokens.add('[data-state=');
+  tokens.add('[aria-expanded='); // 验收④a:think 像素三角展开态前缀键(2026-08-31 收编,同 dataState 先例)
   let bad = [];
-  for (const [f, t] of [...srcText, ...(distNoMap ? [[distFile, distNoMap]] : [])]) {
+  for (const [f, t] of [...srcText, ...(distNoMap ? [[distFile, distNoMap]] : []), ...(clientNoMap ? [[clientFile, clientNoMap]] : [])]) {
     if (rel(f) === 'src/chrome/map.js') continue;
     for (const tok of tokens)
       if (t.includes(tok)) bad.push(`${rel(f)} 含宿主选择器片段 ${tok}`);
   }
   bad.length ? fail(`MC_MAP 选择器泄漏到管制文件之外:\n  ` + [...new Set(bad)].join('\n  '))
-              : pass(`宿主选择器仅存在于 map 段（src/chrome/map.js + dist 对应快照段豁免；${tokens.size} 个特征片段核验）`);
+              : pass(`宿主选择器仅存在于 map 段（src/chrome/map.js + dist/client.js 对应快照段豁免；${tokens.size} 个特征片段核验）`);
 }
 
-console.log(distText ? '（dist/client-body.js 已并入扫描，豁免段按内容特征定位）' : '（dist/client-body.js 不存在，仅扫 src）');
+const joined = [distText ? 'dist/client-body.js' : null, clientText ? 'client.js' : null].filter(Boolean);
+console.log(joined.length ? `（${joined.join(' + ')} 已并入扫描，豁免段按内容特征定位）` : '（dist/client-body.js 与 client.js 均不存在，仅扫 src）');
 if (failures.length) { console.log(`\naudit: ${failures.length} 项 FAIL`); process.exit(1); }
 console.log('\naudit: all green');

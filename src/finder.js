@@ -27,7 +27,8 @@ function McFinderMini(props) {
 }
 
 // 会话行：状态槽（run=脉冲点 / done=✓ / wait=空占位）+ 标题 + 三点菜单钮。
-// 选中行 .on 整行反色方角；onClick 走 flashIn 三拍（ghost→show→白闪→撤，100ms×2 走 CLOCK）。
+// 选中行 .on 整行反色方角；onClick 走 accToggle 四拍（七轮裁定：选中=状态切换统一走库；
+// t0 整行隐 → t100 白块+瞬切选中 → t200 揭开 → t300 滞空，走 CLOCK 100ms 栅格）。
 function McFinderSess(props) {
   const h = React.createElement;
   const s = props.sess;
@@ -35,7 +36,7 @@ function McFinderSess(props) {
   const cls = 'mc-sess' + (on ? ' on' : '') + (s.status === 'run' ? ' run' : '') + (s.xtra ? ' xtra' : '');
   const pick = function (e) {
     const row = e.currentTarget; // 事件对象即刻取 DOM（不依赖事件池生命周期）
-    flashIn(row, function () { props.onPick(s.id); }); // 选中态切换包进闪烁中拍
+    accToggle(row, function () { props.onPick(s.id); }); // 选中态切换包进白块遮盖中拍
   };
   let slot = null;
   if (s.status === 'run') slot = h('i', { className: 'mc-s-dot' });
@@ -50,7 +51,8 @@ function McFinderSess(props) {
 }
 
 // 工作区分组：group-head（折叠三角 i-tri + 文件夹 i-folder + 名称 + 计数 + dots/plus 小钮）+
-// group-body（会话行 + 超 5 条的「展开其余 N 个会话」钮）。折叠开合同走 flashIn 过场。
+// group-body（会话行 + 超 5 条的「展开其余 N 个会话」钮）。折叠开合走 accToggle 四拍
+// （七轮裁定：状态切换统一走库；「展开其余」=元素出现，仍走 flashIn）。
 function McFinderGroup(props) {
   const h = React.createElement;
   const g = props.group;
@@ -59,7 +61,7 @@ function McFinderGroup(props) {
   const xtraCount = g.sessions.filter(function (s) { return s.xtra; }).length;
   const toggle = function (e) {
     const grp = e.currentTarget.closest('.mc-group');
-    flashIn(grp, function () { props.onToggle(g.id); });
+    accToggle(grp, function () { props.onToggle(g.id); });
   };
   const ghBtn = function (title, icon) {
     return h('button', { className: 'mc-gh-btn', type: 'button', title: title, 'aria-label': title, 'data-mc-finder': '' },
@@ -104,7 +106,16 @@ function McFinderTree(props) {
   const current = live ? (list ? list.current : null) : null;
   const selState = React.useState(MC_FINDER_SEL0);
   const sel = live ? current : selState[0];
-  const openState = React.useState(null); // null = 默认全开；记录开合覆盖 {gid:bool}
+  // 开合覆盖 {gid:bool} 持久化 localStorage(七轮修复:刷新回全开 + 点一组全体误折两弊;
+  // null=无记录默认全开;查不到键一律回落「开」——只有显式 false 才折,单组开合互不牵连)
+  const MC_FINDER_OPEN_KEY = 'mcx-finder-open';
+  const openState = React.useState(function () {
+    try {
+      const v = window.localStorage.getItem(MC_FINDER_OPEN_KEY);
+      if (v) { const o = JSON.parse(v); if (o && typeof o === 'object') return o; }
+    } catch (e) { /* 坏值/无存储 → 回落默认全开 */ }
+    return null;
+  });
   const expState = React.useState({});
   const qState = React.useState(MC_FINDER_QUERY); // 迷你态搜索词跨形态接力（惰性初值）
   const q = qState[0].trim().toLowerCase();
@@ -137,7 +148,12 @@ function McFinderTree(props) {
     return function () { window.removeEventListener('mcx-finder-query', onQ); };
   }, []);
   const onToggle = function (gid) {
-    openState[1](function (o) { const n = Object.assign({}, o || {}); n[gid] = !(o ? o[gid] : true); return n; });
+    openState[1](function (o) {
+      const n = Object.assign({}, o || {});
+      n[gid] = !(o ? o[gid] !== false : true); // 查无键=当前开 → 翻折;有键按记录翻
+      try { window.localStorage.setItem(MC_FINDER_OPEN_KEY, JSON.stringify(n)); } catch (e) {}
+      return n;
+    });
   };
   const onExpand = function (gid) {
     expState[1](function (m) { const n = Object.assign({}, m); n[gid] = true; return n; });
@@ -160,7 +176,7 @@ function McFinderTree(props) {
       shown.map(function (g) {
         return h(McFinderGroup, {
           key: g.id, group: g,
-          open: q !== '' ? true : (openState[0] === null ? true : !!openState[0][g.id]),
+          open: q !== '' ? true : (openState[0] === null ? true : openState[0][g.id] !== false),
           expanded: !!expState[0][g.id] || q !== '',
           selected: sel, onToggle: onToggle, onExpand: onExpand, onPick: onPick,
         });
@@ -247,7 +263,7 @@ const McFinder = {
         if (props && props.wide === false) return React.createElement(McFinderMini, props);
         const p = Object.assign({}, props);
         p.openSession = sessionsSvc && typeof sessionsSvc.open === 'function'
-          ? function (id) { try { sessionsSvc.open(id); } catch (e) { try { console.error('[mcx] open session failed:', e && e.message); } catch (e2) {} } }
+          ? function (id) { try { sessionsSvc.open(id); } catch (e) { /* 静默降级：保持假数据选中 */ } }
           : null; // TODO(二期)：服务缺席时行内提示；当前静默降级假数据选中
         return React.createElement(McFinderTree, p);
       }

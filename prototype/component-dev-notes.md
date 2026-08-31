@@ -246,6 +246,66 @@ state = { view, mode, current, sessions, busy:{}, fallback:{}, queue:{}, stats:{
 ### 8.3 宿主差异
 - interactive `flowOf(s)` 每会话独立 flow DOM 留档（思考卡/工具卡/历史切走不丢）；workspace 静态单流陈列
 
+### 8.4 flow 落地差异（2026-08-31 二期实录，host 0.1.1-rc.2）
+- **banner 结构位选择器**：宿主 `.md-code-block`（全局稳定类）内部无锚——语言条+复制钮 banner 只能走
+  `>div:first-child` 结构位；pre 透明也靠 wrapper 兜底（裸 pre 值同）。banner 换版即失配回退官方，不破版
+- **:has() form 图标**：注入条四型细分靠 `:has([data-context-form=…])`（Chromium 105+）；**form 属性仅展开态
+  渲染**——折叠行恒出 doc 兜底图标（MC_FLOW_ICONS 映射 form→doc/list/copy/clock）。宿主原图标链深达
+  `[data-disclosure-row]>span:first-of-type>span:first-child>svg:first-of-type`，隐藏它同样要计入包装层
+- **TurnStatus 宿主特有件**：`flowColumn [role="status"]` 运行中状态行（原型没有）；同款 s-dot 负延迟脉冲，
+  经 mount SYNC 管道对相位（`--pulse-delay`）
+- **command 卡壳仅色壳**：`kindCommand [data-variant="others"]` 三态只覆写边色（默认 border / running spark /
+  error danger），标题条/图标/输出体细节留 toolcard 周期
+- **data-slot 出口包装层（本周期最重要的宿主知识，裁定10）**：keyed slot 出口一律多包一层
+  `div[data-slot=…]`；**`display:contents` 只影响布局、不减选择器深度**——结构位选择器必须把这层数进去。
+  实锤两例：气泡四层锚 `:is(user,steering)>div>div>div>div`（flowItem>data-slot 包装>userRow>userStack>bubble，
+  哈希三件套 gdEzaW_*）；`mdRoot` 一层值命中的其实是包装层（原两层值已修正）。空 images slot 也可能有盒性
+  差异（display:contents 无盒——取「有 ClientRect」的命中者才是真气泡）
+- **气泡四层锚**：同上——四子级直击宿主 `.bubble` 类；底色另走 `--dsw-specific-bubble` 变量通道
+  （overrideTokens 供值），与选择器通道分层降级
+
+### 8.5 flow 验收三轮差异（2026-09 实录，host 0.1.1-rc.2）
+- **开合动画统一协议（五拍）**：用户裁定一切显示/隐藏/换形/换内容动画与原型 `accToggle`（§7 注释 L1290）
+  逐拍同款——t0 ghost → t100 flash 白块 → t200 被遮内容瞬变（可大可小）→ t300 撤块 → t400 内容显回。
+  lib `accToggle` 与 McFlow `cardToggle`（宿主卡版，fn=空转+清残高）均已对齐；宿主卡因 React 自管开合，
+  捕获拍（t0 ghost）必须先于宿主 onClick 才能遮住瞬切
+- **running think 摘要「积攒—吐出」**：宿主摘要流式改字=滚动跑马灯观感，须冻结回显（`textContent`
+  回写 frozen 值）≥400ms，周期末白块（`.mc-line-flash`）盖住→文本瞬换积攒尾部（≤44 字符，原型同款窗口）
+  →100ms 撤块显现；我方回写值==frozen 的自触发 mutation 靠「值相等即跳过」判别，不丢积攒
+- **产物文件 chip（dsh-client-ui-deliverables）**：`[data-turn-tail]` 后代 `button` 规则会误伤
+  `P4kPIW_file` 文件钮（宿主按文件名测宽，被锁 20×20 方块）——钮壳规则必须收窄到 actions 行
+  （`>div:last-child`）；chip 皮肤与 measure 探针同类复用（测宽即所见）；`.P4kPIW_*` 为 build-hash
+  类，无 data-* 稳定锚，DRIFT-RISK 入 MC_MAP
+- **flowColumn 两个生命周期陷阱**（McFlow mount）：① boot 停在空会话（hero 态无列）时轮询 8s 上限会
+  耗尽，之后切会话永不挂载——轮询不限次；② 切会话时宿主整体替换 `[data-chat-flow]` 节点，绑列节点的
+  observer/click 随之失效——一律绑 `document.body`（域限定由 MC_MAP 选择器在 closest/matches 内完成）
+- **headless 验证节流**：Playwright headless 下 100ms 栅格拍会被节流到 ~200ms/拍，五拍全程 ~800ms；
+  验证脚本采样窗口须按 2× 放宽，勿误判卡死
+
+### 8.6 think 卡整体重写（2026-09 验收四轮实录，host 0.1.1-rc.2）
+- **组件化路线（用户裁定）**：不再在宿主 ReasoningRow 上做 CSS/观察器干预——遮蔽
+  `conversation.chat.node` keyed 槽 `assistant-step`（priority:-1），自建 McAssistantNodeView
+  （AssistantMarkdown L9476-9537 平移：text→宿主 primitives MarkdownText 保真、reasoning→自研
+  McThinkCard、image→renderMessageImages、tool-call 跳过）+ McThinkCard（原型 showThinking
+  L1362-1450 的 React 版）
+- **缓冲区 + 定期吐出（核心模型）**：text prop 增量先进 React state 缓冲；每 500ms 周期
+  （400 顿 + 100 揭，CLOCK 栅格）吐 ≤140 字：摘要 `.s-in` 只装本次新字（白块=span 宽=字宽，
+  **零测宽**——被盖元素本身就是文本容器）+ 正文追加 `.mc-app-cover` 行内白块（color:transparent
+  同理）；结束定格前 26 字首行。宿主整段重写（前缀不符）时从头再来（mcThinkTick 纯函数可测）
+- **开合五拍真延迟 flip**：自有 DOM 才能做到「几何变化发生在白块遮盖下」——lib accToggle 的
+  flip 回调在 t200 拍执行（.open 切换），live 实测 body 高度 0→918 精确发生在遮盖期间
+- **ghost 整卡透明**：`.mc-ghost` 须 `background/border-image/box-shadow/outline:transparent!important`
+  （仅子内容 opacity:0 会漏出卡底，用户裁定「先让整个卡片变透明」）
+- **primitives 直取**：`require('@deepseek-ai/dsh-client-ui-primitives')` 在 loader 工厂域无需
+  inject 声明即可解析（注册表全局；缺席静默 null→不遮蔽，宿主原生渲染兜底）——避免了改
+  package.json dsh.client 字段的宿主重启成本
+- **槽位 props 全量**：chat.node 槽把 useSessions/useTurnData/fileMentions/renderMessageImages/
+  node(data.blocks/status) 全数传入遮蔽组件——mentions 的 owner 判定可复刻，仅 t/locale 需自带
+- **摘要行五阶段节拍（验收五轮，用户逐拍定义）**：每拍 100ms、500ms 一循环——
+  A 旧字全透明(.s-in.mcut{color:transparent}) → B 白块盖住(.flash) → C 文本瞬换新字
+  （span 宽即块宽，白块随新字变宽；被盖元素=文本容器，零测宽） → D 撤两类新字显现 → E 滞空一拍。
+  live 采样序列 `-, mcut, mcut+flash(旧), mcut+flash(新/w变), -` 与之逐拍对应
+
 ---
 
 ## 9 · §6 输入坞

@@ -13,7 +13,7 @@ function esc(s) {
     .replace(/"/g, '&quot;');
 }
 
-// 出场三拍：拍0 同步 ghost → 拍1 show()（DOM 插入/显形）+ 换 flash → 拍2 撤两类
+// 出场三拍：拍0 同步 ghost+show()（DOM 插入/显形）→ 拍1 换 flash → 拍2 撤净（含 mcfx，零残留）
 function flashIn(el, show) {
   try {
     if (!el || !el.isConnected) return;
@@ -23,19 +23,19 @@ function flashIn(el, show) {
   mcfxSchedule(() => {
     try {
       if (!el || !el.isConnected) return;
+      el.classList.remove('mc-ghost');
       el.classList.add('mc-flash');
     } catch (e) { /* 同上 */ }
     mcfxSchedule(() => {
       try {
         if (!el || !el.isConnected) return;
-        el.classList.remove('mc-flash');
-        el.classList.remove('mc-ghost');
+        el.classList.remove('mc-flash', 'mc-ghost', 'mcfx');
       } catch (e) { /* 同上 */ }
     }, 100);
   }, 100);
 }
 
-// 退场镜像（原型 §919-927）：拍0 flash 白块 → 拍1 hide() + 撤类
+// 退场镜像（原型 §919-927）：拍0 flash 白块 → 拍1 hide() + 撤净（含 mcfx，零残留）
 function flashOut(el, hide) {
   try {
     if (!el || !el.isConnected) return;
@@ -45,13 +45,15 @@ function flashOut(el, hide) {
     try {
       if (!el || !el.isConnected) return;
       hide();
-      el.classList.remove('mc-flash');
-      el.classList.remove('mc-ghost');
+      el.classList.remove('mc-flash', 'mc-ghost', 'mcfx');
     } catch (e) { /* 同上 */ }
   }, 100);
 }
 
-// 折叠四拍：ghost → flash → 清残高 + fn()（类切换在此发生）→ 撤 flash+ghost
+// 状态切换四拍（验收七轮改版：一切同内容状态切换统一走此——卡片折叠/展开、文字 A→B；
+// 由五拍并拍而来——原拍1(盖白块)与拍2(瞬变内容)合成一拍，观感更紧凑）：
+// t0 ghost(整卡透明) → t100 flash+清残高+fn(盖白块的同时瞬变被遮内容) →
+// t200 同撤 flash+ghost+mcfx(揭开且显回,一步到位) → t300 什么都不动(滞空拍,只清 busy)。
 // dataset.busy 防重入；断连/异常路径也要清 busy，避免卡片永久卡死
 function accToggle(card, fn) {
   try {
@@ -64,22 +66,17 @@ function accToggle(card, fn) {
   mcfxSchedule(() => {
     try {
       if (!card || !card.isConnected) { done(); return; }
-      card.classList.remove('mc-ghost');
       card.classList.add('mc-flash');
-    } catch (e) { done(); return; }
+      card.style.height = ''; // 清展开动画残留的 inline 高度
+      fn(); // 白块已全遮，被遮内容在此拍瞬变（可大可小）
+    } catch (e) { /* fn 抛错仍走完撤拍 */ }
     mcfxSchedule(() => {
+      // 拍2：flash 与 ghost 同时撤（含 mcfx 连撤，元素零残留、内容一步显回）
       try {
-        if (!card || !card.isConnected) { done(); return; }
-        card.style.height = ''; // 清展开动画残留的 inline 高度
-        fn();
-      } catch (e) { /* fn 抛错仍走完撤拍 */ }
+        if (card && card.isConnected) card.classList.remove('mc-flash', 'mc-ghost', 'mcfx');
+      } catch (e) { /* 同上 */ }
       mcfxSchedule(() => {
-        try {
-          if (card && card.isConnected) {
-            card.classList.remove('mc-flash');
-            card.classList.remove('mc-ghost');
-          }
-        } catch (e) { /* 同上 */ }
+        // 拍3：什么都不动（滞空拍，维持四拍栅格；只清 busy）
         done();
       }, 100);
     }, 100);

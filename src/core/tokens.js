@@ -63,14 +63,17 @@ html body, html body[data-ds-dark-theme]{
   --dsw-specific-sidebar-fill:var(--mc-rail-1);
   --dsw-font-family:var(--font-ui);
 }
-/* mcfx 闪烁类（照原型 interactive §172-183 逐行）：flash = ::after 全覆盖遮罩（z-index:3）；
-   ghost = 边框透明 + 子内容透明。使用方须同时挂 'mcfx' 类（flashIn/flashOut/accToggle 自动加）。 */
+/* mcfx 闪烁类（原型 interactive §172-183 + 验收四轮①修订）：
+   flash = ::after 全覆盖遮罩（z-index:3）；ghost = 整卡透明——底色/底图/边框/投影/子内容全隐
+   （!important 压过宿主与我方覆写的 specificity；::after 非元素自身绘制不受影响,白块照常）。
+   使用方须同时挂 'mcfx' 类（flashIn/flashOut/accToggle 自动加）。 */
 .mcfx{position:relative}
 .mcfx::after{content:'';position:absolute;inset:0;pointer-events:none;opacity:0;z-index:3;
   background:#fff;
   background-image:repeating-linear-gradient(0deg,transparent 0 2px,rgba(0,0,0,.06) 2px 3px)}
 .mcfx.mc-flash::after{opacity:1}
-.mcfx.mc-ghost{border-color:transparent}
+.mcfx.mc-ghost{border-color:transparent!important;background:transparent!important;
+  background-image:none!important;box-shadow:none!important;outline:none!important}
 .mcfx.mc-ghost>*{opacity:0}
 html[data-theme="light"] .mcfx::after{
   background:#000;

@@ -57,14 +57,19 @@ const MC_MAP = {
   sidebarBrand: '#root > div > div > div:first-child > div > div > div:nth-child(2) button', /* DRIFT-RISK: structural（+1 标题栏占位；收窄到 logoRow——宽版会误伤标题栏 tbox 的 13px 规格） */
   // sessionRow / sessionRowSelected。复核：dsh-client-ui-workspace/lib/client.js L718-721 ——
   //   SessionNodeItem 行 div role="treeitem" + aria-selected（selected 时 "true"），稳定语义锚点。
+  //   T10 复核（2026-08-31，本机宿主 rc.2：C:\Users\fengb\node_modules\@deepseek-ai\dsh-client-ui-workspace）：
+  //   语义锚不变（工作区行 ownRow L469-472 亦 role=treeitem+aria-expanded）；但 rc.2 起行内图标均包进
+  //   span 槽位（folder 槽=首 span / chevron 槽 / status 槽=会话行首 span），一期「直系 svg」三锚失配 → T10 换锚。
   sessionRow: 'div[role="treeitem"]',
   sessionRowSelected: 'div[role="treeitem"][aria-selected="true"]',
-  // 会话树行细分（probe-tree 实测 2026-08-30）：工作区行带 aria-expanded（直系 svg = 文件夹 + 折叠箭头
-  // [class*="arrow"] 哈希子串）；会话行无 expanded（首个直系 svg = 状态图标）。行内"操作/新建"按钮走 aria-label。
+  // 会话树行细分（probe-tree 实测 2026-08-30；T10 对 rc.2 源码复核修正）：工作区行带 aria-expanded；
+  //   会话行无 expanded（状态图标在首 span 槽）。行内"操作/新建"按钮走 aria-label。
+  //   注意：主题在装时官方树被 McFinder 遮蔽（sidebar.workspaces 席位 priority:-1 lowest-render），
+  //   live DOM 无 treeitem 属设计内行为——本组键是遮蔽失败（slots 服务缺席等）时的兜底样式通道。
   sessionRowWorkspace: 'div[role="treeitem"][aria-expanded]', /* DRIFT-RISK: structural */
-  sessionRowArrow: 'div[role="treeitem"][aria-expanded] > svg[class*="arrow"]', /* DRIFT-RISK: hashed-substring */
-  sessionRowFolder: 'div[role="treeitem"][aria-expanded] > svg:first-of-type', /* DRIFT-RISK: structural */
-  sessionStatusIcon: 'div[role="treeitem"]:not([aria-expanded]) > svg:first-of-type', /* DRIFT-RISK: structural */
+  sessionRowArrow: 'div[role="treeitem"][aria-expanded] svg[class*="arrow"]', /* DRIFT-RISK: hashed-substring;T10 修:svg 入 chevron 槽→去直系改后代(箭头 svg 自带 *_arrow 哈希类,rc.2 源 L486-489) */
+  sessionRowFolder: 'div[role="treeitem"][aria-expanded] > span:first-of-type > svg', /* DRIFT-RISK: structural;T10 修:首 span=folder 槽(rc.2 源 L482-485) */
+  sessionStatusIcon: 'div[role="treeitem"]:not([aria-expanded]) > span:first-of-type > [data-state]', /* DRIFT-RISK: structural;T10 修:StateDot 恒带 data-state 且双形态(ongoing=svg/其余=span,primitives StateDot L66-93),纯 svg 锚先天不稳 */
   // —— 侧栏内部结构位（精修2：元素级 Finder 语汇）。经 probe-session 实测（2026-08-30）——
   //   sidebarCol > div(h0 包装) > .hHd-Xa_root，root 官方 children 恒序：
   //   [1]logoRow(DIV) [2]newSession(BUTTON) [3]regionArea(DIV 工作区树) [4]footArea(DIV)。
@@ -91,5 +96,37 @@ const MC_MAP = {
   sidebarNewSessionRail: '#root > div > div[data-sidebar-collapsed] > div:first-child > div > div > button:nth-child(3)', /* DRIFT-RISK: structural */
   sidebarFootRail: '#root > div > div[data-sidebar-collapsed] > div:first-child > div > div > div:nth-child(5)', /* DRIFT-RISK: structural */
   sidebarLogoRowRail: '#root > div > div[data-sidebar-collapsed] > div:first-child > div > div > div:nth-child(2)', /* DRIFT-RISK: structural */
+  // —— flow 段(会话流;探针 2026-08-31,host 0.1.1-rc.2;dsh-client-ui-conversation 行号)——
+  flowScroll: '[data-conversation-scroll]',                    // stable(L7276)
+  flowColumn: '[data-chat-flow]',                             // stable(L5829)
+  flowItem: '[data-chat-flow-kind]',                          // stable(L5506-5510)
+  // 验收七轮:kindUser/kindSteering/kindContext/kindCompaction/kindManualCompaction/kindModelRetry
+  // 六键随 McSysCard 重绘退役(user/steering 六轮、context/compaction/manual-compaction/model-retry
+  // 七轮——四卡自有 .mc-* 类零宿主锚;行级出场 flashIn 走 flowItem 泛锚即可)
+  kindAssistantStep: '[data-chat-flow-kind="assistant-step"]',
+  kindCommand: '[data-chat-flow-kind="command"]',
+  kindTurnError: '[data-chat-flow-kind="turn-error"]',
+  kindTurnMaxTokens: '[data-chat-flow-kind="turn-max-tokens"]',
+  kindTurnTail: '[data-chat-flow-kind="turn-tail"]',
+  kindUnknown: '[data-chat-flow-kind="unknown"]',
+  bubbleUser: ':is([data-chat-flow-kind="user"],[data-chat-flow-kind="steering"])>div>div>div>div', /* DRIFT-RISK: structural 四子级 flowItem>data-slot 包装>userRow>userStack>bubble;keyed slot 出口有 div[data-slot=…] 包装层(display:contents 不减选择器深度),结构位选择器须计入(裁定10;哈希三件套 gdEzaW_*,L5332-5361) */
+  userGallery: '[data-align="end"] [data-variant]',            // stable(ATT L705-746)
+  // 验收六轮:refChip 键随用户行重写退役(McUserNodeView 自有 .mc-user-chip 类)
+  mdRoot: '[data-chat-flow-kind="assistant-step"] > div > div', /* DRIFT-RISK: structural;第一层 div 为 data-slot 包装层,原一层值命中包装层——当前无消费者,防未来误用(裁定10;Sxvs8a_*,L9461-9521) */
+  // 验收四轮:thinkCard/thinkSummary/ariaExpanded 三键随宿主 ReasoningRow 覆写退役
+  // (McThink 组件整体重写 assistant-step,自有 .mc-think 类零宿主锚)
+  // 验收七轮:ctxBody/disclosureRow/contextForm/retryActive/compactionDisclosure 五键随 McSysCard
+  // 重绘退役(宿主 context/retry/compaction DOM 整体被遮蔽,皮肤锚与 :has 图标细分、pulse 门控
+  // data-active 锚、折叠图标 span 锚全部无消费者;重绘卡自有 .mc-* 类零宿主锚)
+  turnTailBar: '[data-turn-tail]',                            // stable(L9715-9752)
+  // —— 终审 F2 收编（2026-08-31）：此前 flow 规则里直写的宿主选择器一律进管制表（spec §1 唯一管制点）——
+  pendingSteering: '[data-pending-steering]',  // stable(steering 待定态虚线廓，spec §4 行3)
+  statusRow: '[role="status"]',                // stable(TurnStatus 宿主状态行；使用时限定 flowColumn 内，spec §4 行10)
+  commandCard: '[data-variant="others"]',      // stable(command 卡壳锚，spec §4 行9「[data-variant="others"][data-state]」)
+  dataState: '[data-state=',                   // 属性前缀键（任意取值形态；command 三态）
+  // —— 用户验收三轮④收编（2026-09 live 探测，host 0.1.1-rc.2）——
+  deliverRoot: '.P4kPIW_root',   // DRIFT-RISK: build-hash class(dsh-client-ui-deliverables 产物行;无 data-* 稳定锚,宿主升级先复核)
+  deliverFile: '.P4kPIW_file',   // DRIFT-RISK: 同上(文件名 chip 按钮;含 measure 探针 P4kPIW_probe 同类复用)
+  deliverMore: '.P4kPIW_more',   // DRIFT-RISK: 同上("+N 个文件"溢出标签)
 };
 

@@ -13,6 +13,9 @@ window.__ModuleLoader__.load({
 		Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
 		const react = require("react");
 		const React = react;
+		// 验收四轮:primitives 直取(loader 注册表全局可达,无需 inject 声明;缺席时组件降级不注册)
+		var MC_PRIM = null;
+		try { MC_PRIM = require("@deepseek-ai/dsh-client-ui-primitives"); } catch (e) { MC_PRIM = null; }
 // src/core/tokens.js —— 层1：token alias + 最小 --mc-* 底色（深浅两套，值照《笔记》§4.1）
 const McTokens = {
   css: `:root{
@@ -78,14 +81,17 @@ html body, html body[data-ds-dark-theme]{
   --dsw-specific-sidebar-fill:var(--mc-rail-1);
   --dsw-font-family:var(--font-ui);
 }
-/* mcfx 闪烁类（照原型 interactive §172-183 逐行）：flash = ::after 全覆盖遮罩（z-index:3）；
-   ghost = 边框透明 + 子内容透明。使用方须同时挂 'mcfx' 类（flashIn/flashOut/accToggle 自动加）。 */
+/* mcfx 闪烁类（原型 interactive §172-183 + 验收四轮①修订）：
+   flash = ::after 全覆盖遮罩（z-index:3）；ghost = 整卡透明——底色/底图/边框/投影/子内容全隐
+   （!important 压过宿主与我方覆写的 specificity；::after 非元素自身绘制不受影响,白块照常）。
+   使用方须同时挂 'mcfx' 类（flashIn/flashOut/accToggle 自动加）。 */
 .mcfx{position:relative}
 .mcfx::after{content:'';position:absolute;inset:0;pointer-events:none;opacity:0;z-index:3;
   background:#fff;
   background-image:repeating-linear-gradient(0deg,transparent 0 2px,rgba(0,0,0,.06) 2px 3px)}
 .mcfx.mc-flash::after{opacity:1}
-.mcfx.mc-ghost{border-color:transparent}
+.mcfx.mc-ghost{border-color:transparent!important;background:transparent!important;
+  background-image:none!important;box-shadow:none!important;outline:none!important}
 .mcfx.mc-ghost>*{opacity:0}
 html[data-theme="light"] .mcfx::after{
   background:#000;
@@ -204,6 +210,11 @@ const McClock = {
         queue.push(job);
         return () => { queue = queue.filter((j) => j !== job); };
       },
+      // 句柄注销：next 返回的取消句柄经此统一注销（T7 flow mount 轮询 teardown 用）；
+      // dispose 后调用为无害 no-op（句柄闭包只触碰旧 mount 的队列绑定）
+      clear(handle) {
+        if (typeof handle === 'function') { try { handle(); } catch (e) { /* 忽略 */ } }
+      },
       // 负延迟注入：任意时刻挂上的 CSS 动画与全局相位同步
       syncAnim(el, period, prop) {
         if (period === undefined) period = clock.PULSE;
@@ -230,6 +241,10 @@ const McClock = {
     return teardown;
   },
 };
+// CJS 兼容出口（段尾守卫，同 mcfx 尾部模式）：McClock/__clockForTest 供 clear 用例测试；
+// computeNext 早期出口（上方）保留 —— McClock 为 const 声明，出口前移会 TDZ
+if (typeof module !== 'undefined' && module.exports)
+  module.exports = { computeNext, McClock, __clockForTest: function () { return CLOCK; } };
 
 // src/core/mcfx.js —— 层2：闪烁三件套（ghost→flash→swap 三拍协议，照《笔记》§0.3/§5.3/§8.2）
 // 纯顶层声明，无模块系统语法；与 clock.js 拼进同一作用域，直接引用 CLOCK，勿重复声明
@@ -246,45 +261,47 @@ function esc(s) {
     .replace(/"/g, '&quot;');
 }
 
-// 出场三拍：拍0 同步 ghost → 拍1 show()（DOM 插入/显形）+ 换 flash → 拍2 撤两类
+// 出场三拍：拍0 同步 ghost+show()（DOM 插入/显形）→ 拍1 换 flash → 拍2 撤净（含 mcfx，零残留）
 function flashIn(el, show) {
   try {
     if (!el || !el.isConnected) return;
     el.classList.add('mcfx', 'mc-ghost');
     show(); // 拍0：内容在 ghost 遮罩下瞬换（原型 §910-912）
   } catch (e) { /* 单元素失败不拖垮调用方 */ }
-  mcfxSchedule(() => {
+  mcfxSchedule(function () {
     try {
       if (!el || !el.isConnected) return;
+      el.classList.remove('mc-ghost');
       el.classList.add('mc-flash');
     } catch (e) { /* 同上 */ }
-    mcfxSchedule(() => {
+    mcfxSchedule(function () {
       try {
         if (!el || !el.isConnected) return;
-        el.classList.remove('mc-flash');
-        el.classList.remove('mc-ghost');
+        el.classList.remove('mc-flash', 'mc-ghost', 'mcfx');
       } catch (e) { /* 同上 */ }
     }, 100);
   }, 100);
 }
 
-// 退场镜像（原型 §919-927）：拍0 flash 白块 → 拍1 hide() + 撤类
+// 退场镜像（原型 §919-927）：拍0 flash 白块 → 拍1 hide() + 撤净（含 mcfx，零残留）
 function flashOut(el, hide) {
   try {
     if (!el || !el.isConnected) return;
     el.classList.add('mcfx', 'mc-flash');
   } catch (e) { /* 同上 */ }
-  mcfxSchedule(() => {
+  mcfxSchedule(function () {
     try {
       if (!el || !el.isConnected) return;
       hide();
-      el.classList.remove('mc-flash');
-      el.classList.remove('mc-ghost');
+      el.classList.remove('mc-flash', 'mc-ghost', 'mcfx');
     } catch (e) { /* 同上 */ }
   }, 100);
 }
 
-// 折叠四拍：ghost → flash → 清残高 + fn()（类切换在此发生）→ 撤 flash+ghost
+// 状态切换四拍（验收七轮改版：一切同内容状态切换统一走此——卡片折叠/展开、文字 A→B、元素形 A→形 B；
+// 由五拍并拍而来——原拍1(盖白块)与拍2(瞬变内容)合成一拍，观感更紧凑）：
+// t0 ghost(整卡透明) → t100 flash+清残高+fn(盖白块的同时瞬变被遮内容) →
+// t200 同撤 flash+ghost+mcfx(揭开且显回,一步到位) → t300 什么都不动(滞空拍,只清 busy)。
 // dataset.busy 防重入；断连/异常路径也要清 busy，避免卡片永久卡死
 function accToggle(card, fn) {
   try {
@@ -293,26 +310,21 @@ function accToggle(card, fn) {
     card.dataset.busy = '1';
     card.classList.add('mcfx', 'mc-ghost');
   } catch (e) { return; }
-  const done = () => { try { delete card.dataset.busy; } catch (e) { /* 忽略 */ } };
-  mcfxSchedule(() => {
+  var done = function () { try { delete card.dataset.busy; } catch (e2) {} };
+  mcfxSchedule(function () {
     try {
       if (!card || !card.isConnected) { done(); return; }
-      card.classList.remove('mc-ghost');
       card.classList.add('mc-flash');
-    } catch (e) { done(); return; }
-    mcfxSchedule(() => {
+      card.style.height = ''; // 清展开动画残留的 inline 高度
+      fn(); // 白块已全遮，被遮内容在此拍瞬变（可大可小）
+    } catch (e) { /* fn 抛错仍走完撤拍 */ }
+    mcfxSchedule(function () {
+      // 拍2：flash 与 ghost 同时撤（含 mcfx 连撤，元素零残留、内容一步显回）
       try {
-        if (!card || !card.isConnected) { done(); return; }
-        card.style.height = ''; // 清展开动画残留的 inline 高度
-        fn();
-      } catch (e) { /* fn 抛错仍走完撤拍 */ }
-      mcfxSchedule(() => {
-        try {
-          if (card && card.isConnected) {
-            card.classList.remove('mc-flash');
-            card.classList.remove('mc-ghost');
-          }
-        } catch (e) { /* 同上 */ }
+        if (card && card.isConnected) card.classList.remove('mc-flash', 'mc-ghost', 'mcfx');
+      } catch (e) { /* 同上 */ }
+      mcfxSchedule(function () {
+        // 拍3：什么都不动（滞空拍，维持四拍栅格；只清 busy）
         done();
       }, 100);
     }, 100);
@@ -490,14 +502,19 @@ const MC_MAP = {
   sidebarBrand: '#root > div > div > div:first-child > div > div > div:nth-child(2) button', /* DRIFT-RISK: structural（+1 标题栏占位；收窄到 logoRow——宽版会误伤标题栏 tbox 的 13px 规格） */
   // sessionRow / sessionRowSelected。复核：dsh-client-ui-workspace/lib/client.js L718-721 ——
   //   SessionNodeItem 行 div role="treeitem" + aria-selected（selected 时 "true"），稳定语义锚点。
+  //   T10 复核（2026-08-31，本机宿主 rc.2：C:\Users\fengb\node_modules\@deepseek-ai\dsh-client-ui-workspace）：
+  //   语义锚不变（工作区行 ownRow L469-472 亦 role=treeitem+aria-expanded）；但 rc.2 起行内图标均包进
+  //   span 槽位（folder 槽=首 span / chevron 槽 / status 槽=会话行首 span），一期「直系 svg」三锚失配 → T10 换锚。
   sessionRow: 'div[role="treeitem"]',
   sessionRowSelected: 'div[role="treeitem"][aria-selected="true"]',
-  // 会话树行细分（probe-tree 实测 2026-08-30）：工作区行带 aria-expanded（直系 svg = 文件夹 + 折叠箭头
-  // [class*="arrow"] 哈希子串）；会话行无 expanded（首个直系 svg = 状态图标）。行内"操作/新建"按钮走 aria-label。
+  // 会话树行细分（probe-tree 实测 2026-08-30；T10 对 rc.2 源码复核修正）：工作区行带 aria-expanded；
+  //   会话行无 expanded（状态图标在首 span 槽）。行内"操作/新建"按钮走 aria-label。
+  //   注意：主题在装时官方树被 McFinder 遮蔽（sidebar.workspaces 席位 priority:-1 lowest-render），
+  //   live DOM 无 treeitem 属设计内行为——本组键是遮蔽失败（slots 服务缺席等）时的兜底样式通道。
   sessionRowWorkspace: 'div[role="treeitem"][aria-expanded]', /* DRIFT-RISK: structural */
-  sessionRowArrow: 'div[role="treeitem"][aria-expanded] > svg[class*="arrow"]', /* DRIFT-RISK: hashed-substring */
-  sessionRowFolder: 'div[role="treeitem"][aria-expanded] > svg:first-of-type', /* DRIFT-RISK: structural */
-  sessionStatusIcon: 'div[role="treeitem"]:not([aria-expanded]) > svg:first-of-type', /* DRIFT-RISK: structural */
+  sessionRowArrow: 'div[role="treeitem"][aria-expanded] svg[class*="arrow"]', /* DRIFT-RISK: hashed-substring;T10 修:svg 入 chevron 槽→去直系改后代(箭头 svg 自带 *_arrow 哈希类,rc.2 源 L486-489) */
+  sessionRowFolder: 'div[role="treeitem"][aria-expanded] > span:first-of-type > svg', /* DRIFT-RISK: structural;T10 修:首 span=folder 槽(rc.2 源 L482-485) */
+  sessionStatusIcon: 'div[role="treeitem"]:not([aria-expanded]) > span:first-of-type > [data-state]', /* DRIFT-RISK: structural;T10 修:StateDot 恒带 data-state 且双形态(ongoing=svg/其余=span,primitives StateDot L66-93),纯 svg 锚先天不稳 */
   // —— 侧栏内部结构位（精修2：元素级 Finder 语汇）。经 probe-session 实测（2026-08-30）——
   //   sidebarCol > div(h0 包装) > .hHd-Xa_root，root 官方 children 恒序：
   //   [1]logoRow(DIV) [2]newSession(BUTTON) [3]regionArea(DIV 工作区树) [4]footArea(DIV)。
@@ -524,6 +541,38 @@ const MC_MAP = {
   sidebarNewSessionRail: '#root > div > div[data-sidebar-collapsed] > div:first-child > div > div > button:nth-child(3)', /* DRIFT-RISK: structural */
   sidebarFootRail: '#root > div > div[data-sidebar-collapsed] > div:first-child > div > div > div:nth-child(5)', /* DRIFT-RISK: structural */
   sidebarLogoRowRail: '#root > div > div[data-sidebar-collapsed] > div:first-child > div > div > div:nth-child(2)', /* DRIFT-RISK: structural */
+  // —— flow 段(会话流;探针 2026-08-31,host 0.1.1-rc.2;dsh-client-ui-conversation 行号)——
+  flowScroll: '[data-conversation-scroll]',                    // stable(L7276)
+  flowColumn: '[data-chat-flow]',                             // stable(L5829)
+  flowItem: '[data-chat-flow-kind]',                          // stable(L5506-5510)
+  // 验收七轮:kindUser/kindSteering/kindContext/kindCompaction/kindManualCompaction/kindModelRetry
+  // 六键随 McSysCard 重绘退役(user/steering 六轮、context/compaction/manual-compaction/model-retry
+  // 七轮——四卡自有 .mc-* 类零宿主锚;行级出场 flashIn 走 flowItem 泛锚即可)
+  kindAssistantStep: '[data-chat-flow-kind="assistant-step"]',
+  kindCommand: '[data-chat-flow-kind="command"]',
+  kindTurnError: '[data-chat-flow-kind="turn-error"]',
+  kindTurnMaxTokens: '[data-chat-flow-kind="turn-max-tokens"]',
+  kindTurnTail: '[data-chat-flow-kind="turn-tail"]',
+  kindUnknown: '[data-chat-flow-kind="unknown"]',
+  bubbleUser: ':is([data-chat-flow-kind="user"],[data-chat-flow-kind="steering"])>div>div>div>div', /* DRIFT-RISK: structural 四子级 flowItem>data-slot 包装>userRow>userStack>bubble;keyed slot 出口有 div[data-slot=…] 包装层(display:contents 不减选择器深度),结构位选择器须计入(裁定10;哈希三件套 gdEzaW_*,L5332-5361) */
+  userGallery: '[data-align="end"] [data-variant]',            // stable(ATT L705-746)
+  // 验收六轮:refChip 键随用户行重写退役(McUserNodeView 自有 .mc-user-chip 类)
+  mdRoot: '[data-chat-flow-kind="assistant-step"] > div > div', /* DRIFT-RISK: structural;第一层 div 为 data-slot 包装层,原一层值命中包装层——当前无消费者,防未来误用(裁定10;Sxvs8a_*,L9461-9521) */
+  // 验收四轮:thinkCard/thinkSummary/ariaExpanded 三键随宿主 ReasoningRow 覆写退役
+  // (McThink 组件整体重写 assistant-step,自有 .mc-think 类零宿主锚)
+  // 验收七轮:ctxBody/disclosureRow/contextForm/retryActive/compactionDisclosure 五键随 McSysCard
+  // 重绘退役(宿主 context/retry/compaction DOM 整体被遮蔽,皮肤锚与 :has 图标细分、pulse 门控
+  // data-active 锚、折叠图标 span 锚全部无消费者;重绘卡自有 .mc-* 类零宿主锚)
+  turnTailBar: '[data-turn-tail]',                            // stable(L9715-9752)
+  // —— 终审 F2 收编（2026-08-31）：此前 flow 规则里直写的宿主选择器一律进管制表（spec §1 唯一管制点）——
+  pendingSteering: '[data-pending-steering]',  // stable(steering 待定态虚线廓，spec §4 行3)
+  statusRow: '[role="status"]',                // stable(TurnStatus 宿主状态行；使用时限定 flowColumn 内，spec §4 行10)
+  commandCard: '[data-variant="others"]',      // stable(command 卡壳锚，spec §4 行9「[data-variant="others"][data-state]」)
+  dataState: '[data-state=',                   // 属性前缀键（任意取值形态；command 三态）
+  // —— 用户验收三轮④收编（2026-09 live 探测，host 0.1.1-rc.2）——
+  deliverRoot: '.P4kPIW_root',   // DRIFT-RISK: build-hash class(dsh-client-ui-deliverables 产物行;无 data-* 稳定锚,宿主升级先复核)
+  deliverFile: '.P4kPIW_file',   // DRIFT-RISK: 同上(文件名 chip 按钮;含 measure 探针 P4kPIW_probe 同类复用)
+  deliverMore: '.P4kPIW_more',   // DRIFT-RISK: 同上("+N 个文件"溢出标签)
 };
 
 
@@ -626,8 +675,10 @@ const McSidebar = {
     '.mc-sb-name{display:inline-flex;align-items:center;min-width:0}',
     '.mc-sb-brand{font:700 17px/1.2 var(--font-sb);letter-spacing:.02em;color:var(--mc-fg)}',
     '.mc-sb-tag{font:600 14px/1.2 var(--font-sb);background:var(--mc-fg);color:var(--mc-rail-1);padding:1px 5px;margin-left:5px;flex:none}',
-    // 会话树图标统一 15px（原型 group-head svg 15px；行内小钮 12px 走 18px 容器）
-    `${MC_MAP.sessionRow} svg{width:15px;height:15px;flex:none}`,
+    // 会话树图标统一 15px（原型 group-head svg 15px；行内小钮 12px 走 18px 容器）。
+    // sessionStatusIcon 一并入选：rc.2 StateDot 非 ongoing 态渲染为 span[data-state]（非 svg），
+    // 不入本规则会以官方 10px 原尺寸出像素 doc —— T10 换锚配套。
+    `${MC_MAP.sessionRow} svg,${MC_MAP.sessionStatusIcon}{width:15px;height:15px;flex:none}`,
     // —— 会话树像素图标（15px 起步：24 栅格像素画在 12px 下退化为细线，15px 才读得出像素块）——
     `${MC_MAP.sessionRowWorkspace} svg *{visibility:hidden}`,
     `${MC_MAP.sessionStatusIcon} *{visibility:hidden}`,
@@ -760,7 +811,7 @@ const McSidebar = {
 
     // —— 真 DOM 标题栏：.mc-titlebar 插为 sidebarRoot 首子（React 容器内外来节点，
     //    MutationObserver 监听 childList 自愈重插；sidebarRoot 晚于 apply 出现时经
-    //    CLOCK 100ms 栅格轮询定位，上限 ~10s）。tclose = 折叠/展开：flashIn 白闪包裹
+    //    CLOCK 100ms 栅格轮询定位，上限 ~10s）。tclose = 折叠/展开：accToggle 四拍包裹
     //    官方隐藏钮的程序化 click（保官方行为与状态持久化）。 ——
     let stopped = false;
     let bar = null;
@@ -772,7 +823,7 @@ const McSidebar = {
       if (!btn) return;
       const col = document.querySelector(MC_MAP.sidebar);
       // 折叠/展开过场：ghost 下瞬切宽度 → 白闪 → 撤（官方 300ms/150ms 过渡已压 0）
-      if (col) flashIn(col, function () { btn.click(); });
+      if (col) accToggle(col, function () { btn.click(); });
       else btn.click();
     };
     const build = function () {
@@ -997,7 +1048,7 @@ function McFinderMini(props) {
 }
 
 // 会话行：状态槽（run=脉冲点 / done=✓ / wait=空占位）+ 标题 + 三点菜单钮。
-// 选中行 .on 整行反色方角；onClick 走 flashIn 三拍（ghost→show→白闪→撤，100ms×2 走 CLOCK）。
+// 选中行 .on 整行反色方角；onClick 走 accToggle 四拍（七轮裁定：选中=状态切换统一走库；
 function McFinderSess(props) {
   const h = React.createElement;
   const s = props.sess;
@@ -1005,7 +1056,7 @@ function McFinderSess(props) {
   const cls = 'mc-sess' + (on ? ' on' : '') + (s.status === 'run' ? ' run' : '') + (s.xtra ? ' xtra' : '');
   const pick = function (e) {
     const row = e.currentTarget; // 事件对象即刻取 DOM（不依赖事件池生命周期）
-    flashIn(row, function () { props.onPick(s.id); }); // 选中态切换包进闪烁中拍
+    accToggle(row, function () { props.onPick(s.id); }); // 选中态切换包进白块遮盖中拍
   };
   let slot = null;
   if (s.status === 'run') slot = h('i', { className: 'mc-s-dot' });
@@ -1020,7 +1071,7 @@ function McFinderSess(props) {
 }
 
 // 工作区分组：group-head（折叠三角 i-tri + 文件夹 i-folder + 名称 + 计数 + dots/plus 小钮）+
-// group-body（会话行 + 超 5 条的「展开其余 N 个会话」钮）。折叠开合同走 flashIn 过场。
+// group-body（会话行 + 超 5 条的「展开其余 N 个会话」钮）。折叠开合走 accToggle 四拍
 function McFinderGroup(props) {
   const h = React.createElement;
   const g = props.group;
@@ -1029,7 +1080,7 @@ function McFinderGroup(props) {
   const xtraCount = g.sessions.filter(function (s) { return s.xtra; }).length;
   const toggle = function (e) {
     const grp = e.currentTarget.closest('.mc-group');
-    flashIn(grp, function () { props.onToggle(g.id); });
+    accToggle(grp, function () { props.onToggle(g.id); });
   };
   const ghBtn = function (title, icon) {
     return h('button', { className: 'mc-gh-btn', type: 'button', title: title, 'aria-label': title, 'data-mc-finder': '' },
@@ -1074,7 +1125,16 @@ function McFinderTree(props) {
   const current = live ? (list ? list.current : null) : null;
   const selState = React.useState(MC_FINDER_SEL0);
   const sel = live ? current : selState[0];
-  const openState = React.useState(null); // null = 默认全开；记录开合覆盖 {gid:bool}
+  // 开合覆盖 {gid:bool} 持久化 localStorage(七轮修复:刷新回全开 + 点一组全体误折两弊;
+  // null=无记录默认全开;查不到键一律回落「开」——只有显式 false 才折,单组开合互不牵连)
+  const MC_FINDER_OPEN_KEY = 'mcx-finder-open';
+  const openState = React.useState(function () {
+    try {
+      const v = window.localStorage.getItem(MC_FINDER_OPEN_KEY);
+      if (v) { const o = JSON.parse(v); if (o && typeof o === 'object') return o; }
+    } catch (e) { /* 坏值/无存储 → 回落默认全开 */ }
+    return null;
+  });
   const expState = React.useState({});
   const qState = React.useState(MC_FINDER_QUERY); // 迷你态搜索词跨形态接力（惰性初值）
   const q = qState[0].trim().toLowerCase();
@@ -1107,7 +1167,12 @@ function McFinderTree(props) {
     return function () { window.removeEventListener('mcx-finder-query', onQ); };
   }, []);
   const onToggle = function (gid) {
-    openState[1](function (o) { const n = Object.assign({}, o || {}); n[gid] = !(o ? o[gid] : true); return n; });
+    openState[1](function (o) {
+      const n = Object.assign({}, o || {});
+      n[gid] = !(o ? o[gid] !== false : true); // 查无键=当前开 → 翻折;有键按记录翻
+      try { window.localStorage.setItem(MC_FINDER_OPEN_KEY, JSON.stringify(n)); } catch (e) {}
+      return n;
+    });
   };
   const onExpand = function (gid) {
     expState[1](function (m) { const n = Object.assign({}, m); n[gid] = true; return n; });
@@ -1130,7 +1195,7 @@ function McFinderTree(props) {
       shown.map(function (g) {
         return h(McFinderGroup, {
           key: g.id, group: g,
-          open: q !== '' ? true : (openState[0] === null ? true : !!openState[0][g.id]),
+          open: q !== '' ? true : (openState[0] === null ? true : openState[0][g.id] !== false),
           expanded: !!expState[0][g.id] || q !== '',
           selected: sel, onToggle: onToggle, onExpand: onExpand, onPick: onPick,
         });
@@ -1217,7 +1282,7 @@ const McFinder = {
         if (props && props.wide === false) return React.createElement(McFinderMini, props);
         const p = Object.assign({}, props);
         p.openSession = sessionsSvc && typeof sessionsSvc.open === 'function'
-          ? function (id) { try { sessionsSvc.open(id); } catch (e) { try { console.error('[mcx] open session failed:', e && e.message); } catch (e2) {} } }
+          ? function (id) { try { sessionsSvc.open(id); } catch (e) { /* 静默降级：保持假数据选中 */ } }
           : null; // TODO(二期)：服务缺席时行内提示；当前静默降级假数据选中
         return React.createElement(McFinderTree, p);
       }
@@ -1225,9 +1290,781 @@ const McFinder = {
   },
 };
 
+// src/conv/flow.js —— 会话流覆写(spec 2026-08-31)
+// 协议 { css, mount(ctx) }。选择器一律插值 MC_MAP;无 :hover 无 transition。
+// apply 段 overrideTokens 追加 --dsw-specific-bubble(见 client.js apply)
+// MC_FLOW_ICONS:form→icon 名纯数据(kit 与 css 图标位共用;与 src/conv/flow.js 同源。
+// CJS shim(module.exports 守卫)只在 src 镜像——loader 工厂域 module 为自有 boilerplate,勿引入)
+var MC_FLOW_ICONS = { instructions:'doc', notice:'doc', relay:'doc', catalog:'list',
+  snapshot:'copy', recall:'clock', compaction:'copy', 'manual-compaction':'copy' };
+// 注入条图标位 data-URI。验收二轮①:inject 四型原型(L958/L1245)用 sprite #i-doc(经典 Mac 手绘
+// 款 8×10,FIGMA-ASSETS L633)而非 pixelarticons doc——DOC 常量换成 i-doc 双 path 联合剪影;
+// catalog=list/snapshot=copy/recall=clock 保持 pixelarticons 24 栅格(原型即如此,L1245 特判 i-doc
+// 独用 8×10 栅格)。mask 用,fill 仅占 alpha → 黑;百分号编码同 MC_TBOX 款:< > # 转义、属性单引号、
+// d 串逐字保留(i-tri 同款:侧栏 .mc-tri 的 sprite 资产平移,fill 一并 %23000)
+const MC_FLOW_ICON_DOC = "%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 10'%3E%3Cpath fill='%23000' fill-rule='evenodd' clip-rule='evenodd' d='M0 0H6V1H8V10H0V0ZM7 3H5V1H1V9H7V3Z'/%3E%3Cpath fill='%23000' d='M5 1H1V9H7V3H5V1Z'/%3E%3C/svg%3E";
+const MC_FLOW_ICON_LIST = "%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23000' d='M2 5h20v14H2V5zm2 2v2h16V7H4zm16 4H4v2h16v-2zm0 4H4v2h16v-2z'/%3E%3C/svg%3E";
+const MC_FLOW_ICON_COPY = "%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23000' d='M4 2h11v2H6v13H4V2zm4 4h12v16H8V6zm2 2v12h8V8h-8z'/%3E%3C/svg%3E";
+const MC_FLOW_ICON_CLOCK = "%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23000' d='M19 3H5v2H3v14h2v2h14v-2h2V5h-2V3zm0 2v14H5V5h14zm-8 2h2v6h4v2h-6V7z'/%3E%3C/svg%3E";
+// 验收四轮:MC_FLOW_ICON_TRI(think 折叠三角 mask)退役——think 卡重写后用 sprite #i-tri 直引
+var McFlow = {
+  // IIFE 安放 var F:顶层作用域与 tokens/clock/mcfx/sprite 共享,F 不外泄
+  css: (function () {
+    if (typeof MC_MAP === 'undefined') return ''; // standalone CJS(测试 loadSrc)只消费纯数据;client.js 装配域恒有 MC_MAP
+    var F = MC_MAP.kindAssistantStep;
+    return [
+      // §4-1:.flow 列(gap 16→14 原型 L462;padding 16;子项 flex:none 手册 §6.4)
+      MC_MAP.flowColumn + '{gap:14px;padding:16px}',
+      MC_MAP.flowItem + '{flex:none;min-width:0}',
+      // §5:.md 正文覆写(md 全要素;值照原型 L298-315,前缀 .flow .md → F)
+      F + '{font:400 14px/1.8 var(--font-ui);color:var(--mc-fg);word-break:break-word}',
+      F + ' h1,' + F + ' h2,' + F + ' h3{font:600 17px/1.4 var(--font-display);letter-spacing:.01em;margin:14px 0 6px}',
+      F + ' h2{font-size:15px}',
+      F + ' h3{font-size:14px}',
+      // h4-h6：原型 §5 未定义，官方样式兜底（spec §2 勘误见 ledger 裁定）
+      F + ' p+p{margin-top:8px}',
+      F + ' ul,' + F + ' ol{margin:6px 0;padding-left:22px}',
+      F + ' li{margin:3px 0}',
+      F + ' :not(pre)>code{font:500 12px/1.5 var(--font-code);padding:1px 5px;background:var(--mc-sel-bg);border-radius:var(--mc-r-tag);color:var(--mc-fg)}',
+      F + ' pre{margin:8px 0;padding:10px 12px;overflow-x:auto;background:var(--mc-bg-deep);border:1px solid var(--mc-border-soft);border-radius:var(--mc-r-card)}',
+      F + ' pre code{padding:0;background:none;font:400 12.5px/1.7 var(--font-code)}',
+      F + ' table{border-collapse:collapse;margin:8px 0;font:400 12.5px/1.6 var(--font-ui)}',
+      F + ' th,' + F + ' td{padding:4px 10px;text-align:left;border:1px solid var(--mc-border-soft)}',
+      F + ' th{font:600 12px/1.4 var(--font-display);background:var(--mc-surface-2)}',
+      F + ' blockquote{margin:8px 0;padding:2px 12px;color:var(--mc-muted);border-left:2px solid var(--mc-accent-dim)}',
+      F + ' a{color:var(--mc-accent)}',
+      F + ' input[type="checkbox"]{accent-color:var(--mc-accent)}',
+      // 宿主代码块包装(.md-code-block 全局稳定类)。banner 重样式(验收② 2026-08-31 live 探明):
+      // 首子 bannerWrap div 内还有一层 _banner 哈希壳(自带 tab 底/9px 粗 padding/12px 顶圆角 =
+      // 宿主 tab 感来源)→ display:contents 让位;bannerWrap 直接作 22px 细条:surface-2 底 +
+      // 底部 1px border-soft 分隔,infostring 语言名(mono 11 muted)左置,action 复制钮
+      // (18×18 方钮+像素 copy 图标,「复制」文字 font-size:0 藏但 AT 可读)margin-left:auto 右置
+      F + ' .md-code-block{background:var(--mc-bg-deep);border:1px solid var(--mc-border-soft);border-radius:var(--mc-r-card);overflow:hidden}',
+      F + ' .md-code-block pre{margin:0;border:none;border-radius:0}',
+      F + ' .md-code-block>div:first-child{display:flex;align-items:center;gap:8px;box-sizing:border-box;height:22px;padding:0 10px;background:var(--mc-surface-2);border-bottom:1px solid var(--mc-border-soft);border-radius:0;font:500 11px/1 var(--font-mono);color:var(--mc-muted)}',
+      F + ' .md-code-block>div:first-child>div{display:contents}',
+      F + ' .md-code-block>div:first-child>div>div:first-child{flex:none;min-width:0;font:500 11px/1 var(--font-mono);color:var(--mc-muted)}',
+      F + ' .md-code-block>div:first-child>div>div:last-child{margin-left:auto;flex:none;display:inline-flex}',
+      F + ' .md-code-block>div:first-child button{display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box;width:18px;height:18px;padding:0;border:1px solid var(--mc-border);border-radius:var(--mc-r-btn);background:var(--mc-surface);color:var(--mc-fg);font-size:0;cursor:pointer}',
+      F + ' .md-code-block>div:first-child button::before{content:"";width:11px;height:11px;background-color:currentColor;-webkit-mask:url("data:image/svg+xml,' + MC_FLOW_ICON_COPY + '") center/contain no-repeat;mask:url("data:image/svg+xml,' + MC_FLOW_ICON_COPY + '") center/contain no-repeat}',
+      F + ' .md-code-block>div:first-child button:active{background:var(--mc-fg);color:var(--mc-surface);border-color:var(--mc-fg)}',
+      F + ' .md-table-wide{overflow-x:auto}',
+      // §6:用户气泡(user/steering)+ 变量通道(原型 L483-497;气泡底色走 overrideTokens --dsw-specific-bubble)
+      // 验收①:宿主气泡自带 padding(~10px 16px)未覆写 → 补 7px 12px(原型 L485)
+      MC_MAP.bubbleUser + '{color:var(--mc-accent-ink);border:1px solid var(--mc-border);border-radius:8px;padding:7px 12px;font:400 14px/1.7 var(--font-ui)}',
+      MC_MAP.bubbleUser + ':active{border-color:var(--mc-fg)}',
+      MC_MAP.userGallery + '{border:1px solid var(--mc-border);border-radius:var(--mc-r-card)}',
+      // 验收六轮:refChip 宿主 chip 覆写随用户行重写退役(McUserNodeView 自有 .mc-user-chip)
+      // 六轮续:pending steering 重绘改观察器嫁接(见 skinPending)——结构位皮肤规则退役,
+      // 只留 .mc-pending 虚线待定廓(嫁接标记)
+      '.mc-pending{outline:1px dashed var(--mc-faint);outline-offset:2px;border-radius:8px}',
+      // 验收七轮:注入条/压缩条/重试条 CSS 皮肤随 syscard 重绘退役(McSysCard 遮蔽 context/
+      // compaction/manual-compaction/model-retry 四槽,自有 .mc-inject/.mc-comp/.mc-retry 类)——
+      // 原 §7 虚线条 + 表单图标 + leading 槽清理 + §8 重试八角点/chevron 规则与 T4 压缩图标位一并下岗;
+      // 行级出场 flashIn(观察器)对四 kind 照常供给
+      // §8:细长条组(实线 soft 边;retry 已重绘移出,余 unknown 同款壳)
+      ':is(' + MC_MAP.kindTurnMaxTokens + ',' + MC_MAP.kindUnknown + '){display:flex;align-items:center;gap:8px;padding:6px 9px;background:var(--mc-surface-2);border:1px solid var(--mc-border-soft);border-radius:var(--mc-r-card);font:400 12px/1.6 var(--font-ui);color:var(--mc-muted)}',
+      MC_MAP.kindTurnError + '{display:flex;align-items:center;gap:8px;padding:6px 9px;background:var(--mc-surface-2);border-left:2px solid var(--mc-danger);border-radius:var(--mc-r-card);font:400 12px/1.6 var(--font-ui);color:var(--mc-danger)}',
+      MC_MAP.kindTurnMaxTokens + '::before{content:"";flex:none;border-left:5px solid var(--mc-faint);border-top:4px solid transparent;border-bottom:4px solid transparent}',
+      // §9:TurnStatus(宿主运行中状态行)
+      MC_MAP.flowColumn + ' ' + MC_MAP.statusRow + '{display:flex;align-items:center;gap:8px;font:400 12px/1.6 var(--font-ui);color:var(--mc-muted)}',
+      MC_MAP.flowColumn + ' ' + MC_MAP.statusRow + '::before{content:"";flex:none;width:6px;height:6px;background:var(--mc-spark);clip-path:polygon(33% 0,67% 0,100% 33%,100% 67%,67% 100%,33% 100%,0 67%,0 33%);animation:mc-pulse 2600ms steps(1,end) infinite;animation-delay:var(--pulse-delay,0ms)}',
+      // 验收四轮:think 卡整体重写(McThink 遮蔽 assistant-step 槽,自有 .mc-think 类)——
+      // 此前对宿主 ReasoningRow 的全部覆写(shimmer/sweep 压制、像素三角替换、摘要行
+      // .mc-line-flash 观察器)一并退役;.mc-app-cover 保留供 McThinkCard 正文追加段复用
+      '.mc-app-cover{color:transparent;background:#fff;background-image:repeating-linear-gradient(0deg,transparent 0 2px,rgba(0,0,0,.06) 2px 3px);border-radius:1px}',
+      'html[data-theme="light"] .mc-app-cover{background:#000;background-image:repeating-linear-gradient(0deg,transparent 0 2px,rgba(255,255,255,.07) 2px 3px)}',
+      // 验收七轮:压缩条图标位/leading 槽清理随 syscard 重绘退役(.mc-comp 自有图标)
+      // §10:turn-tail 操作条(spec §4 行6;原型 L533-536)+ 钳形钮壳(只造壳不换宿主图标;
+      // 后代选择器命中 .actions 容器内钮,data-slot 包装层不减后代深度)
+      // 验收二轮④(live 探明):root 宿主为 column flex,原 align-items:center 会把 deliverables
+      // 产物行(chain 槽注入的 .P4kPIW grid 行)水平居中 → 改 flex-start 靠左;actions 行自带
+      // align-self:stretch(下条)不受影响
+      MC_MAP.turnTailBar + '{display:flex;align-items:flex-start;gap:8px;flex-wrap:wrap;padding-top:2px;font:500 11px/1.6 var(--font-mono);color:var(--mc-faint)}',
+      // 验收三轮④:钮壳收窄到 actions 行(>div:last-child)——原后代 ' button' 误伤 chain 槽
+      // 注入的产物文件钮(P4kPIW_file,宿主按文件名测宽),把长方形 chip 锁成 20×20 方块
+      MC_MAP.turnTailBar + '>div:last-child button{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border:1px solid var(--mc-border);border-radius:var(--mc-r-btn);background:var(--mc-surface);color:var(--mc-fg)}',
+      MC_MAP.turnTailBar + '>div:last-child button:active{background:var(--mc-fg);color:var(--mc-surface);border-color:var(--mc-fg)}',
+      // 验收三轮④:产物文件 chip——自然宽度按文件名长度(宿主 measure 探针同类复用本皮肤,
+      // 测宽即所见),20px 高小长方块;超长名 220px 封顶截断;溢出标签 "+N 个文件" 同语汇
+      MC_MAP.deliverRoot + ' ' + MC_MAP.deliverFile + '{display:inline-flex;align-items:center;height:24px;padding:0 8px;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;border:1px solid var(--mc-border);border-radius:var(--mc-r-btn);background:var(--mc-surface);color:var(--mc-fg);font:500 13px/1.6 var(--font-mono)}',
+      MC_MAP.deliverRoot + ' ' + MC_MAP.deliverFile + ':active{background:var(--mc-fg);color:var(--mc-surface);border-color:var(--mc-fg)}',
+      MC_MAP.deliverRoot + ' ' + MC_MAP.deliverMore + '{display:inline-flex;align-items:center;height:20px;padding:0 7px;white-space:nowrap;border:1px solid var(--mc-border-soft);border-radius:var(--mc-r-btn);background:var(--mc-surface-2);color:var(--mc-faint);font:500 11px/1.6 var(--font-mono)}',
+      // 验收⑤(2026-08-31 live 探明):钮组靠左、统计常驻靠右——root[data-time-hover-root] 下
+      // 统计 span(.actions 末子 timeEnd)宿主 opacity:0 hover 显隐 → opacity/visibility 反制
+      // (裁定:此两属性允许作为对宿主动效反制)+transition:none 压平;DOM 序本就 [copy,extra
+      // (contents),branch,time] time 末位。宿主 root 为 flex-direction:column(实测)→ actions
+      // align-self:stretch 横向撑满(行向由 flex:1 兜底,方向无关),margin-left:auto 推右
+      MC_MAP.turnTailBar + '>div:last-child{display:flex;align-items:center;gap:8px;flex:1;min-width:0;align-self:stretch}',
+      MC_MAP.turnTailBar + '>div:last-child>span:last-child{margin-left:auto;flex:none;white-space:nowrap;opacity:1!important;visibility:visible!important;transition:none;font:500 11px/1.6 var(--font-mono);color:var(--mc-faint)}',
+      // §11:command 三态卡壳(spec §4 行9;默认 border / running spark / error danger;
+      // [data-variant="others"] 在 kindCommand 行内任意深度;细节留 toolcard 周期)
+      MC_MAP.kindCommand + ' ' + MC_MAP.commandCard + '{background:var(--mc-surface);border:1px solid var(--mc-border);border-radius:var(--mc-r-card);overflow:hidden}',
+      MC_MAP.kindCommand + ' ' + MC_MAP.commandCard + MC_MAP.dataState + '"running"]{border-color:var(--mc-spark)}',
+      MC_MAP.kindCommand + ' ' + MC_MAP.commandCard + MC_MAP.dataState + '"error"]{border-color:var(--mc-danger)}',
+    ].join('\n');
+  })(),
+  mount: function (ctx) {
+    // Task 7：MutationObserver 出场三拍 + syncAnim 相位同步管道（spec 2026-08-31）。
+    // 一切延时走 CLOCK.next（audit：禁裸定时器直调）；REDUCED 用户零闪烁（类不加，内容照常）。
+    if (typeof MutationObserver === 'undefined' || typeof CLOCK === 'undefined' || !CLOCK) return null;
+    var REDUCED = false;
+    try { REDUCED = window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) {}
+    var SYNC = [
+      [MC_MAP.flowColumn + ' ' + MC_MAP.statusRow, '--pulse-delay', CLOCK.PULSE],
+    ];
+    // 验收七轮:折叠卡开合点击委托表整体退役——context/model-retry/双 compaction 四卡已由
+    // McSysCard 重绘(自有 DOM,开合/状态切换在组件内走 lib accToggle);think 卡四轮起已自管。
+    // click 委托/onHeadClick/offClick 一并下岗,观察器只剩出场 flashIn/相位同步/pending 嫁接
+    // 验收六轮改版:手抄变体全部收编回库——开合走 lib accToggle、新行入场走 lib flashIn,
+    // 协议唯一定义在 mcfx 段(t0 ghost→t100 flash→t200 fn→t300 同撤 flash+ghost→t400 滞空)。
+    // 宿主卡 fn=空转+清残高——宿主 React 在捕获拍后自行瞬切,几何变化发生在白块遮盖下
+    var mo = null, tries = 0, timer = null;
+    var seen = new WeakSet();
+    function syncEl(el) {
+      for (var i = 0; i < SYNC.length; i++) { try {
+        if (el.matches(SYNC[i][0])) CLOCK.syncAnim(el, SYNC[i][2], SYNC[i][1]);
+        var qs = el.querySelectorAll(SYNC[i][0]);
+        for (var j = 0; j < qs.length; j++) CLOCK.syncAnim(qs[j], SYNC[i][2], SYNC[i][1]);
+      } catch (e) {} }
+    }
+    // 验收六轮:enterFlash 收编为 lib flashIn 空回调(show 在 ghost 遮罩下空转,拍3 撤净含 mcfx)
+    function enterFlash(el) { flashIn(el, function () {}); }
+    // 六轮续:pending steering 重绘(嫁接)——宿主收件箱直渲染 PendingSteeringBubble(L5877),
+    // 无 keyed 槽可遮蔽 → 观察器把自有类直接嫁到宿主结构上,吃到与 McUserNodeView 同一套 CSS:
+    // 行→.mc-user-row 栈→flex 右对齐 气泡→.mc-user-bubble 图集→.mc-user-attach 引用→.mc-user-ref,
+    // 标记 .mc-pending(虚线待定廓,host data-pending-steering 保留作锚)。幂等:已嫁接即跳过
+    function skinPending(el) {
+      try {
+        if (el.classList.contains('mc-user-row')) return;
+        el.classList.add('mc-user-row', 'mc-pending');
+        var stack = el.firstElementChild; // 宿主 userStack
+        if (!stack) return;
+        stack.style.display = 'flex';
+        stack.style.flexDirection = 'column';
+        stack.style.alignItems = 'flex-end';
+        stack.style.gap = '6px';
+        var bub = null;
+        for (var c = stack.firstElementChild; c; c = c.nextElementSibling) {
+          if (c.hasAttribute('data-align')) { c.classList.add('mc-user-attach'); continue; }
+          if (!bub) { bub = c; c.classList.add('mc-user-bubble'); }
+          else c.classList.add('mc-user-ref');
+        }
+        if (bub && !REDUCED) flashIn(bub, function () {});
+      } catch (e) { /* 宿主结构漂移即回退官方样式,不破版 */ }
+    }
+    // 验收四轮:think 摘要/正文观察器(thinkStream/thinkBodyStream)随宿主 ReasoningRow 覆写
+    // 一并退役——think 卡由 McThink 组件整体重写(缓冲积攒+周期吐出),不再需要 DOM 干预
+    function enter(node) {
+      if (!(node instanceof Element)) return;
+      syncEl(node); // 相位同步不限 flowItem 本行：[role=status] 常为 flowColumn 直接子节点，
+      // 新入节点全量试 SYNC 两选择器（syncAnim 幂等，重复触发只是相位刷新）
+      // pending steering:直渲染节点(flowColumn 直接子节点,非 flowItem),命中即嫁接重绘
+      try {
+        if (node.matches(MC_MAP.pendingSteering)) skinPending(node);
+        var pq = node.querySelectorAll(MC_MAP.pendingSteering);
+        for (var pi = 0; pi < pq.length; pi++) skinPending(pq[pi]);
+      } catch (e) {}
+      var items = node.matches(MC_MAP.flowItem) ? [node] : [];
+      try { var q = node.querySelectorAll(MC_MAP.flowItem); for (var i = 0; i < q.length; i++) items.push(q[i]); } catch (e) {}
+      for (var i = 0; i < items.length; i++) {
+        var it = items[i];
+        if (seen.has(it)) continue; seen.add(it);
+        syncEl(it);
+        // 验收六轮:user/steering 行由 McUserNodeView 气泡自带 flashIn 出场——
+        // flowItem 级整行白块(铺满左右)不再适用,跳过
+        var mk = null; try { mk = it.getAttribute('data-chat-flow-kind'); } catch (e) {}
+        if (!REDUCED && mk !== 'user' && mk !== 'steering') enterFlash(it);
+      }
+    }
+    function attach() { // 验收三轮⑥ live 探明:切会话时宿主会整体替换 [data-chat-flow] 节点,
+      // observer/click 绑列节点随会话切换失效——一律绑 document.body(稳定根;委托/域限定
+      // 由 MC_MAP 选择器在 closest/matches 内完成,body 级观察回调轻量早退)
+      var root = document.body;
+      try { // 存量行标记不闪（历史加载）
+        var q = root.querySelectorAll(MC_MAP.flowItem); for (var i = 0; i < q.length; i++) seen.add(q[i]);
+      } catch (e) {}
+      mo = new MutationObserver(function (muts) {
+        try {
+          for (var i = 0; i < muts.length; i++) {
+            var m = muts[i];
+            if (m.type === 'characterData') continue; // 文本变化观察已随 think 重写退役
+            for (var j = 0; j < m.addedNodes.length; j++) {
+              var n = m.addedNodes[j];
+              if (n instanceof Element) enter(n);
+            }
+          }
+        } catch (e) {}
+      });
+      mo.observe(root, { childList: true, subtree: true });
+    }
+    timer = CLOCK.next(function poll() { // flowColumn 晚挂载轮询（不再限次——boot 停在空会话
+      // (hero 态无列)时 8s 上限会耗尽,之后切会话 observer 永不挂载;验收三轮⑥ live 复现。
+      // 列出现即 attach(绑 body,不再依赖列节点存续);每拍一次 querySelector 开销可忽略)
+      tries++;
+      var root = null; try { root = document.querySelector(MC_MAP.flowColumn); } catch (e) {}
+      if (root) { attach(); return; }
+      timer = CLOCK.next(poll, 400);
+    }, 400);
+    return function teardown() {
+      try { if (mo) mo.disconnect(); } catch (e) {}
+      try { if (timer) CLOCK.clear(timer); } catch (e) {}
+    };
+  },
+};
+
+// src/conv/think.js —— assistant-step 节点重写（验收四轮：缓冲区 + 定期吐出）
+// 协议 { css, slots(ctx) }。遮蔽 conversation.chat.node keyed 槽 'assistant-step'
+// (priority:-1 同侧栏先例);reasoning 块走我们自己的 McThinkCard(原型 showThinking 状态机
+// L1362-1450 的 React 版:text prop 增量先进缓冲,500ms 周期末摘要 s-in 只装本次新字
+// (白块=span 宽=字宽,零测宽)+正文追加 mc-app-cover 行内白块,100ms 揭盖;text/image 块
+// 复用宿主 primitives MarkdownText/renderMessageImages 保真)。primitives 缺席时不注册
+// (宿主原生渲染兜底)。选择器零宿主锚——全部 .mc-think 自有类,audit §5 安全。
+// CJS shim 供 mcThinkTick 纯函数测试(src 镜像;loader 域 module 为自有 boilerplate)。
+function mcThinkTick(shown, text, cap) {
+  // 追加前缀不符 = 宿主整段重写:从头再来(base='')
+  var base = shown && text.slice(0, shown.length) === shown ? shown : '';
+  var rest = text.slice(base.length);
+  var take = rest.slice(0, cap);
+  return { shown: base + take, delta: take, rewritten: shown !== '' && base === '' };
+}
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = { mcThinkTick };
+}
+const MC_THINK_CAP = 140; // 每周期最多吐出字符数(对齐原型 PER_TICK=28 token 的节奏量级)
+const McThink = {
+  css: [
+    /* AssistantMarkdown 布局平移(Sxvs8a_root/body/stopped → mc-amd-*;typography 由
+       McFlow 的 F 段(.md 全要素)在 flowItem 级供给) */
+    '.mc-amd-root{flex-direction:column;display:flex}',
+    '.mc-amd-body{flex-direction:column;gap:16px;display:flex}',
+    '.mc-amd-stopped{align-self:flex-start;padding:0 6px;font-size:11px;line-height:18px;border-radius:var(--mc-r-btn);background:var(--mc-surface-2);color:var(--mc-muted)}',
+    /* 用户/steering 行重写(验收六轮):原型 .msg.user .bubble L316-321 语汇;右对齐纵栈 */
+    '.mc-user-row{display:flex;flex-direction:column;align-items:flex-end;gap:6px;max-width:100%}',
+    '.mc-user-bubble{max-width:520px;padding:7px 12px;background:var(--mc-accent);color:var(--mc-accent-ink);border:1px solid var(--mc-border);border-radius:8px;font:400 14px/1.7 var(--font-ui);white-space:pre-wrap;word-break:break-word;text-align:left}',
+    /* 六轮排查:宿主 MessageText 根结点自带 border+padding(_text_* 双边框元凶)——气泡内一律剥净 */
+    '.mc-user-bubble>*{border:none!important;padding:0!important;margin:0!important;background:none!important}',
+    '.mc-user-copy{flex:none;align-self:flex-end;border:1px solid var(--mc-border);border-radius:var(--mc-r-btn);padding:1px 7px;background:var(--mc-surface-2);color:var(--mc-muted);font:500 10px/1.6 var(--font-mono);cursor:pointer}',
+    '.mc-user-chip{border:1px solid var(--mc-border);border-radius:var(--mc-r-tag);padding:0 4px;background:var(--mc-accent-strong);font:500 12px var(--font-mono)}',
+    '.mc-user-attach{max-width:360px;display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap}',
+    '.mc-user-ref{font:400 12px/1.6 var(--font-ui);color:var(--mc-muted)}',
+    /* 原型 .reasoning 段(interactive L339-366)平移,.mc-think 前缀 */
+    '.mc-think{background:var(--mc-surface-3);border:1px solid var(--mc-border);border-radius:var(--mc-r-card);overflow:hidden}',
+    '.mc-think.run{background:color-mix(in oklab,var(--mc-spark) 9%,var(--mc-surface-3))}',
+    '.mc-think-head{display:flex;align-items:center;gap:6px;width:100%;padding:6px 9px;background:none;border:none;cursor:pointer;text-align:left;color:inherit}',
+    '.mc-think-head .mc-think-tag{font:400 13px/1.3 \'FindersKeepers\',\'Fusion Pixel 12px monospaced zh\',\'Noto Sans SC\',monospace;letter-spacing:.03em;color:var(--mc-fg)}',
+    '.mc-think.run .mc-think-head .mc-think-tag{color:var(--mc-spark)}',
+    '.mc-think-head .mc-think-sum{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:400 12px/1.5 var(--font-ui);color:var(--mc-faint)}',
+    /* 六轮:展开态正文已可见,顶栏摘要(及其闪烁刷新)隐藏;折叠回来再现(visibility 保占位,高度零抖动) */
+    '.mc-think.open .mc-think-sum{visibility:hidden}',
+    '.mc-think-head .mc-think-dur{font:500 10px/1.5 var(--font-mono);color:var(--mc-faint);flex:none}',
+    '.mc-think-body{overflow:hidden;height:auto}',
+    '.mc-think:not(.open) .mc-think-body{height:0}',
+    '.mc-think-body .mc-think-txt{padding:2px 9px 9px 26px;font:400 12px/1.8 var(--font-ui);color:var(--mc-muted);white-space:pre-wrap}',
+    '.mc-think.run .mc-think-txt .mc-app-cover{color:transparent}',
+    /* 摘要行文字 A→B(验收七轮并拍改版):统一走 lib accToggle 四拍——
+       t0 旧字透明(.mc-ghost+color:transparent) → t100 白块盖+文本瞬换新字
+       (mcfx::after 随 span 宽) → t200 同撤两类新字显现 → t300 滞空(周期余量) */
+    '.mc-think-head .mc-think-sum .s-in{position:relative}',
+    '.mc-think-head .mc-think-sum .s-in.mc-ghost{color:transparent}',
+  ].join('\n'),
+  slots(ctx) {
+    if (!MC_PRIM || typeof React === 'undefined') return; // primitives 缺席:不遮蔽,宿主原生渲染兜底
+    const S = ctx.slots;
+    if (!S || typeof S.register !== 'function' || typeof S.inject !== 'function') return;
+    const h = React.createElement;
+    const MarkdownText = MC_PRIM.MarkdownText;
+    const JsonBlock = MC_PRIM.JsonBlock;
+
+    /* —— McThinkCard:缓冲积攒 + 周期吐出(原型 showThinking 状态机) ——
+       摘要文字 A→B 与 running→完成 换形统一走 lib accToggle(验收六轮改版):
+       t0 旧字/旧形透明 → t100 白块盖 → t200 瞬换 → t300 同撤两类 → t400 滞空 */
+    function McThinkCard(props) {
+      var text = props.text || '', running = !!props.running;
+      var st = React.useRef({ committed: '', pending: '', sum: '', open: false, timer: null, mounted: true, wasRunning: false });
+      st.current.text = text;
+      var cardRef = React.useRef(null);
+      var sumRef = React.useRef(null);
+      var version = React.useState(0), setV = version[1];
+      function paint() { setV(function (x) { return x + 1; }); }
+      function tick() {
+        var s = st.current;
+        if (!s.mounted || !s.running) return;
+        var r = mcThinkTick(s.committed, s.text, MC_THINK_CAP);
+        if (r.delta) {
+          // 原型帧 B/A 协议 + 六轮统一节拍:正文与摘要同一条时间轴——
+          // t0 白块(pending 尾段)与摘要 ghost 同拍出现,t300 与摘要同拍揭开(零高度抽搐,刷新规律一致)
+          s.committed = r.shown;
+          s.pending = r.delta;
+          paint();
+          var spanEl = sumRef.current;
+          var swap = function () { s.sum = r.delta.replace(/\n/g, ' '); paint(); };
+          if (spanEl) accToggle(spanEl, swap); else swap();
+          CLOCK.next(function () { // t200 揭盖:与摘要 accToggle 拍2(同撤 flash+ghost)同步
+            var s6 = st.current; if (!s6.mounted) return;
+            s6.pending = ''; paint();
+          }, 200);
+        }
+        s.timer = CLOCK.next(tick, 700); // accToggle 四拍 400ms + 滞空 300ms(文本驻留可读)
+      }
+      React.useEffect(function () {
+        var s = st.current; s.mounted = true;
+        return function () { s.mounted = false; if (s.timer) { try { CLOCK.clear(s.timer); } catch (e) {} } };
+      }, []);
+      React.useEffect(function () {
+        var s = st.current;
+        var wasRunning = s.wasRunning; s.wasRunning = running;
+        s.running = running;
+        if (running) {
+          if (!s.timer) s.timer = CLOCK.next(tick, 200);
+        } else {
+          if (s.timer) { try { CLOCK.clear(s.timer); } catch (e) {} s.timer = null; }
+          // 六轮改版:running→完成 属「形 A→形 B」状态切换,统一走 accToggle(白块盖住期间定格);
+          // 历史存量卡首挂不闪
+          var settle = function () {
+            s.committed = text; s.pending = ''; s.sum = text ? (text.length > 26 ? text.slice(0, 26) + '…' : text) : '';
+            paint();
+          };
+          if (wasRunning && cardRef.current) accToggle(cardRef.current, settle);
+          else settle();
+        }
+      }, [running]);
+      function toggleCard() {
+        var card = cardRef.current; if (!card) return;
+        accToggle(card, function () { st.current.open = !st.current.open; paint(); });
+      }
+      var s = st.current;
+      return h('div', { className: 'mc-think' + (running ? ' run' : '') + (s.open ? ' open' : ''), ref: cardRef },
+        h('button', { className: 'mc-think-head', type: 'button', onClick: toggleCard },
+          h('svg', { className: 'mc-tri' + (s.open ? ' open' : ''), 'aria-hidden': true }, h('use', { href: '#i-tri' })),
+          h('span', { className: 'mc-think-tag' }, 'Think'),
+          h('span', { className: 'mc-think-sum' },
+            h('span', { className: 's-in', ref: sumRef }, running ? (s.sum || '正在思考…') : s.sum)),
+          h('span', { className: 'mc-think-dur' }, running ? 'streaming' : '')),
+        h('div', { className: 'mc-think-body' },
+          h('div', { className: 'mc-think-txt' },
+            (s.pending && s.committed.slice(-s.pending.length) === s.pending) ? s.committed.slice(0, s.committed.length - s.pending.length) : s.committed,
+            s.pending ? h('span', { className: 'mc-app-cover' }, s.pending) : null)));
+    }
+
+    /* —— McAssistantNodeView:AssistantMarkdown 平移(L9476-9537) ——
+       text→MarkdownText(宿主保真)/reasoning→McThinkCard/image→renderMessageImages/
+       tool-call→跳过/其他→JsonBlock;mentions 复刻 owner 判定(useTurnData 可选)。 */
+    function McAssistantNodeView(props) {
+      var node = props.node, data = (node && node.data) || {};
+      var blocks = data.blocks || [];
+      var streaming = data.status === 'running';
+      var interrupted = data.status === 'interrupted';
+      var renderMessageImages = props.renderMessageImages, fileMentions = props.fileMentions;
+      var useTurnData = props.useTurnData, openFile = props.openFile;
+      var tail = useTurnData ? useTurnData('turn-tail') : undefined;
+      var turn = node && (node.location.kind === 'turn' || node.location.kind === 'step') ? node.location.turn : undefined;
+      var mentions = React.useMemo(function () {
+        try {
+          if (turn === undefined || (turn && turn.status) !== 'closed' || data.finalNode === undefined) return undefined;
+          if (tail && tail.closing && tail.closing.finalNode && tail.closing.finalNode.seq !== data.finalNode.seq) return undefined;
+          return fileMentions({ turn: turn, seq: data.finalNode.seq, openFile: openFile });
+        } catch (e) { return undefined; }
+      }, [tail, turn, data.finalNode, openFile]);
+      if (!(streaming || interrupted === true || blocks.some(function (b) { return b.kind !== 'tool-call'; }))) return null;
+      var codeLabels = { copyLabel: '复制', copiedLabel: '已复制' };
+      var rendered = [];
+      var last = blocks.length - 1;
+      for (var i = 0; i < blocks.length; i++) {
+        var block = blocks[i];
+        if (block === undefined) continue;
+        if (block.kind === 'text') {
+          rendered.push(h(MarkdownText, { key: i, text: block.text, streaming: streaming, codeLabels: codeLabels, fileMentions: mentions }));
+        } else if (block.kind === 'reasoning') {
+          rendered.push(h(McThinkCard, { key: i, text: block.text, running: streaming && i === last }));
+        } else if (block.kind === 'image') {
+          var start = i, group = [block];
+          while (i + 1 < blocks.length) {
+            var next = blocks[i + 1];
+            if (next === undefined || next.kind !== 'image') break;
+            group.push(next); i += 1;
+          }
+          rendered.push(h(React.Fragment, { key: start }, renderMessageImages({ images: group.map(function (g) { return { attachment: g.attachment }; }), align: 'start' })));
+        } else if (block.kind !== 'tool-call') {
+          rendered.push(h(JsonBlock, { key: i, label: 'unknown', payload: block.block }));
+        }
+      }
+      return h('div', { className: 'mc-amd-root', 'data-streaming': streaming || undefined },
+        h('div', { className: 'mc-amd-body' }, rendered,
+          interrupted ? h('span', { className: 'mc-amd-stopped' }, '已停止') : null));
+    }
+
+    ctx.effect(() => S.inject('conversation.chat.node', () => S.register({
+      name: 'conversation.chat.node',
+      key: 'assistant-step',
+      priority: -1,
+      registrant: 'macintosh',
+    }, McAssistantNodeView)));
+
+    /* —— McUserNodeView:用户/steering 行重写(验收六轮)——
+       官方 UserMessageNodeView(L5393-5408)平移:content 块拆 text/images/rest;气泡为
+       自有 .mc-user-bubble(原型 .msg.user .bubble L318-321 语汇),出场走 lib flashIn
+       挂在气泡自身——白块=inset:0=气泡面积,不再整行铺白(此前观察器挂 flowItem 之弊);
+       @引用//命令 chip 为自有 .mc-user-chip 类(audit §5 安全)。 */
+    function mcProjectUserText(h, MessageText, text, referenceLabels) {
+      var ranges = [];
+      var labels = [];
+      try { labels = Array.from(new Set(referenceLabels || [])).sort(function (a, b) { return b.length - a.length; }); } catch (e) {}
+      for (var li = 0; li < labels.length; li++) {
+        var lab = '@' + labels[li], st2 = text.indexOf(lab);
+        while (st2 >= 0) { ranges.push({ start: st2, end: st2 + lab.length, label: lab, kind: 'session' }); st2 = text.indexOf(lab, st2 + lab.length); }
+      }
+      var re = /(^|\s)(\/[\w-]+|@"[^"\n]+"|@[^\s]+)/gu, m;
+      while ((m = re.exec(text)) !== null) {
+        var ts = m.index + (m[1] ? m[1].length : 0);
+        var raw = m[2] || '';
+        var lab2 = raw.indexOf('@"') === 0 ? raw : raw.replace(/[.,;:!?，。；：！？]+$/gu, '');
+        if (lab2.length <= 1) continue;
+        ranges.push({ start: ts, end: ts + lab2.length, label: lab2, kind: 'plain' });
+      }
+      ranges.sort(function (a, b) { return a.start - b.start || (a.kind === b.kind ? b.end - a.end : a.kind === 'session' ? -1 : 1); });
+      var parts = [], cur = 0;
+      for (var i = 0; i < ranges.length; i++) {
+        var r = ranges[i];
+        if (r.start < cur) continue;
+        var kind = r.kind === 'session' ? 'session' : r.label.indexOf('@') === 0 ? (r.label.slice(-1) === '/' ? 'folder' : 'file') : 'skill';
+        if (r.start > cur) parts.push(h(MessageText, { key: 't' + cur, text: text.slice(cur, r.start) }));
+        parts.push(h('span', { key: 'c' + r.start, className: 'mc-user-chip', title: r.label }, r.label));
+        cur = r.end;
+      }
+      if (!parts.length) return h(MessageText, { text: text });
+      if (cur < text.length) parts.push(h(MessageText, { key: 't' + cur, text: text.slice(cur) }));
+      return h(React.Fragment, null, parts);
+    }
+    function McUserNodeView(props) {
+      var node = props.node, data = (node && node.data) || {};
+      var renderMessageImages = props.renderMessageImages;
+      var MessageText = MC_PRIM.MessageText;
+      var texts = [], images = [], rest = [];
+      var content = data.content || [];
+      for (var i = 0; i < content.length; i++) {
+        var b = content[i];
+        if (b && b.type === 'text' && typeof b.text === 'string') texts.push(b.text);
+        else if (b && b.type === 'image' && b.attachment !== undefined) images.push({ attachment: b.attachment });
+        else rest.push(b);
+      }
+      var text = texts.join('');
+      var bubbleRef = React.useRef(null);
+      React.useEffect(function () { // 出场:气泡自身三拍(ghost→白块→显现),白块面积=气泡
+        var el = bubbleRef.current;
+        if (el) flashIn(el, function () {});
+      }, []);
+      var refs = data.referenceLabels;
+      var copied = React.useState(false), setCopied = copied[1];
+      function doCopy() { // 六轮:复制钮(用户输入内容可一键复制;反馈回落走 CLOCK)
+        try { navigator.clipboard.writeText(text); } catch (e) {}
+        setCopied(true);
+        CLOCK.next(function () { setCopied(false); }, 1200);
+      }
+      return h('div', { className: 'mc-user-row' },
+        images.length ? h('div', { className: 'mc-user-attach' }, renderMessageImages({ images: images, align: 'end' })) : null,
+        (text !== '' || rest.length) ? h('div', { className: 'mc-user-bubble', ref: bubbleRef },
+          mcProjectUserText(h, MessageText, text, refs),
+          rest.map(function (b2, j) { return h(JsonBlock, { key: 'r' + j, label: 'extra', payload: b2 }); })) : null,
+        text !== '' ? h('button', { className: 'mc-user-copy', type: 'button', onClick: doCopy }, copied[0] ? '已复制' : '复制') : null,
+        refs && refs.length ? h('div', { className: 'mc-user-ref' }, '引用 · ' + refs.join(' · ')) : null);
+    }
+    ctx.effect(() => S.inject('conversation.chat.node', () => S.register({
+      name: 'conversation.chat.node',
+      key: 'user',
+      priority: -1,
+      registrant: 'macintosh',
+    }, McUserNodeView)));
+    ctx.effect(() => S.inject('conversation.chat.node', () => S.register({
+      name: 'conversation.chat.node',
+      key: 'steering',
+      priority: -1,
+      registrant: 'macintosh',
+    }, McUserNodeView)));
+  },
+};
+
+// src/conv/syscard.js —— 系统卡四族重写（验收七轮：上下文注入 / 自动·手动压缩 / 模型重试）
+// 遮蔽 conversation.chat.node keyed 槽 'context' / 'compaction' / 'manual-compaction' /
+// 'model-retry'（priority:-1 同 user/assistant-step 先例）——宿主卡整体替换为自有 DOM
+// （真·重绘，非 CSS 套壳）；primitives 缺席时不注册（宿主原生渲染兜底）。
+// 动效纪律（验收六轮改版沿用）：出场 = flowItem 行级 flashIn（McFlow 观察器供给）；折叠开合与
+// 状态切换（压缩中→已压缩 / 重试 scheduled→started·cancelled）= lib accToggle 四拍，文字 A→B
+// 挂 .s-in span（ghost 拍 color:transparent，白块随 span 宽）；REDUCED 全跳过功能不受影响。
+// 纯函数经 CJS 兼容出口供测试 createRequire 使用。
+var MC_SYS_PRIM = null;
+try { if (typeof require === 'function') MC_SYS_PRIM = require("@deepseek-ai/dsh-client-ui-primitives"); } catch (e) { MC_SYS_PRIM = null; }
+
+// 图标位 data-URI（与 McFlow 注入条四型同款；本段自持副本保持自包含，避免拼接顺序耦合）
+const MC_SYS_ICON_DOC = "%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 10'%3E%3Cpath fill='%23000' fill-rule='evenodd' clip-rule='evenodd' d='M0 0H6V1H8V10H0V0ZM7 3H5V1H1V9H7V3Z'/%3E%3Cpath fill='%23000' d='M5 1H1V9H7V3H5V1Z'/%3E%3C/svg%3E";
+const MC_SYS_ICON_LIST = "%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23000' d='M2 5h20v14H2V5zm2 2v2h16V7H4zm16 4H4v2h16v-2zm0 4H4v2h16v-2z'/%3E%3C/svg%3E";
+const MC_SYS_ICON_COPY = "%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23000' d='M4 2h11v2H6v13H4V2zm4 4h12v16H8V6zm2 2v12h8V8h-8z'/%3E%3C/svg%3E";
+const MC_SYS_ICON_CLOCK = "%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23000' d='M19 3H5v2H3v14h2v2h14v-2h2V5h-2V3zm0 2v14H5V5h14zm-8 2h2v6h4v2h-6V7z'/%3E%3C/svg%3E";
+
+// —— 纯函数（测试出口）——
+// 压缩条一行摘要：全空 = 压缩进行中；双计数 = 完成语；有摘要无计数 = 展开提示；余 = 不可用/命令文案
+function mcCompactionLine(summary, items, tokens, fallback) {
+  if (items === null && tokens === null) return fallback ? String(fallback) : '正在压缩…';
+  if (items !== null && tokens !== null) return '已压缩 ' + items + ' 条历史记录（约 ' + tokens + ' tokens）';
+  return fallback ? String(fallback) : '压缩摘要不可用';
+}
+// 重试卡文案三件：active（=scheduled，八角点脉冲）+ 标签 + 上限（normal=数字 / 其余=∞）
+function mcRetryParts(cur) {
+  var state = cur ? cur.retryState : '';
+  var active = state === 'scheduled';
+  var label = active ? '正在重试模型请求'
+    : state === 'cancelled' ? '模型请求重试已取消'
+    : state === 'started' ? '已重试模型请求'
+    : '等待重试模型请求';
+  var maximum = cur && cur.mode === 'normal' ? cur.maxRetries : '∞';
+  return { active: active, label: label, maximum: maximum };
+}
+// 上下文注入正文：文本块按模型所见顺序连缀（相邻无分隔），超 cap 截断；非文本块另册走 JsonBlock
+function mcContextText(content, cap) {
+  var out = '';
+  try {
+    var blocks = content || [];
+    for (var i = 0; i < blocks.length; i++) {
+      var b = blocks[i];
+      if (b && b.type === 'text' && typeof b.text === 'string') out += b.text;
+      if (out.length >= cap) return out.slice(0, cap) + '…';
+    }
+  } catch (e) { /* 结构漂移 → 空正文，条头照常 */ }
+  return out;
+}
+
+const MC_SYS_TEXT_CAP = 20000; // 宿主 ModelFacingContent 同款上界（20k chars）
+
+const McSysCard = {
+  css: [
+    /* —— 注入条（context）：虚线壳 + 表单图标；head 全宽按钮，body 折叠 height:0 —— */
+    '.mc-inject-head{display:flex;align-items:center;gap:7px;box-sizing:border-box;width:100%;padding:7px 9px;background:var(--mc-surface-2);border:1px dashed var(--mc-border-soft);border-radius:var(--mc-r-card);font:400 12px/1.7 var(--font-ui);color:var(--mc-muted);cursor:pointer;text-align:left}',
+    '.mc-inject-head::before{content:"";flex:none;width:15px;height:15px;background-color:var(--mc-faint);-webkit-mask:url("data:image/svg+xml,' + MC_SYS_ICON_DOC + '") center/contain no-repeat;mask:url("data:image/svg+xml,' + MC_SYS_ICON_DOC + '") center/contain no-repeat}',
+    '.mc-inject[data-mc-form="catalog"] .mc-inject-head::before{-webkit-mask-image:url("data:image/svg+xml,' + MC_SYS_ICON_LIST + '");mask-image:url("data:image/svg+xml,' + MC_SYS_ICON_LIST + '")}',
+    '.mc-inject[data-mc-form="snapshot"] .mc-inject-head::before{-webkit-mask-image:url("data:image/svg+xml,' + MC_SYS_ICON_COPY + '");mask-image:url("data:image/svg+xml,' + MC_SYS_ICON_COPY + '")}',
+    '.mc-inject[data-mc-form="recall"] .mc-inject-head::before,.mc-inject[data-mc-role="recall"] .mc-inject-head::before{-webkit-mask-image:url("data:image/svg+xml,' + MC_SYS_ICON_CLOCK + '");mask-image:url("data:image/svg+xml,' + MC_SYS_ICON_CLOCK + '")}',
+    '.mc-inject-head .mc-tri{flex:none;width:8px;height:8px;color:var(--mc-faint);transition:none}',
+    '.mc-inject-src{flex:none;max-width:40%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--mc-faint)}',
+    '.mc-inject-sum{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--mc-faint)}',
+    '.mc-inject-body{height:0;overflow:hidden}',
+    '.mc-inject.open .mc-inject-body{height:auto}',
+    '.mc-inject-body-in{padding:4px 9px 8px 24px;font:400 12px/1.7 var(--font-ui);color:var(--mc-muted);white-space:pre-wrap;word-break:break-word}',
+    /* —— 压缩条（compaction / manual-compaction）：同注入条语汇 + copy 图标；摘要文字 A→B 走 .s-in —— */
+    '.mc-comp-head{display:flex;align-items:center;gap:7px;box-sizing:border-box;width:100%;padding:7px 9px;background:var(--mc-surface-2);border:1px dashed var(--mc-border-soft);border-radius:var(--mc-r-card);font:400 12px/1.7 var(--font-ui);color:var(--mc-muted);cursor:pointer;text-align:left}',
+    '.mc-comp-head::before{content:"";flex:none;width:15px;height:15px;background-color:var(--mc-faint);-webkit-mask:url("data:image/svg+xml,' + MC_SYS_ICON_COPY + '") center/contain no-repeat;mask:url("data:image/svg+xml,' + MC_SYS_ICON_COPY + '") center/contain no-repeat}',
+    '.mc-comp-head[disabled]{cursor:default}',
+    '.mc-comp-head .mc-tri{flex:none;width:8px;height:8px;color:var(--mc-faint);transition:none}',
+    '.mc-comp-sum{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
+    '.mc-comp-sum .s-in{position:relative}',
+    '.mc-comp-sum .s-in.mc-ghost{color:transparent}',
+    '.mc-comp-body{height:0;overflow:hidden}',
+    '.mc-comp.open .mc-comp-body{height:auto}',
+    '.mc-comp-body-in{padding:2px 9px 9px 26px;font:400 12px/1.8 var(--font-ui);color:var(--mc-muted)}',
+    /* —— 重试条（model-retry）：实线 soft 壳 + 八角点（scheduled 脉冲）；状态文字 A→B 走 .s-in —— */
+    '.mc-retry-head{display:flex;align-items:center;gap:8px;box-sizing:border-box;width:100%;padding:6px 9px;background:var(--mc-surface-2);border:1px solid var(--mc-border-soft);border-radius:var(--mc-r-card);font:400 12px/1.6 var(--font-ui);color:var(--mc-muted);cursor:pointer;text-align:left}',
+    '.mc-retry-dot{flex:none;width:6px;height:6px;background:var(--mc-spark);clip-path:polygon(33% 0,67% 0,100% 33%,100% 67%,67% 100%,33% 100%,0 67%,0 33%)}',
+    '.mc-retry.run .mc-retry-dot{animation:mc-pulse 2600ms steps(1,end) infinite;animation-delay:var(--pulse-delay,0ms)}',
+    '.mc-retry-txt{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
+    '.mc-retry-txt .s-in{position:relative}',
+    '.mc-retry-txt .s-in.mc-ghost{color:transparent}',
+    '.mc-retry-head .mc-tri{flex:none;width:8px;height:8px;color:var(--mc-faint);transition:none}',
+    '.mc-retry-body{height:0;overflow:hidden}',
+    '.mc-retry.open .mc-retry-body{height:auto}',
+    '.mc-retry-body-in{display:flex;flex-direction:column;gap:2px;padding:4px 9px 8px 23px;font:400 12px/1.6 var(--font-ui);color:var(--mc-muted)}',
+    '.mc-retry-body-in b{font-weight:500;color:var(--mc-faint)}',
+    '.mc-inject-tt,.mc-comp-tt{flex:none;white-space:nowrap}',
+  ].join('\n'),
+  slots(ctx) {
+    if (!MC_SYS_PRIM || typeof React === 'undefined') return; // primitives 缺席:不遮蔽,宿主原生渲染兜底
+    const S = ctx.slots;
+    if (!S || typeof S.register !== 'function' || typeof S.inject !== 'function') return;
+    const h = React.createElement;
+    const MarkdownText = MC_SYS_PRIM.MarkdownText;
+    const JsonBlock = MC_SYS_PRIM.JsonBlock;
+    let REDUCED = false;
+    try { REDUCED = window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) {}
+
+    // 持值切换：props 变化不在提交拍直出，而是包进 accToggle 四拍（t100 白块遮盖的同时瞬变）；
+    // busy 期间到的新值直接落地（accToggle 防重入会吞 fn —— 不丢更新优先）；REDUCED 直出
+    function mcSwap(el, apply) {
+      if (REDUCED || !el || !el.isConnected || (el.dataset && el.dataset.busy)) { apply(); return; }
+      accToggle(el, apply);
+    }
+    // 折叠开合（卡头点击）：REDUCED/busy 直翻，否则四拍（几何变化发生在白块遮盖下）
+    function mcFold(card, flip) {
+      if (!card) { flip(); return; }
+      if (REDUCED || (card.dataset && card.dataset.busy)) { flip(); return; }
+      accToggle(card, flip);
+    }
+
+    /* —— McContextNodeView：上下文注入条（keyed 'context'）——
+       条头 = 表单图标 + 标题（跨会话召回/上下文注入）+ 来源 label + notice 摘要；
+       展开体 = 文本块连缀（模型所见顺序，20k 截断）+ 非文本块 JsonBlock。 */
+    function McContextNodeView(props) {
+      var node = props.node, data = (node && node.data) || {};
+      var prov = data.provenance || {};
+      var role = prov.role || '';
+      var form = data.form || '';
+      var notice = '';
+      try { var sm = (data.source || {}).summary; if (typeof sm === 'string' && sm) notice = sm; } catch (e) {}
+      var rest = [];
+      try {
+        var blocks = data.content || [];
+        for (var i = 0; i < blocks.length; i++) if (!(blocks[i] && blocks[i].type === 'text')) rest.push(blocks[i]);
+      } catch (e) {}
+      var st = React.useRef({ open: false });
+      var cardRef = React.useRef(null);
+      var v = React.useState(0), setV = v[1];
+      function toggle() {
+        var card = cardRef.current;
+        mcFold(card, function () { st.current.open = !st.current.open; setV(function (x) { return x + 1; }); });
+      }
+      return h('div', { className: 'mc-inject' + (st.current.open ? ' open' : ''), ref: cardRef, 'data-mc-form': form, 'data-mc-role': role },
+        h('button', { className: 'mc-inject-head', type: 'button', onClick: toggle, 'aria-expanded': st.current.open ? 'true' : 'false' },
+          h('span', { className: 'mc-inject-tt' }, role === 'recall' ? '跨会话召回' : '上下文注入'),
+          prov.label ? h('span', { className: 'mc-inject-src' }, String(prov.label)) : null,
+          notice ? h('span', { className: 'mc-inject-sum' }, notice) : null,
+          h('svg', { className: 'mc-tri' + (st.current.open ? ' open' : ''), 'aria-hidden': true }, h('use', { href: '#i-tri' }))),
+        h('div', { className: 'mc-inject-body' },
+          h('div', { className: 'mc-inject-body-in' },
+            mcContextText(data.content, MC_SYS_TEXT_CAP),
+            rest.map(function (b, j) { return h(JsonBlock, { key: 'r' + j, label: 'extra', payload: b }); }))));
+    }
+
+    /* —— McCompactionBar：压缩条共用体（自动 compaction / 手动 manual-compaction）——
+       摘要行文字 A→B（正在压缩…→已压缩 N 条…）走 .s-in accToggle；折叠体 = 摘要 markdown。 */
+    function McCompactionBar(props) {
+      var d = props.node || {};
+      var summary = d.summary == null ? null : String(d.summary);
+      var items = d.shadowedItemCount == null ? null : d.shadowedItemCount;
+      var tokens = d.shadowedTokenCount == null ? null : d.shadowedTokenCount;
+      var fallback = props.fallback || '';
+      var line = mcCompactionLine(summary, items, tokens, fallback);
+      var expandable = summary !== null;
+      var st = React.useRef({ open: false, line: line, mounted: true });
+      var cardRef = React.useRef(null);
+      var inRef = React.useRef(null);
+      var v = React.useState(0), setV = v[1];
+      React.useEffect(function () { st.current.mounted = true; return function () { st.current.mounted = false; }; }, []);
+      React.useEffect(function () { // 状态切换（验收六轮裁定）：压缩中→完成 文字换形走四拍
+        var s = st.current;
+        if (s.line === line) return;
+        var apply = function () { s.line = line; if (s.mounted) setV(function (x) { return x + 1; }); };
+        mcSwap(inRef.current, apply);
+      }, [line]);
+      function toggle() {
+        if (!expandable) return;
+        var card = cardRef.current;
+        mcFold(card, function () { st.current.open = !st.current.open; setV(function (x) { return x + 1; }); });
+      }
+      return h('div', { className: 'mc-comp' + (st.current.open ? ' open' : ''), ref: cardRef },
+        h('button', { className: 'mc-comp-head', type: 'button', onClick: toggle, disabled: !expandable, 'aria-expanded': expandable ? (st.current.open ? 'true' : 'false') : undefined },
+          h('span', { className: 'mc-comp-tt' }, props.title || '上下文已压缩'),
+          h('span', { className: 'mc-comp-sum' }, h('span', { className: 's-in', ref: inRef }, st.current.line)),
+          expandable ? h('svg', { className: 'mc-tri' + (st.current.open ? ' open' : ''), 'aria-hidden': true }, h('use', { href: '#i-tri' })) : null),
+        h('div', { className: 'mc-comp-body' },
+          h('div', { className: 'mc-comp-body-in' }, expandable ? h(MarkdownText, { text: summary }) : null)));
+    }
+
+    function McCompactionNodeView(props) {
+      var node = props.node;
+      return h(McCompactionBar, { node: (node && node.data) || {}, title: '上下文已压缩' });
+    }
+
+    /* 手动 /compact：压缩事务落定前 = compact · 正在压缩…；落定后与自动卡同款（fallback=命令文案） */
+    function McManualCompactionNodeView(props) {
+      var data = (props.node && props.node.data) || {};
+      var command = data.command || {};
+      var fallback = '';
+      try { if (command.outcome && typeof command.outcome.text === 'string') fallback = command.outcome.text; } catch (e) {}
+      return h(McCompactionBar, {
+        node: data.compaction || { summary: null, shadowedItemCount: null, shadowedTokenCount: null },
+        title: 'compact', fallback: fallback || '',
+      });
+    }
+
+    /* —— McRetryNodeView：模型重试条（keyed 'model-retry'）——
+       八角点 scheduled 脉冲（相位 CLOCK.syncAnim 注入）；状态文字 A→B（scheduled→started/
+       cancelled）走 .s-in accToggle；倒计时 CLOCK 1s 栅格递减；详情折叠 = 延迟 + 失败原因。 */
+    function McRetryNodeView(props) {
+      var data = (props.node && props.node.data) || {};
+      var cur = data.current || {};
+      var parts = mcRetryParts(cur);
+      var active = parts.active;
+      var maximum = parts.maximum;
+      var st = React.useRef({ open: false, label: parts.label, retry: cur.retry, mounted: true });
+      var cardRef = React.useRef(null);
+      var txtRef = React.useRef(null);
+      var dotRef = React.useRef(null);
+      var v = React.useState(0), setV = v[1];
+      var secState = React.useState(Math.max(1, Math.ceil((cur.delayMs || 0) / 1000)));
+      var sec = secState[0], setSec = secState[1];
+      React.useEffect(function () { st.current.mounted = true; return function () { st.current.mounted = false; }; }, []);
+      React.useEffect(function () { // 八角点相位（与主流程脉冲同栅格不交错）
+        try { if (dotRef.current && CLOCK && typeof CLOCK.syncAnim === 'function') CLOCK.syncAnim(dotRef.current, CLOCK.PULSE, '--pulse-delay'); } catch (e) {}
+      }, []);
+      var stateKey = parts.label + '/' + cur.retry + '/' + maximum;
+      React.useEffect(function () { // 状态切换：等待中→重试中/已重试/已取消 文字换形走四拍
+        var prev = st.current.stateKey;
+        st.current.stateKey = stateKey;
+        if (prev === undefined) return; // 首挂不闪（历史存量卡）
+        if (prev === stateKey) return;
+        var apply = function () { st.current.label = parts.label; st.current.retry = cur.retry; st.current.maximum = maximum; if (st.current.mounted) setV(function (x) { return x + 1; }); };
+        mcSwap(txtRef.current, apply);
+      }, [stateKey]);
+      React.useEffect(function () { // 倒计时：active 每秒递减到 1 停；非 active 静态展示
+        var total = Math.max(1, Math.ceil((cur.delayMs || 0) / 1000));
+        setSec(total);
+        if (!active) return;
+        var left = total, timer = null;
+        var step = function () {
+          left -= 1;
+          if (left < 1) { setSec(1); return; }
+          setSec(left);
+          timer = CLOCK.next(step, 1000);
+        };
+        timer = CLOCK.next(step, 1000);
+        return function () { if (timer) { try { CLOCK.clear(timer); } catch (e) {} } };
+      }, [active, cur.seq, cur.delayMs]);
+      function toggle() {
+        var card = cardRef.current;
+        mcFold(card, function () { st.current.open = !st.current.open; setV(function (x) { return x + 1; }); });
+      }
+      return h('div', { className: 'mc-retry' + (active ? ' run' : '') + (st.current.open ? ' open' : ''), ref: cardRef },
+        h('button', { className: 'mc-retry-head', type: 'button', onClick: toggle, 'aria-expanded': st.current.open ? 'true' : 'false' },
+          h('span', { className: 'mc-retry-dot', ref: dotRef }),
+          h('span', { className: 'mc-retry-txt' },
+            h('span', { className: 's-in', ref: txtRef }, st.current.label + '（' + st.current.retry + '/' + st.current.maximum + '） · ' + sec + 's')),
+          h('svg', { className: 'mc-tri' + (st.current.open ? ' open' : ''), 'aria-hidden': true }, h('use', { href: '#i-tri' }))),
+        h('div', { className: 'mc-retry-body' },
+          h('div', { className: 'mc-retry-body-in' },
+            h('div', null, h('b', null, '重试延迟：'), Math.round(cur.delayMs || 0) + 'ms'),
+            h('div', null, h('b', null, '失败原因：'), (cur.failure && cur.failure.message) || '—'))));
+    }
+
+    ctx.effect(() => S.inject('conversation.chat.node', () => S.register({
+      name: 'conversation.chat.node', key: 'context', priority: -1, registrant: 'macintosh',
+    }, McContextNodeView)));
+    ctx.effect(() => S.inject('conversation.chat.node', () => S.register({
+      name: 'conversation.chat.node', key: 'compaction', priority: -1, registrant: 'macintosh',
+    }, McCompactionNodeView)));
+    ctx.effect(() => S.inject('conversation.chat.node', () => S.register({
+      name: 'conversation.chat.node', key: 'manual-compaction', priority: -1, registrant: 'macintosh',
+    }, McManualCompactionNodeView)));
+    ctx.effect(() => S.inject('conversation.chat.node', () => S.register({
+      name: 'conversation.chat.node', key: 'model-retry', priority: -1, registrant: 'macintosh',
+    }, McRetryNodeView)));
+  },
+};
+
 // src/kit.js —— 检视页骨架（默认关闭零足迹；控制台 window.__MC_KIT_OPEN__ = true 打开）
 // 布局类全部 kit- 前缀，样式不外泄 kit 根之外；组件类直接复用 mc- 原语
+// 会话流分区（T8）：原型 §5 类定义 scoped 到 .kit-panel（Ruling 3，非宿主选择器不进
+// MC_MAP）+ ReasoningDemo 五帧流式驱动（§8.2 状态机 kit 化，延时全走 CLOCK.next）
 // 纯顶层声明，无模块系统语法；与 tokens/clock/mcfx/sprite 拼进同一作用域
+// 镜像同步：本段与 src/kit.js 手工同源维护（无程序化逐字比对测试；audit 自终审 F1 起直接扫描
+// client.js 全文——六项静态纪律含本段在内违禁即红，MC_MAP 段豁免）；唯一差异 = slots 守卫
+// 行改常驻直达 ctx.slots（inject:['slots'] 声明已生效，同 make-persistent-client 变换 2）
 const McKit = {
   css: `/* ===== kit 检视页专属布局（全部 kit- 前缀，不外泄） ===== */
 .kit-scrim{position:fixed;inset:0;z-index:95;overflow-y:auto;box-sizing:border-box;
@@ -1273,7 +2110,116 @@ const McKit = {
 .kit-scrim{scrollbar-width:thin;scrollbar-color:var(--mc-scroll-box) transparent}
 .kit-scrim::-webkit-scrollbar{width:15px}
 .kit-scrim::-webkit-scrollbar-track{background:var(--mc-scroll-track);border-left:1px solid var(--mc-border)}
-.kit-scrim::-webkit-scrollbar-thumb{background:var(--mc-scroll-box);border:1px solid var(--mc-border)}`,
+.kit-scrim::-webkit-scrollbar-thumb{background:var(--mc-scroll-box);border:1px solid var(--mc-border)}
+/* ===== 会话流演示分区(Ruling 3):原型 §5 类定义 scoped 到 kit 面板 =====
+   T2-T6 的 css 只覆写宿主选择器;.md/.msg/.bubble/.inject/.reasoning/.turn-tail/.retry-row/
+   .cap-row 及其子件(tri/s-in/cover/icon-btn/s-dot…)在主题内无任何已定义样式 —— 此处照
+   prototype/macintosh-workspace.html §5 段(L461-548)逐行移植,全部选择器以 .kit-panel
+   前缀 scoped 不外溢;--* 换 --mc-* 对应名(--font-*/--r-*/--sel-bg 沿 McTokens 现有名)。
+   非宿主选择器,不进 MC_MAP(audit §5 不红)。kit- 前缀为检视页自有布局件(kit-band 词汇)。 */
+.kit-frames{display:grid;gap:16px;grid-template-columns:1fr}
+.kit-frame{border-radius:var(--mc-r-window);overflow:hidden;background:var(--mc-surface);
+  box-shadow:var(--mc-shadow-panel);border:1px solid var(--mc-border)}
+.kit-frame-tag{display:flex;justify-content:space-between;gap:12px;align-items:center;
+  padding:7px 12px;font:700 11px/1.3 var(--font-mono);letter-spacing:.08em;color:var(--mc-faint);
+  text-transform:uppercase;background:var(--mc-surface-2);border-bottom:1px solid var(--mc-border)}
+.kit-frame-tag em{font-style:normal;color:var(--mc-accent)}
+.kit-frame-body{padding:16px}
+.kit-stack{display:flex;flex-direction:column;gap:12px}
+.kit-stack.sm{gap:10px}
+.kit-injects{display:grid;gap:8px;max-width:680px}
+.kit-panel .md{font:400 14px/1.8 var(--font-ui);color:var(--mc-fg);word-break:break-word}
+.kit-panel .md p{margin:0} /* 原型 §2 全局 h/p{margin:0} 的 scoped 化:§5 的 p+p 间距依赖零基线 */
+.kit-panel .md h1,.kit-panel .md h2,.kit-panel .md h3{font:600 17px/1.4 var(--font-display);letter-spacing:.01em;margin:14px 0 6px}
+.kit-panel .md h2{font-size:15px}
+.kit-panel .md h3{font-size:14px}
+.kit-panel .md p + p{margin-top:8px}
+.kit-panel .md ul,.kit-panel .md ol{margin:6px 0;padding-left:22px}
+.kit-panel .md li{margin:3px 0}
+.kit-panel .md code{font:500 12px/1.5 var(--font-code);
+  padding:1px 5px;background:var(--mc-sel-bg);border-radius:var(--mc-r-tag);color:var(--mc-fg)}
+.kit-panel .md pre{margin:8px 0;padding:10px 12px;overflow-x:auto;
+  background:var(--mc-bg-deep);border:1px solid var(--mc-border-soft);border-radius:var(--mc-r-card)}
+.kit-panel .md pre code{padding:0;background:none;font:400 12.5px/1.7 var(--font-code)}
+.kit-panel .md table{border-collapse:collapse;margin:8px 0;font:400 12.5px/1.6 var(--font-ui)}
+.kit-panel .md th,.kit-panel .md td{padding:4px 10px;text-align:left;
+  border:1px solid var(--mc-border-soft)}
+.kit-panel .md th{font:600 12px/1.4 var(--font-display);background:var(--mc-surface-2)}
+.kit-panel .md blockquote{margin:8px 0;padding:2px 12px;color:var(--mc-muted);
+  border-left:2px solid var(--mc-accent-dim)}
+.kit-panel .md a{color:var(--mc-accent)} /* 原型 §2 全局 a 染 accent 的 scoped 化(两文件均有) */
+.kit-panel .msg{display:flex;flex-direction:column;gap:6px}
+.kit-panel .msg.user{align-items:flex-end}
+.kit-panel .msg.user .bubble{max-width:520px;padding:7px 12px;
+  background:var(--mc-accent);color:var(--mc-accent-ink);
+  border:1px solid var(--mc-border);border-radius:8px;
+  font:400 14px/1.7 var(--font-ui)}
+.kit-panel .msg.user .attach{max-width:360px;display:flex;gap:8px;align-items:flex-end}
+.kit-panel .msg.user .attach .ph{width:132px;height:92px;flex:none;position:relative;
+  background:var(--mc-surface-3);
+  border:1px solid var(--mc-border);border-radius:var(--mc-r-card)}
+.kit-panel .msg.user .attach .ph::after{content:'IMG';position:absolute;right:5px;bottom:5px;
+  padding:1px 5px;background:var(--mc-surface);color:var(--mc-muted);
+  border:1px solid var(--mc-border-soft);border-radius:var(--mc-r-tag);
+  font:600 9px/1.4 var(--font-mono)}
+.kit-panel .msg.user .attach .cap{font:400 12px/1.6 var(--font-ui);color:var(--mc-muted);max-width:180px}
+.kit-panel .inject{display:flex;align-items:flex-start;gap:7px;padding:7px 9px;
+  background:var(--mc-surface-2);
+  border:1px dashed var(--mc-border-soft);border-radius:var(--mc-r-card)}
+.kit-panel .inject svg{width:15px;height:15px;flex:none;margin-top:1px;color:var(--mc-faint)}
+.kit-panel .inject .i-tt{flex:1;min-width:0;font:400 12px/1.7 var(--font-ui);color:var(--mc-muted);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.kit-panel .reasoning{background:var(--mc-surface-3);
+  border:1px solid var(--mc-border);border-radius:var(--mc-r-card);
+  overflow:hidden}
+.kit-panel .reasoning.run{background:color-mix(in oklab,var(--mc-spark) 9%,var(--mc-surface-3))}
+.kit-panel .reasoning-head{display:flex;align-items:center;gap:6px;width:100%;
+  padding:6px 9px;background:none;border:none;cursor:pointer;text-align:left}
+.kit-panel .reasoning-head .r-tag{font:400 13px/1.3 'FindersKeepers','Fusion Pixel 12px monospaced zh','Noto Sans SC',monospace;letter-spacing:.03em;color:var(--mc-fg)}
+.kit-panel .reasoning-head .r-sum{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  font:400 12px/1.5 var(--font-ui);color:var(--mc-faint)}
+.kit-panel .reasoning-head .r-sum .s-in{position:relative}
+.kit-panel .reasoning-head .r-sum .s-in::after{content:'';position:absolute;inset:-1px -2px;opacity:0;pointer-events:none;
+  background:#fff;
+  background-image:repeating-linear-gradient(0deg,transparent 0 2px,rgba(0,0,0,.06) 2px 3px)}
+.kit-panel .reasoning-head .r-sum .s-in.flash::after{opacity:1}
+.kit-panel .reasoning-head .r-dur{font:500 10px/1.5 var(--font-mono);color:var(--mc-faint);flex:none}
+.kit-panel .reasoning.run .reasoning-head .r-tag{color:var(--mc-spark)}
+.kit-panel .reasoning-body{overflow:hidden;height:auto}
+.kit-panel .reasoning:not(.open) .reasoning-body{height:0}
+.kit-panel .reasoning-body .r-txt{padding:2px 9px 9px 26px;
+  font:400 12px/1.8 var(--font-ui);color:var(--mc-muted);white-space:pre-wrap}
+.kit-panel .reasoning.run .r-txt .cover{color:transparent;background:#fff;
+  background-image:repeating-linear-gradient(0deg,transparent 0 2px,rgba(0,0,0,.06) 2px 3px)}
+html[data-theme="light"] .kit-panel .reasoning.run .r-txt .cover{background:#000;
+  background-image:repeating-linear-gradient(0deg,transparent 0 2px,rgba(255,255,255,.07) 2px 3px)}
+.kit-panel .turn-tail{display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+  padding-top:2px}
+.kit-panel .turn-tail .t-stats{margin-left:auto;font:500 11px/1.6 var(--font-mono);color:var(--mc-faint);
+  white-space:nowrap}
+.kit-panel .retry-row{display:flex;align-items:center;gap:8px;padding:6px 9px;
+  background:var(--mc-surface-2);
+  border:1px solid var(--mc-border-soft);border-radius:var(--mc-r-card);
+  font:400 12px/1.6 var(--font-ui);color:var(--mc-muted)}
+.kit-panel .retry-row .s-dot{width:6px;height:6px;background:var(--mc-spark);flex:none;
+  clip-path:polygon(33% 0,67% 0,100% 33%,100% 67%,67% 100%,33% 100%,0 67%,0 33%); /* 八角像素圆点(§4 款) */
+  animation:mc-pulse 2.6s steps(1,end) infinite;animation-delay:var(--pulse-delay,0ms)}
+.kit-panel .cap-row{display:flex;align-items:center;gap:8px;padding:6px 9px;
+  background:var(--mc-surface-2);
+  border:1px solid var(--mc-border-soft);border-radius:var(--mc-r-card);
+  font:400 12px/1.6 var(--font-ui);color:var(--mc-muted)}
+/* 原型 .cap-row .tri{border-left-color} 系死规则(svg 无 border),不移植 */
+.kit-panel .tri{width:11px;height:11px;flex:none;color:var(--mc-fg);overflow:visible}
+.kit-panel .tri.open{transform:rotate(90deg)}
+.kit-panel .tri.dim{color:var(--mc-faint)}
+.kit-panel .icon-btn{display:grid;place-items:center;width:26px;height:26px;flex:none;
+  border-radius:var(--mc-r-tag);border:1px solid var(--mc-border);
+  background:var(--mc-surface-2);color:var(--mc-fg);cursor:pointer}
+.kit-panel .icon-btn:active{background:var(--mc-border);color:var(--mc-surface)}
+.kit-panel .icon-btn:disabled{opacity:.4;cursor:not-allowed}
+.kit-panel .icon-btn svg{width:13px;height:13px}
+.kit-panel .icon-btn.sm{width:20px;height:20px}
+.kit-panel .icon-btn.sm svg{width:11px;height:11px}`,
 
   slots(ctx) {
     // 席位：shell.overlay（additive 列表槽，order 靠后）；默认渲染 null。
@@ -1292,28 +2238,61 @@ const McKit = {
   },
 };
 
+// —— 会话流演示数据（静态字面量；声明先于 McKitPage/McKitReasoningRun，任何求值时序下无 TDZ）——
+// md 全要素 = interactive s-md 会话首条文案逐字（受信静态字面量，经 dangerouslySetInnerHTML
+// 注入；无任何动态插值，audit §3 纪律不破）。其余分区文案一律结构化 h()，字面量无插值。
+const MC_KIT_MD_HTML = `<h1>一级标题 Heading 1</h1><h2>二级标题 Heading 2</h2><h3>三级标题 Heading 3</h3><p>正文段落:经典麦金塔主题的 <strong>加粗</strong>、<em>斜体</em>、<code>行内代码 inline_code()</code>、以及一个 <a href="#" onclick="return false">超链接</a>。段与段之间有 8px 间距,长文本自动换行并保持 1.8 倍行距。</p><p>第二段:验证 p + p 的 margin-top。</p><blockquote>引用块 blockquote — 左侧 2px 淡紫竖线,文字 muted。适合放补充说明或原文摘录。</blockquote><h3>无序列表</h3><ul><li>列表项一</li><li>列表项二 <code>带行内代码</code></li><li>列表项三</li></ul><h3>有序列表</h3><ol><li>第一步:拆数</li><li>第二步:分配律</li><li>第三步:合并</li></ol><h3>代码块</h3><pre><code>function mul9(x) {
+  return 9 * (x - 2) + 18; // 拆数还原
+}
+mul9(8); // =&gt; 72</code></pre><h3>表格</h3><table><thead><tr><th>拆法</th><th>算式</th><th>结果</th></tr></thead><tbody><tr><td>10 − 2</td><td>9×10 − 9×2</td><td>72</td></tr><tr><td>3 × 8 × 3</td><td>(9×8)×1</td><td>72</td></tr><tr><td><code>7 = 10 − 3</code></td><td>6×10 − 6×3</td><td>42</td></tr></tbody></table><p>以上覆盖 .md 支持的全部语法:h1–h3、段落、<strong>/<em>、行内 code、链接、引用、ul/ol、pre 代码块、table。</p>`;
+
+// 推理流式正文（THINK_POOL 静态子集，三条长句量级对齐设计稿；静态字面量、无洗牌）
+const MC_KIT_THINK_TXT = [
+  '拆解意图:哪些约束是硬性的、哪些只是偏好,哪些信息已经给足、哪些还需要推断,这决定了回复的详略与结构',
+  '组织骨架:先给结论,再给依据,最后给可选的延伸;推导链条超过三步就拆成分步列表,避免把过程铺成一大段没人读的文字',
+  '收敛结论:主要判断已经过两路交叉验证,剩余的不确定性都标注了前提条件,现在可以停止思考,把结论组织成最终回复输出',
+].join('\n');
+
+// tokenize 副本（照 prototype/macintosh-interactive.html 逐行）：CJK 一字一词（无 + 号）、
+// 数字/拉丁连续段为一词 → take(n) 的 n 即字符量级
+function mcTokenize(s) {
+  return s.match(/[\u2E80-\u9FFF\uF900-\uFFEF]|[0-9]+|[A-Za-z]+|\s|[^\s]/g) || [];
+}
+const MC_KIT_TOKS = mcTokenize(MC_KIT_THINK_TXT);
+const MC_KIT_PER_TICK = 28; /* 一次追加 = 帧 B + 帧 A 两帧的量（设计稿同款） */
+
 // —— 检视页根组件：window.__MC_KIT_OPEN__ 真值才渲染，关闭走本地 state 强刷 ——
+// hook 纪律：全部 hook 先于 `if (!open) return null` 早退（React #310：同一 fiber 两次
+// 渲染的 hook 数必须恒定 —— 旧版 runPill 系列挂在早退之后，关闭→打开翻转即崩，T8 修复）；
+// 相位对齐 effect 依赖 [open]：关闭态 ref 为 null 安全跳过，翻开时元素上树后再补对相。
 function McKitPage() {
   const h = React.createElement;
   const force = React.useState(0)[1];
   const open = !!(typeof window !== 'undefined' && window.__MC_KIT_OPEN__);
+
+  // run 胶囊：挂载即向 CLOCK 对相位（负延迟），多 run 点同屏不交错
+  const runPill = React.useRef(null);
+  React.useEffect(function () {
+    if (CLOCK && runPill.current) CLOCK.syncAnim(runPill.current);
+  }, [open]);
+
+  // 会话流分区 retry 细长条 s-dot：同款负延迟相位对齐（与宿主 SYNC 管道同参数）
+  const retryDot = React.useRef(null);
+  React.useEffect(function () {
+    if (CLOCK && retryDot.current) CLOCK.syncAnim(retryDot.current);
+  }, [open]);
+
+  // mcfx 演示靶
+  const tgtIn = React.useRef(null);
+  const tgtOut = React.useRef(null);
+  const tgtAcc = React.useRef(null);
+
   if (!open) return null;
 
   const close = () => {
     window.__MC_KIT_OPEN__ = false;
     force(function (n) { return n + 1; });
   };
-
-  // run 胶囊：挂载即向 CLOCK 对相位（负延迟），多 run 点同屏不交错
-  const runPill = React.useRef(null);
-  React.useEffect(function () {
-    if (CLOCK && runPill.current) CLOCK.syncAnim(runPill.current);
-  }, []);
-
-  // mcfx 演示靶
-  const tgtIn = React.useRef(null);
-  const tgtOut = React.useRef(null);
-  const tgtAcc = React.useRef(null);
 
   const doFlashIn = () => {
     const el = tgtIn.current;
@@ -1400,7 +2379,206 @@ function McKitPage() {
               return h('div', { className: 'kit-icell', key: id },
                 h('svg', null, h('use', { href: '#' + id })),
                 h('span', { className: 'kit-ilabel' }, esc(id)));
-            }))))));
+            }))),
+        // (e) 会话流分区（Ruling 3：原型 §5 类 scoped 定义 + 五帧流式演示；
+        //     DOM 照 prototype/macintosh-workspace.html §5 kit-band L1760-1840 直抄，
+        //     文案为演示字面量；md 全要素区走受信静态字面量 dangerouslySetInnerHTML）
+        h('section', null,
+          h('h3', { className: 'kit-h' }, '会话流'),
+          h('div', { className: 'kit-frames' },
+            // md 全要素
+            h('div', { className: 'kit-frame' },
+              h('div', { className: 'kit-frame-tag' },
+                h('span', null, 'md 全要素 · h1–h3 / 段落 / 加粗斜体 / 行内 code / 链接 / 引用 / ul / ol / pre / table'),
+                h('em', null, 'md')),
+              h('div', { className: 'kit-frame-body' },
+                h('div', { className: 'md', dangerouslySetInnerHTML: { __html: MC_KIT_MD_HTML } }))),
+            // 用户消息 · 含图片附件
+            h('div', { className: 'kit-frame' },
+              h('div', { className: 'kit-frame-tag' },
+                h('span', null, '用户消息 · 含图片附件'),
+                h('em', null, 'msg-user')),
+              h('div', { className: 'kit-frame-body' },
+                h('div', { className: 'msg user' },
+                  h('div', { className: 'attach' },
+                    h('span', { className: 'ph' }),
+                    h('span', { className: 'cap' }, '截图:Finder 里手动验证 9×8 = 72 的便签一张,很长的说明文本用来验证多行换行形态。')),
+                  h('div', { className: 'bubble' }, '顺便把这张桌面截图也存进会话记录里喵。')))),
+            // 上下文注入 · 细长条四型
+            h('div', { className: 'kit-frame' },
+              h('div', { className: 'kit-frame-tag' },
+                h('span', null, '上下文注入 · 细长条四型（system-reminder / 运行时上下文 / 压缩 checkpoint / 技能内容）'),
+                h('em', null, 'inject')),
+              h('div', { className: 'kit-frame-body' },
+                h('div', { className: 'kit-injects' },
+                  h('div', { className: 'inject' },
+                    h('svg', { 'aria-hidden': true }, h('use', { href: '#i-doc' })),
+                    h('span', { className: 'i-tt' }, '上下文注入 <system-reminder> — 可用技能目录变更:grilling 已移除,brainstorming 已加入(完整目录见 system prompt)')),
+                  h('div', { className: 'inject' },
+                    h('svg', { 'aria-hidden': true }, h('use', { href: '#i-doc' })),
+                    h('span', { className: 'i-tt' }, '上下文注入 Current runtime context — file policy: danger-full-access;approval prompts disabled;目标 round 2/6')),
+                  h('div', { className: 'inject' },
+                    h('svg', { viewBox: '0 0 24 24', 'aria-hidden': true }, h('use', { href: '#i-px-copy' })),
+                    h('span', { className: 'i-tt' }, '压缩 checkpoint — 会话前段已压缩:菜单栏/图标库/输入坞五件套决策保留,逐 token 流式细节折叠(96.2k → 12.4k tok)')),
+                  h('div', { className: 'inject' },
+                    h('svg', { viewBox: '0 0 24 24', 'aria-hidden': true }, h('use', { href: '#i-px-attach' })),
+                    h('span', { className: 'i-tt' }, '技能内容注入 <skill_content> brainstorming — 探索意图/需求/设计后再实现,禁止跳过直接动手…'))))),
+            // 推理卡 · 五帧流式 vs 完成（ReasoningDemo 组件自带控制钮）
+            h('div', { className: 'kit-frame' },
+              h('div', { className: 'kit-frame-tag' },
+                h('span', null, '推理卡 · 五帧流式（帧 B 白块 → 帧 A 揭开 → 顿拍 ×3） vs 完成'),
+                h('em', null, 'reasoning')),
+              h('div', { className: 'kit-frame-body' },
+                h(McKitReasoningRun, null))),
+            // 自动重试行 / 上限行 / 回合尾部
+            h('div', { className: 'kit-frame' },
+              h('div', { className: 'kit-frame-tag' },
+                h('span', null, '自动重试行 / 上限行 / 回合尾部'),
+                h('em', null, 'rows')),
+              h('div', { className: 'kit-frame-body kit-stack sm' },
+                h('div', { className: 'retry-row' },
+                  h('i', { className: 's-dot', ref: retryDot }),
+                  h('span', null, '自动重试第 2/3 次 · 等待上游恢复(5s 后发起)')),
+                h('div', { className: 'cap-row' },
+                  h('svg', { className: 'tri', 'aria-hidden': true }, h('use', { href: '#i-tri' })),
+                  h('span', null, '已到单回合步数上限(50 steps)— 继续请发送「继续」')),
+                h('div', { className: 'turn-tail' },
+                  h('button', { className: 'icon-btn sm', type: 'button', title: '复制' },
+                    h('svg', { viewBox: '0 0 24 24', 'aria-hidden': true }, h('use', { href: '#i-px-copy' }))),
+                  h('button', { className: 'icon-btn sm', type: 'button', title: '重发' },
+                    h('svg', { viewBox: '0 0 24 24', 'aria-hidden': true }, h('use', { href: '#i-px-reload' }))),
+                  h('span', { className: 't-stats' }, '8.9s · token 1.9s · 83 tok/s')))))))));
+
+// —— ReasoningDemo：推理卡五帧流式演示（§8.2 状态机 kit 化）——
+// 五帧一周期 500ms：帧 B（t+0）追加 span.cover + 标题换字挂 flash → 帧 A（t+100）合并进
+// 持久文本节点 + 撤 cover → 空 ×3 顿拍。一切延时走 CLOCK.next（禁裸定时器）；组件卸载 /
+// 关闭 kit / 重开演示均停流（CLOCK clear）。DOM 命令式照原型逐行，组件零 state 重渲，
+// React 只负责静态骨架 —— r-txt 内的文本节点与 cover 由状态机独占管理。
+function McKitReasoningRun() {
+  const h = React.createElement;
+  const cardRef = React.useRef(null);
+  const triRef = React.useRef(null);  // 标题行 tri（开合态）
+  const sumRef = React.useRef(null);  // .s-in 摘要行（帧 B 换字挂 flash）
+  const txtRef = React.useRef(null);  // .r-txt（持久文本节点 T + cover 白块）
+  const durRef = React.useRef(null);  // .r-dur（streaming → 实际秒）
+  const st = React.useRef({
+    running: false, timer: null, T: null, blk: null, pos: 0, pause: 0, card: null,
+  }).current;
+
+  function stopTimer() {
+    if (st.timer) {
+      try { CLOCK.clear(st.timer); } catch (e) { /* 时钟已 dispose：无害 no-op */ }
+      st.timer = null;
+    }
+  }
+  function take(n) { /* 顺序取 token：取尽返回空串（照原型） */
+    var out = '';
+    for (var j = 0; j < n && st.pos < MC_KIT_TOKS.length; j++, st.pos++) out += MC_KIT_TOKS[st.pos];
+    return out;
+  }
+  function tick() {
+    if (!st.running || st.card !== cardRef.current) return; /* 卸载/重开后旧流不写 */
+    var txt = txtRef.current, sum = sumRef.current;
+    if (!txt || !sum) return;
+    if (st.pause > 0) {                        /* 帧 C/D/E：连续空帧，追加间顿三拍 */
+      st.pause--;
+    } else if (st.blk) {                       /* 帧 A（t+100）：白块消失，揭开成文字 */
+      st.T.data = st.T.data + st.blk.textContent; /* 合并进持久文本节点（勿 innerHTML 重建） */
+      st.blk.remove(); st.blk = null;
+      sum.classList.remove('flash');           /* 标题栏白块同步消失 */
+      if (st.pos >= MC_KIT_TOKS.length) {      /* 取尽：停拍挂 run 态，等「■ 收尾」信号 */
+        st.running = false;
+        return;
+      }
+      st.pause = 3;
+    } else {                                   /* 帧 B（t+0）：白块出现（追加占位，不显字） */
+      var nxt = take(MC_KIT_PER_TICK);
+      if (nxt) {
+        var blk = document.createElement('span');
+        blk.className = 'cover';
+        blk.textContent = nxt;
+        txt.appendChild(blk);
+        st.blk = blk;
+        var flat = nxt.replace(/\n/g, ' ');    /* 标题栏：换行折叠空格，超 44 字掐头留尾 */
+        sum.textContent = flat.length > 44 ? '…' + flat.slice(-44) : flat;
+        sum.classList.add('flash');
+      }
+    }
+    st.timer = CLOCK.next(tick, 100);          /* 每 tick 一格；五帧合计一周期 500ms */
+  }
+  function startStream() { /* 「▶ 播放流式」：重开演示从头流（复位全部帧状态） */
+    var card = cardRef.current, txt = txtRef.current, sum = sumRef.current;
+    if (!card || !txt || !sum || typeof CLOCK === 'undefined' || !CLOCK) return;
+    stopTimer();
+    st.pos = 0; st.pause = 0; st.blk = null;
+    st.running = true; st.card = card;
+    card.classList.add('run', 'open');
+    if (triRef.current) triRef.current.classList.add('open');
+    sum.classList.remove('flash');
+    sum.textContent = '正在思考…';
+    if (durRef.current) durRef.current.textContent = 'streaming';
+    txt.textContent = '';                      /* 清上轮残余（含未收尾的 cover） */
+    st.T = document.createTextNode('');
+    txt.appendChild(st.T);
+    st.timer = CLOCK.next(tick, 200);          /* 起拍 200ms（照原型） */
+  }
+  function finishStream() { /* 「■ 收尾」：finishThinking 语义（摘前 26 字 / r-dur 定格 / 撤 run） */
+    var card = cardRef.current, sum = sumRef.current;
+    if (!card || !sum || !st.card) return;     /* 未开过流：无收尾对象 */
+    stopTimer();
+    st.running = false;
+    if (st.blk && st.T) {                      /* 在途 cover 先按帧 A 合并（hideThinking「等帧 A」） */
+      st.T.data = st.T.data + st.blk.textContent;
+      st.blk.remove(); st.blk = null;
+    }
+    var full = st.T ? st.T.data : '';
+    card.classList.remove('run', 'open');      /* 摘 run：琥珀染与 cover 白块规则一并失效 */
+    if (triRef.current) triRef.current.classList.remove('open');
+    sum.classList.remove('flash');
+    sum.textContent = full.length > 26 ? full.slice(0, 26) + '…' : full; /* 摘正文前 26 字 */
+    if (durRef.current) durRef.current.textContent = '1.8s';             /* 演示定值（原型 r-dur 位） */
+  }
+  // 卸载 / 关闭 kit：停流（未决 tick 经 CLOCK.clear 注销，不再分发）
+  React.useEffect(function () {
+    return function () { st.running = false; stopTimer(); };
+  }, []);
+
+  // 点标题行：accToggle 四拍开合（照原型 accToggle 通道；与宿主 think 卡同款）
+  function accCard(card) {
+    if (!card) return;
+    accToggle(card, function () {
+      card.classList.toggle('open');
+      var tri = card.querySelector('.tri');
+      if (tri) tri.classList.toggle('open');
+    });
+  }
+
+  const doneRef = React.useRef(null); // 完成帧卡（收合态）
+
+  return h('div', { className: 'kit-stack' },
+    h('div', { className: 'kit-row' },
+      h('button', { className: 'mc-btn', type: 'button', onClick: startStream }, '▶ 播放流式'),
+      h('button', { className: 'mc-btn', type: 'button', onClick: finishStream }, '■ 收尾'),
+      h('span', { className: 'kit-note' }, '五帧一周期 500ms · PER_TICK=28 · CLOCK 100ms 栅格驱动')),
+    // 运行帧（reasoning.run.open：流式靶卡）
+    h('div', { className: 'reasoning run open', ref: cardRef },
+      h('button', { className: 'reasoning-head', type: 'button', onClick: function () { accCard(cardRef.current); } },
+        h('svg', { className: 'tri open', ref: triRef, 'aria-hidden': true }, h('use', { href: '#i-tri' })),
+        h('span', { className: 'r-tag' }, 'Think'),
+        h('span', { className: 'r-sum' }, h('span', { className: 's-in', ref: sumRef }, '待机 — 点「▶ 播放流式」')),
+        h('span', { className: 'r-dur', ref: durRef }, 'streaming')),
+      h('div', { className: 'reasoning-body' },
+        h('div', { className: 'r-txt', ref: txtRef }))),
+    // 完成帧（收合态定格，对照 workspace L1815-1824）
+    h('div', { className: 'reasoning', ref: doneRef },
+      h('button', { className: 'reasoning-head', type: 'button', onClick: function () { accCard(doneRef.current); } },
+        h('svg', { className: 'tri', 'aria-hidden': true }, h('use', { href: '#i-tri' })),
+        h('span', { className: 'r-tag' }, 'Think'),
+        h('span', { className: 'r-sum' }, h('span', { className: 's-in' }, '已收敛:两种拆法互相验证 42。收合态。')),
+        h('span', { className: 'r-dur' }, '1.8s')),
+      h('div', { className: 'reasoning-body' },
+        h('div', { className: 'r-txt' }, '收合态正文(窗口高度过渡露出)。'))));
+}
 }
 
 
@@ -1415,22 +2593,24 @@ const mods = {
   McChrome: McChrome,
   McSidebar: McSidebar,
   McFinder: McFinder,
+  McFlow: McFlow,
+  McThink: McThink,
+  McSysCard: McSysCard,
   McKit: McKit,
 };
-const order = ["McTokens","McClock","McMcfx","McSprite","MC_MAP","McChrome","McSidebar","McFinder","McKit"];
+const order = ["McTokens","McClock","McMcfx","McSprite","MC_MAP","McChrome","McSidebar","McFinder","McFlow","McThink","McSysCard","McKit"];
 
 return {
   inject: ["slots", "theme", "sessions"],
   apply(ctx) {
-    try { console.log('[mcx] apply — 主题注入开始（persistent）'); } catch (e) {}
     const style = document.createElement('style');
     style.setAttribute('data-mc-root','');
     // @font-face ×5 —— 宿主静态路由（index.js 前缀路由 /mcx-assets/ → 本包 assets/）
     let css = "@font-face{font-family:'FindersKeepers';src:url(/mcx-assets/fonts/FindersKeepers.ttf) format('truetype');font-display:swap}\n@font-face{font-family:'ChiKareGo';src:url(/mcx-assets/fonts/ChiKareGo.ttf) format('truetype');font-display:swap}\n@font-face{font-family:'Fusion Pixel 12px monospaced';src:url(/mcx-assets/fonts/fusion-pixel-12px-monospaced-latin.ttf) format('truetype');font-display:swap}\n@font-face{font-family:'Fusion Pixel 12px monospaced zh';src:url(/mcx-assets/fonts/fusion-pixel-12px-monospaced-zh_hans.ttf) format('truetype');font-display:swap}\n@font-face{font-family:'ChiKareGo Latin';src:url(/mcx-assets/fonts/ChiKareGo.ttf) format('truetype');unicode-range:U+0041-005A,U+0061-007A,U+00C0-024F,U+1E00-1EFF,U+2000-206F;font-display:swap}";
     for (const k of order) { const m = mods[k]; if (!m) continue;
       if (m.css) css += m.css + '\n';
-      if (m.mount) try { const td = m.mount(ctx); if (typeof td === 'function') ctx.effect(() => td); } catch(e) { try { console.error('[mcx] mount ' + k + ' failed:', e && e.message); } catch (e2) {} }
-      if (m.slots) try { m.slots(ctx) } catch(e) { try { console.error('[mcx] slots ' + k + ' failed:', e && e.message); } catch (e2) {} }
+      if (m.mount) try { const td = m.mount(ctx); if (typeof td === 'function') ctx.effect(() => td); } catch(e) { /* mount 失败不拖垮其余 */ }
+      if (m.slots) try { m.slots(ctx) } catch(e) { /* slots 失败不拖垮其余 */ }
     }
     style.textContent = css; document.head.appendChild(style);
     // 正规主题通道：宿主 ThemePresenter 把活动主题 token 以 inline style 写在 body 上，
@@ -1456,14 +2636,13 @@ return {
           '--dsw-alias-state-warn-primary': pair('var(--mc-warn)'),
           '--dsw-specific-sidebar-fill': pair('var(--mc-rail-1)'),
           '--dsw-font-family': pair('var(--font-ui)'),
+          '--dsw-specific-bubble': pair('var(--mc-accent)'),
         });
         ctx.effect(() => () => { try { off(); } catch (e) {} });
-        console.log('[mcx] theme.overrideTokens 已叠层');
       } else {
-        console.warn('[mcx] theme 服务不可用，仅 CSS 层生效');
+        /* theme 服务不可用：仅 CSS 层生效（静默降级） */
       }
-    } catch (e) { console.error('[mcx] overrideTokens failed:', e && e.message); }
-    try { console.log('[mcx] apply 完成，样式已入 head'); } catch (e) {}
+    } catch (e) { /* overrideTokens 失败：静默降级，CSS 层仍生效 */ }
     ctx.effect(() => () => {
       style.remove();
     });

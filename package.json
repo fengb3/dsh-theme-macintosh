@@ -40,5 +40,8 @@
   },
   "scripts": {
     "test": "node --test \"test/*.test.mjs\" && node tools/audit.mjs"
+  },
+  "devDependencies": {
+    "playwright": "^1.62.1"
   }
 }

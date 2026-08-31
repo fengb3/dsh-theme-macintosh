@@ -42,7 +42,7 @@ test('esc 转义四种字符（& 最先）', () => {
   assert.equal(esc('plain 中文 ✓'), 'plain 中文 ✓');
 });
 
-test('flashIn 三拍（原型 §909-918）：ghost+show 同拍0 → flash 拍1 → 撤两类拍2，各 100ms', () => {
+test('flashIn 三拍（原型 §909-918）：ghost+show 同拍0 → flash(撤 ghost) 拍1 → 撤净拍2，各 100ms', () => {
   const el = fakeEl();
   let shown = 0;
   flashIn(el, () => { shown++; });
@@ -51,21 +51,22 @@ test('flashIn 三拍（原型 §909-918）：ghost+show 同拍0 → flash 拍1 �
   assert.ok(el.classList.contains('mcfx'));
   assert.ok(el.classList.contains('mc-ghost'));
   assert.ok(!el.classList.contains('mc-flash'));
-  // 拍1：换 mc-flash（::after 覆盖遮罩）
+  // 拍1：换 mc-flash（::after 覆盖遮罩），ghost 同拍撤（白块已全遮，等价显现）
   clock.flush();
   assert.equal(shown, 1);
-  assert.ok(el.classList.contains('mc-ghost'));
+  assert.ok(!el.classList.contains('mc-ghost'));
   assert.ok(el.classList.contains('mc-flash'));
-  // 拍2：撤两类
+  // 拍2：撤净（含 mcfx，零残留）
   clock.flush();
   assert.equal(shown, 1);
   assert.ok(!el.classList.contains('mc-flash'));
   assert.ok(!el.classList.contains('mc-ghost'));
+  assert.ok(!el.classList.contains('mcfx'));
   assert.equal(clock.pending(), 0);
   assert.deepEqual(clock.calls, [100, 100]);
 });
 
-test('flashOut 镜像：flash → hide+撤 → 完', () => {
+test('flashOut 镜像：flash → hide+撤净(含 mcfx) → 完', () => {
   const el = fakeEl();
   let hidden = 0;
   flashOut(el, () => { hidden++; });
@@ -75,6 +76,7 @@ test('flashOut 镜像：flash → hide+撤 → 完', () => {
   assert.equal(hidden, 1);
   assert.ok(!el.classList.contains('mc-flash'));
   assert.ok(!el.classList.contains('mc-ghost'));
+  assert.ok(!el.classList.contains('mcfx'));
   assert.equal(clock.pending(), 0);
   assert.deepEqual(clock.calls, [100]);
 });
@@ -98,24 +100,28 @@ test('flashIn 回调抛错不向外传播（每拍 try/catch）', () => {
   assert.doesNotThrow(() => clock.flush());
 });
 
-test('accToggle 四拍：ghost → flash → 清残高+fn → 撤两类+清 busy', () => {
+test('accToggle 四拍(七轮并拍改版)：ghost → flash+清残高+fn(白块遮下瞬变) → 同撤 flash+ghost+mcfx → 滞空拍只清 busy', () => {
   const card = fakeEl();
   card.style.height = '123px'; // 残高
   let fnArgs = 0;
   let heightAtFn = null;
   accToggle(card, () => { fnArgs++; heightAtFn = card.style.height; });
-  // 拍0：busy + ghost
+  // 拍0：busy + ghost（整卡透明）
   assert.equal(card.dataset.busy, '1');
   assert.ok(card.classList.contains('mc-ghost'));
-  clock.flush(); // 拍1：flash
+  assert.ok(!card.classList.contains('mc-flash'));
+  clock.flush(); // 拍1(t100)：+flash 盖白块，同拍清残高+fn（被遮内容瞬变拍——七轮并拍）
   assert.ok(card.classList.contains('mc-flash'));
-  assert.ok(!card.classList.contains('mc-ghost'));
-  assert.equal(fnArgs, 0);
-  clock.flush(); // 拍2：清残高 + fn()
+  assert.ok(card.classList.contains('mc-ghost'), 'ghost 保留到拍2');
   assert.equal(fnArgs, 1);
   assert.ok(!heightAtFn, 'fn 前已清 inline height'); // '' 即已清（真实 DOM 同款）
   assert.ok(!card.style.height);
-  clock.flush(); // 拍3：撤两类 + 清 busy
+  clock.flush(); // 拍2(t200)：flash+ghost+mcfx 同时撤（揭开且显回，一步到位）
+  assert.ok(!card.classList.contains('mc-flash'));
+  assert.ok(!card.classList.contains('mc-ghost'));
+  assert.ok(!card.classList.contains('mcfx'), 'mcfx 连撤零残留');
+  assert.equal(card.dataset.busy, '1', 'busy 未清');
+  clock.flush(); // 拍3(t300)：什么都不动（滞空拍），只清 busy
   assert.ok(!card.classList.contains('mc-flash'));
   assert.ok(!card.classList.contains('mc-ghost'));
   assert.equal(card.dataset.busy, undefined);
@@ -127,11 +133,11 @@ test('accToggle busy 期间重入直接拒绝', () => {
   let n = 0;
   accToggle(card, () => { n++; });
   accToggle(card, () => { n += 10; }); // 应被 busy 挡下
-  clock.flush(); clock.flush(); clock.flush();
+  clock.flush(); clock.flush(); clock.flush(); clock.flush();
   assert.equal(n, 1);
   // busy 已清，再次可用
   accToggle(card, () => { n += 100; });
-  clock.flush(); clock.flush(); clock.flush();
+  clock.flush(); clock.flush(); clock.flush(); clock.flush();
   assert.equal(n, 101);
 });
 
