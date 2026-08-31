@@ -64,7 +64,7 @@ turnTailBar  '[data-turn-tail]'                                // stable(L9715-9
 | 2 | .md 正文 | kindAssistantStep 下钻 | 14px/1.8 ui 族;h1-h3 统一 display 600 17/15/14;行内 code=sel-bg 底+r-tag 角;pre(.md-code-block)=bg-deep+1px border-soft+r-card,横滚;code 块 banner(语言条+复制钮)→ surface-2 细条 + icon-btn sm 钳形;table 全格线 border-soft、th display 体 surface-2 底;blockquote 左 2px accent-dim、muted;a 染 accent |
 | 3 | 用户气泡 | userBubble(结构位) | accent 实底 + accent-ink 反白 + 1px border + radius 8(压官方 22px)+ ui 14/1.7;`--dsw-specific-bubble` 走变量通道;userGallery 图廓 1px 边+r-card;refChip sel-bg 小片;steering 同款,[data-pending-steering] 加 faint 虚线廓 |
 | 4 | context 注入条 | kindContext+ctxBody | surface-2 底 + **1px dashed** border-soft + r-card;折叠态单行 ellipsis 12px muted;15px faint 图标(§2 映射);展开体 12px muted 左缩进 |
-| 5 | reasoning think 卡 | thinkCard 双锚 | surface-3 底+1px 边+r-card;[data-state=running]=spark 9% 琥珀染 + 标题 spark 色(原型 run 态信号即此,**宿主 shimmer 移除、不加替代卡面动画**);摘要行 faint 12px ellipsis;时长 mono 10px;折叠行为宿主 DisclosureRow 自理 |
+| 5 | reasoning think 卡 | thinkCard 双锚 | surface-3 底+1px 边+r-card;[data-state=running]=spark 9% 琥珀染 + 标题 spark 色(原型 run 态信号即此,**宿主 shimmer 移除、不加替代卡面动画**);摘要行 faint 12px ellipsis;时长 mono 10px;折叠行为宿主 DisclosureRow 自理;**修订(2026-08-31 用户验收裁定):折叠摘要行的单行 flash 刷新入本期**(观察宿主摘要文本变化→换字瞬间挂白块,零渲染干预;正文逐字打字机 cover 仍留 kit——那需要向宿主文本节点插块) |
 | 6 | turn-tail | turnTailBar | 统计文本 11px mono faint;复制/分支钮容器→ icon-btn sm 钳形(不换宿主图标内容,只造壳) |
 | 7 | 细长条组 | kindModelRetry/TurnError/TurnMaxTokens | retry=s-dot 八角点 mc-pulse+muted 12px 文案;error=danger 文字+左 2px danger 线;max-tokens=spark 同款 |
 | 8 | 压缩条 | kindCompaction/ManualCompaction | inject 同款虚线条(i-px-copy)+ 可展开摘要体 12px muted |
