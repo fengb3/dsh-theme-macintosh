@@ -63,7 +63,13 @@ var McFlow = {
       MC_MAP.bubbleUser + ':active{border-color:var(--mc-fg)}',
       MC_MAP.userGallery + '{border:1px solid var(--mc-border);border-radius:var(--mc-r-card)}',
       // 验收六轮:refChip 宿主 chip 覆写随用户行重写退役(McUserNodeView 自有 .mc-user-chip)
-      MC_MAP.pendingSteering + '{outline:1px dashed var(--mc-faint);outline-offset:2px;border-radius:8px}',
+      MC_MAP.pendingSteering + '{display:flex;flex-direction:column;align-items:flex-end;outline:1px dashed var(--mc-faint);outline-offset:2px;border-radius:8px}',
+      // 六轮:pending steering 与正式气泡同皮(宿主收件箱直渲染,不经 keyed steering 槽——bubbleUser
+      // flowItem 域选择器够不着)。行>栈>气泡 三级结构位(DRIFT-RISK:哈希 class 不可用,同 bubbleUser 先例);
+      // :not([data-align]) 跳过图集廊;内层 _text_* 自带框距一律剥净(同 .mc-user-bubble>* 双边框修)
+      MC_MAP.pendingSteering + '>div{display:flex;flex-direction:column;align-items:flex-end;gap:6px;max-width:100%}',
+      MC_MAP.pendingSteering + '>div>div:not([data-align]){max-width:520px;padding:7px 12px;background:var(--mc-accent);color:var(--mc-accent-ink);border:1px solid var(--mc-border);border-radius:8px;font:400 14px/1.7 var(--font-ui);white-space:pre-wrap;word-break:break-word;text-align:left}',
+      MC_MAP.pendingSteering + '>div>div:not([data-align])>*{border:none!important;padding:0!important;margin:0!important;background:none!important}',
       // §7:注入条(context + 双 compaction 同款;kind 行即条壳)
       // 验收③:行改 align-items:center、图标位去 margin-top(宿主行高下 flex-start+1px 不居中);
       // ctxBody 展开体在行外,不受影响
