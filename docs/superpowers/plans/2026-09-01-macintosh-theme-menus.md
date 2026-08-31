@@ -412,6 +412,10 @@ MC_MENU_WIRING.archive = function (w) { try { w.ctx.sessions.archive(currentSess
 - 图标勘定：#i-px-box/#i-px-list 不在 sprite → 归档用 #i-suitcase、排序用 #i-px-clock。
 - 触发钮五处（listbar view/add、分组头 dots/plus、会话行 dots）经模块级 `MC_MENU_OPEN` 桥调 openMenu；锚定容器（.mc-sb-la/.mc-gh-act/.mc-sess）预置 position:relative 使 offsetParent 收敛到按钮近旁。
 
+## 遗留待办（后续修复，本轮不修）
+
+- **工作区顶部排序设置钮缺失**（用户报告，2026-09-01 重启后活体确认）：工作区左侧边栏顶部按钮组比原生少一个设置按钮，点开应可切换会话排序方式（按创建时间先后 vs 按最近活跃时间）。本轮不修。修复时需勘定宿主排序偏好存储位（workspaces/sessions 服务或本地存储），可顺势给 view 菜单接 viewSortTime 类键（现 view 全项 no-op）。
+
 ## Self-Review 结论
 
 
