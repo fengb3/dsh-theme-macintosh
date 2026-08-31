@@ -246,6 +246,24 @@ state = { view, mode, current, sessions, busy:{}, fallback:{}, queue:{}, stats:{
 ### 8.3 宿主差异
 - interactive `flowOf(s)` 每会话独立 flow DOM 留档（思考卡/工具卡/历史切走不丢）；workspace 静态单流陈列
 
+### 8.4 flow 落地差异（2026-08-31 二期实录，host 0.1.1-rc.2）
+- **banner 结构位选择器**：宿主 `.md-code-block`（全局稳定类）内部无锚——语言条+复制钮 banner 只能走
+  `>div:first-child` 结构位；pre 透明也靠 wrapper 兜底（裸 pre 值同）。banner 换版即失配回退官方，不破版
+- **:has() form 图标**：注入条四型细分靠 `:has([data-context-form=…])`（Chromium 105+）；**form 属性仅展开态
+  渲染**——折叠行恒出 doc 兜底图标（MC_FLOW_ICONS 映射 form→doc/list/copy/clock）。宿主原图标链深达
+  `[data-disclosure-row]>span:first-of-type>span:first-child>svg:first-of-type`，隐藏它同样要计入包装层
+- **TurnStatus 宿主特有件**：`flowColumn [role="status"]` 运行中状态行（原型没有）；同款 s-dot 负延迟脉冲，
+  经 mount SYNC 管道对相位（`--pulse-delay`）
+- **command 卡壳仅色壳**：`kindCommand [data-variant="others"]` 三态只覆写边色（默认 border / running spark /
+  error danger），标题条/图标/输出体细节留 toolcard 周期
+- **data-slot 出口包装层（本周期最重要的宿主知识，裁定10）**：keyed slot 出口一律多包一层
+  `div[data-slot=…]`；**`display:contents` 只影响布局、不减选择器深度**——结构位选择器必须把这层数进去。
+  实锤两例：气泡四层锚 `:is(user,steering)>div>div>div>div`（flowItem>data-slot 包装>userRow>userStack>bubble，
+  哈希三件套 gdEzaW_*）；`mdRoot` 一层值命中的其实是包装层（原两层值已修正）。空 images slot 也可能有盒性
+  差异（display:contents 无盒——取「有 ClientRect」的命中者才是真气泡）
+- **气泡四层锚**：同上——四子级直击宿主 `.bubble` 类；底色另走 `--dsw-specific-bubble` 变量通道
+  （overrideTokens 供值），与选择器通道分层降级
+
 ---
 
 ## 9 · §6 输入坞
