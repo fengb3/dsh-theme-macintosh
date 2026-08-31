@@ -426,6 +426,8 @@ if (typeof module !== 'undefined') module.exports = { MC_FLOW_ICONS: MC_FLOW_ICO
 
 其余六轮遗留:①用户复验(视觉为准)。
 
+> **验收流程规则(用户裁定,六轮起生效)**:每轮改动完成后**不自动跑探针脚本**(acc*-check.mjs);活体验证须用户发起才跑,且**必须覆盖多个会话**(开/切多个 session 各验一遍,含空会话/历史会话/切回场景),单会话结果不作数。
+
 ## 验收五轮(2026-09)—— ✅ 摘要行五阶段节拍
 
 用户逐拍定义摘要切换:A 旧字全透明 → B 白块盖住 → C 文本瞬换新字(白块随新字变宽) → D 撤块新字显现 → E 滞空一拍;每拍 100ms、500ms 循环,直至流式结束全文吐尽。已落地于 McThinkCard tick(s.ghost/s.block 双状态 + CLOCK 五连拍,CSS 增 .s-in.mcut{color:transparent});live 采样序列 `-, mcut, mcut+flash(旧字), mcut+flash(新字/块宽 610→629 变化), -` 逐拍对应;测试 31/31+audit 绿;证据 tools/acc5-check.mjs 状态序列。
