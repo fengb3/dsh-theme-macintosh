@@ -571,6 +571,9 @@ const MC_MAP = {
   // —— 用户验收五项收编（2026-08-31 live 探测，host 0.1.1-rc.2）——
   thinkSummary: '[data-follow-end]',           // stable(running think 卡折叠摘要 span，disclosure 行内直接子；单行 flash 定位锚，spec §4 行5 修订)
   ariaExpanded: '[aria-expanded=',             // 属性前缀键（宿主折叠行展开态；think 像素三角 rotate 用）
+  // —— 用户验收二轮收编（2026-08-31 live 探测 + 部署源复核，host 0.1.1-rc.2）——
+  retryActive: 'details[data-active]',         // stable(ModelRetryItem L5191 "data-active": active||void 0——scheduled 态才有;⑧ pulse 门控锚)
+  compactionDisclosure: '[data-compaction-disclosure]', // stable(CompactionItem 折叠图标 span L4320;⑥ 卡头结构注记——click target 为其外层 button,头锚取 kind 行内 button 元素)
 };
 
 
@@ -1276,16 +1279,24 @@ const McFinder = {
 
 // src/conv/flow.js —— 会话流覆写(spec 2026-08-31)
 // 协议 { css, mount(ctx) }。选择器一律插值 MC_MAP;无 :hover 无 transition。
+// apply 段 overrideTokens 追加 --dsw-specific-bubble(见 client.js apply)
 // MC_FLOW_ICONS:form→icon 名纯数据(kit 与 css 图标位共用;与 src/conv/flow.js 同源。
 // CJS shim(module.exports 守卫)只在 src 镜像——loader 工厂域 module 为自有 boilerplate,勿引入)
 var MC_FLOW_ICONS = { instructions:'doc', notice:'doc', relay:'doc', catalog:'list',
   snapshot:'copy', recall:'clock', compaction:'copy', 'manual-compaction':'copy' };
-// 注入条图标位 data-URI(pixelarticons doc/list/copy/clock,24 栅格;mask 用,fill 仅占 alpha → 黑;
-// 百分号编码同 MC_TBOX 款:< > # 转义、属性单引号、d 串逐字保留)
-const MC_FLOW_ICON_DOC = "%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23000' d='M3 22h18V8h-2V6h-2v2h-2V6h2V4h-2V2H3v20zm2-2V4h8v6h6v10H5z'/%3E%3C/svg%3E";
+// 注入条图标位 data-URI。验收二轮①:inject 四型原型(L958/L1245)用 sprite #i-doc(经典 Mac 手绘
+// 款 8×10,FIGMA-ASSETS L633)而非 pixelarticons doc——DOC 常量换成 i-doc 双 path 联合剪影;
+// catalog=list/snapshot=copy/recall=clock 保持 pixelarticons 24 栅格(原型即如此,L1245 特判 i-doc
+// 独用 8×10 栅格)。mask 用,fill 仅占 alpha → 黑;百分号编码同 MC_TBOX 款:< > # 转义、属性单引号、
+// d 串逐字保留(i-tri 同款:侧栏 .mc-tri 的 sprite 资产平移,fill 一并 %23000)
+const MC_FLOW_ICON_DOC = "%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 10'%3E%3Cpath fill='%23000' fill-rule='evenodd' clip-rule='evenodd' d='M0 0H6V1H8V10H0V0ZM7 3H5V1H1V9H7V3Z'/%3E%3Cpath fill='%23000' d='M5 1H1V9H7V3H5V1Z'/%3E%3C/svg%3E";
 const MC_FLOW_ICON_LIST = "%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23000' d='M2 5h20v14H2V5zm2 2v2h16V7H4zm16 4H4v2h16v-2zm0 4H4v2h16v-2z'/%3E%3C/svg%3E";
 const MC_FLOW_ICON_COPY = "%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23000' d='M4 2h11v2H6v13H4V2zm4 4h12v16H8V6zm2 2v12h8V8h-8z'/%3E%3C/svg%3E";
 const MC_FLOW_ICON_CLOCK = "%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23000' d='M19 3H5v2H3v14h2v2h14v-2h2V5h-2V3zm0 2v14H5V5h14zm-8 2h2v6h4v2h-6V7z'/%3E%3C/svg%3E";
+// 验收二轮⑦:think 折叠三角像素 mask——同款资产 = sprite i-tri(6×11,McFinder 分组头/侧栏折叠
+// 面板 T10 换锚后的像素三角);侧栏 .mc-tri 规格为 11×11 currentColor,此处经 data-URI mask 复刻
+// (mask 只吃 alpha,双色 sprite 单色化即剪影,视觉与 currentColor 版一致)
+const MC_FLOW_ICON_TRI = "%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 6 11'%3E%3Cpath fill='%23000' d='M0 0H1V1H2V2H1V9H2V10H1V11H0V0Z'/%3E%3Cpath fill='%23000' d='M3 8H2V9H3V8Z'/%3E%3Cpath fill='%23000' d='M4 7V8H3V7H4Z'/%3E%3Cpath fill='%23000' d='M5 6V7H4V6H5Z'/%3E%3Cpath fill='%23000' d='M5 5H6V6H5V5Z'/%3E%3Cpath fill='%23000' d='M4 4H5V5H4V4Z'/%3E%3Cpath fill='%23000' d='M3 3H4V4H3V3Z'/%3E%3Cpath fill='%23000' d='M3 3V2H2V3H3Z'/%3E%3C/svg%3E";
 var McFlow = {
   // IIFE 安放 var F:顶层作用域与 tokens/clock/mcfx/sprite 共享,F 不外泄
   css: (function () {
@@ -1340,18 +1351,25 @@ var McFlow = {
       // ctxBody 展开体在行外,不受影响
       ':is(' + MC_MAP.kindContext + ',' + MC_MAP.kindCompaction + ',' + MC_MAP.kindManualCompaction + '){display:flex;align-items:center;gap:7px;padding:7px 9px;background:var(--mc-surface-2);border:1px dashed var(--mc-border-soft);border-radius:var(--mc-r-card);font:400 12px/1.7 var(--font-ui);color:var(--mc-muted)}',
       MC_MAP.ctxBody + '{font:400 12px/1.7 var(--font-ui);color:var(--mc-muted);padding-left:22px}',
-      // 图标:mask + data-URI;:has() 细分 form(Chromium 105+)。宿主原图标隐藏——live 实测
-      // 2026-08-31(裁定10:data-slot 包装层计入):折叠态 idle 图标链 = kind 行>data-slot 包装>
-      // root>disclosure row>leading span>iconIdle span>svg,brief 原 '>:first-child>svg' 两条
-      // 均够不着,按实况改写;展开态 iconIdle 不渲染、chevron 为 leading 直接子 svg,均不受本条影响
-      MC_MAP.kindContext + ' ' + MC_MAP.disclosureRow + '>span:first-of-type>span:first-child>svg:first-of-type{display:none}',
+      // 图标:mask + data-URI;:has() 细分 form(Chromium 105+;form 锚在展开体 data-context-form 上,
+      // 折叠态回落 DOC 基础位——宿主 children 仅展开渲染,裁定内既有行为)
+      // 验收二轮⑤(live 探明):宿主 DisclosureRow 的 leading 槽(16px 定宽 + margin 6px,内藏
+      // hover 才显的 chevronHover 绝对定位 svg)整槽占位 → 图标与文本间距虚大;原型注入条(L332-337)
+      // 无 disclosure 箭头语汇 → 整槽 display:none(行点击开合保留,role=button 在行上)
+      MC_MAP.kindContext + ' ' + MC_MAP.disclosureRow + '>span:first-of-type{display:none}',
       MC_MAP.kindContext + '::before{content:"";flex:none;width:15px;height:15px;background-color:var(--mc-faint);-webkit-mask:url("data:image/svg+xml,' + MC_FLOW_ICON_DOC + '") center/contain no-repeat;mask:url("data:image/svg+xml,' + MC_FLOW_ICON_DOC + '") center/contain no-repeat}',
       MC_MAP.kindContext + ':has(' + MC_MAP.contextForm + '"catalog"])::before{-webkit-mask-image:url("data:image/svg+xml,' + MC_FLOW_ICON_LIST + '");mask-image:url("data:image/svg+xml,' + MC_FLOW_ICON_LIST + '")}',
       MC_MAP.kindContext + ':has(' + MC_MAP.contextForm + '"snapshot"])::before{-webkit-mask-image:url("data:image/svg+xml,' + MC_FLOW_ICON_COPY + '");mask-image:url("data:image/svg+xml,' + MC_FLOW_ICON_COPY + '")}',
       MC_MAP.kindContext + ':has(' + MC_MAP.contextForm + '"recall"])::before{-webkit-mask-image:url("data:image/svg+xml,' + MC_FLOW_ICON_CLOCK + '");mask-image:url("data:image/svg+xml,' + MC_FLOW_ICON_CLOCK + '")}',
       // §8:细长条组(实线 soft 边,非虚线——inject 专属语汇)
       ':is(' + MC_MAP.kindModelRetry + ',' + MC_MAP.kindTurnMaxTokens + ',' + MC_MAP.kindUnknown + '){display:flex;align-items:center;gap:8px;padding:6px 9px;background:var(--mc-surface-2);border:1px solid var(--mc-border-soft);border-radius:var(--mc-r-card);font:400 12px/1.6 var(--font-ui);color:var(--mc-muted)}',
-      MC_MAP.kindModelRetry + '::before{content:"";flex:none;width:6px;height:6px;background:var(--mc-spark);clip-path:polygon(33% 0,67% 0,100% 33%,100% 67%,67% 100%,33% 100%,0 67%,0 33%);animation:mc-pulse 2600ms steps(1,end) infinite;animation-delay:var(--pulse-delay,0ms)}',
+      // 验收二轮⑧+⑨:八角点静态常驻、pulse 仅限 active 态(宿主 <details data-active>——scheduled
+      // 时才有,RetryNodeView active=data.current.retryState==="scheduled";live 探明 finished 行
+      // 无此属性)→ 重试结束即停闪;宿主 summary::after chevron(6×6 旋转方块,行内唯一宿主图形
+      // ——用户所见「时钟图标」即它)content:none 去重,只留我方八角点
+      MC_MAP.kindModelRetry + '::before{content:"";flex:none;width:6px;height:6px;background:var(--mc-spark);clip-path:polygon(33% 0,67% 0,100% 33%,100% 67%,67% 100%,33% 100%,0 67%,0 33%)}',
+      MC_MAP.kindModelRetry + ':has(' + MC_MAP.retryActive + ')::before{animation:mc-pulse 2600ms steps(1,end) infinite;animation-delay:var(--pulse-delay,0ms)}',
+      MC_MAP.kindModelRetry + ' summary::after{content:none}',
       MC_MAP.kindTurnError + '{display:flex;align-items:center;gap:8px;padding:6px 9px;background:var(--mc-surface-2);border-left:2px solid var(--mc-danger);border-radius:var(--mc-r-card);font:400 12px/1.6 var(--font-ui);color:var(--mc-danger)}',
       MC_MAP.kindTurnMaxTokens + '::before{content:"";flex:none;border-left:5px solid var(--mc-faint);border-top:4px solid transparent;border-bottom:4px solid transparent}',
       // §9:TurnStatus(宿主运行中状态行)
@@ -1362,26 +1380,39 @@ var McFlow = {
       MC_MAP.thinkCard + ' *{transition:none!important}',
       MC_MAP.thinkCard + MC_MAP.dataState + '"running"]{background:color-mix(in oklab,var(--mc-spark) 9%,var(--mc-surface-3))}',
       MC_MAP.thinkCard + ' [class*="thinkBody"]{font:400 12px/1.8 var(--font-ui);color:var(--mc-muted);white-space:pre-wrap}',
-      // 宿主 shimmer 移除(原型 run 态信号=琥珀染;标题染 spark 由行内继承,faint 摘要):
+      // 宿主 shimmer/sweep 移除(原型 run 态信号=琥珀染;标题染 spark 由行内继承,faint 摘要):
+      // 验收二轮③(live 探明):残留渐变来源 = ReasoningRow 宿主 .row::after 扫光(300px 宽
+      // left:0 静态残留,animation 杀掉后伪元素仍在)→ 对 [data-disclosure-row]::after 精准
+      // content:none + background:none 清净;旧两条全局压制保留作纵深
       MC_MAP.thinkCard + MC_MAP.dataState + '"running"]::after{content:none}',
       MC_MAP.thinkCard + MC_MAP.dataState + '"running"] *::after{animation:none!important}',
-      // 验收④a(2026-08-31 live 探明):折叠箭头换全局像素三角——宿主 leading 图标(running=
-      // iconIdle 原子图标/展开=chevron 直系 svg)全隐,leading span ::before 顶上;三角语汇同
-      // turn-max-tokens cap-row(border-left 5 + top/bottom 4,11px 级);展开态 rotate(90deg) 硬切
+      MC_MAP.thinkCard + MC_MAP.dataState + '"running"] ' + MC_MAP.disclosureRow + '::after{content:none!important;background:none!important}',
+      // 验收④a→二轮⑦(2026-08-31 live 探明):折叠箭头换像素三角——宿主 leading 图标(running=
+      // iconIdle 原子图标/展开=chevron 直系 svg)全隐,leading ::before 顶上;⑦ 对齐侧栏 McFinder
+      // 折叠面板语汇:同款 sprite i-tri 资产经 data-URI mask 复刻(11×11 currentColor,同 .mc-tri
+      // 规格);展开态 rotate(90deg) 硬切
       MC_MAP.thinkCard + ' ' + MC_MAP.disclosureRow + '>span:first-of-type svg{display:none}',
-      MC_MAP.thinkCard + ' ' + MC_MAP.disclosureRow + '>span:first-of-type::before{content:"";display:inline-block;width:0;height:0;border-left:5px solid currentColor;border-top:4px solid transparent;border-bottom:4px solid transparent}',
+      MC_MAP.thinkCard + ' ' + MC_MAP.disclosureRow + '>span:first-of-type::before{content:"";display:block;width:11px;height:11px;flex:none;background-color:currentColor;-webkit-mask:url("data:image/svg+xml,' + MC_FLOW_ICON_TRI + '") center/contain no-repeat;mask:url("data:image/svg+xml,' + MC_FLOW_ICON_TRI + '") center/contain no-repeat}',
       MC_MAP.thinkCard + ' ' + MC_MAP.disclosureRow + MC_MAP.ariaExpanded + '"true"]>span:first-of-type::before{transform:rotate(90deg)}',
       // 验收④b(spec §4 行5 修订):running think 折叠摘要行单行 flash——mount 观察到摘要文本变化即
-      // 挂 .mc-line-flash,CLOCK.next 100ms 撤;类切换直切零过渡;样式照原型 L515-520(s-in)
+      // 挂 .mc-line-flash,CLOCK.next 100ms 撤;类切换直切零过渡;样式照原型 L515-520(s-in)。
+      // 验收二轮②补强:z-index:2——宿主行级遮罩(如 ReasoningRow 扫光 ::after,树序在摘要之后
+      // 平涂其上)永远压不住 flash 块(③ 已 content:none 清扫,此为纵深保险)
       '.mc-line-flash{position:relative}',
-      '.mc-line-flash::after{content:"";position:absolute;inset:-1px -2px;pointer-events:none;background:#fff;background-image:repeating-linear-gradient(0deg,transparent 0 2px,rgba(0,0,0,.06) 2px 3px)}',
+      '.mc-line-flash::after{content:"";position:absolute;inset:-1px -2px;pointer-events:none;z-index:2;background:#fff;background-image:repeating-linear-gradient(0deg,transparent 0 2px,rgba(0,0,0,.06) 2px 3px)}',
       'html[data-theme="light"] .mc-line-flash::after{background:#000;background-image:repeating-linear-gradient(0deg,transparent 0 2px,rgba(255,255,255,.07) 2px 3px)}',
       // T4 补遗(spec §2 行「compaction/manual-compaction → i-px-copy」;T4 裁定并入本 commit):
-      // 压缩条 ::before 图标位,复用 T4 已内联的 copy data-URI 常量插值(context snapshot 同款)
+      // 压缩条 ::before 图标位,复用 T4 已内联的 copy data-URI 常量插值(context snapshot 同款)。
+      // 验收二轮⑤ 同款占位清理(原型注入条语汇,无 disclosure 箭头):宿主 compactionButton 的
+      // leading 槽(16px 定宽 + margin 6px,内藏 API 图标/hover chevron 双叠 span)整槽 display:none
       ':is(' + MC_MAP.kindCompaction + ',' + MC_MAP.kindManualCompaction + ')::before{content:"";flex:none;width:15px;height:15px;background-color:var(--mc-faint);-webkit-mask:url("data:image/svg+xml,' + MC_FLOW_ICON_COPY + '") center/contain no-repeat;mask:url("data:image/svg+xml,' + MC_FLOW_ICON_COPY + '") center/contain no-repeat}',
+      ':is(' + MC_MAP.kindCompaction + ',' + MC_MAP.kindManualCompaction + ') button>span:first-of-type{display:none}',
       // §10:turn-tail 操作条(spec §4 行6;原型 L533-536)+ 钳形钮壳(只造壳不换宿主图标;
       // 后代选择器命中 .actions 容器内钮,data-slot 包装层不减后代深度)
-      MC_MAP.turnTailBar + '{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding-top:2px;font:500 11px/1.6 var(--font-mono);color:var(--mc-faint)}',
+      // 验收二轮④(live 探明):root 宿主为 column flex,原 align-items:center 会把 deliverables
+      // 产物行(chain 槽注入的 .P4kPIW grid 行)水平居中 → 改 flex-start 靠左;actions 行自带
+      // align-self:stretch(下条)不受影响
+      MC_MAP.turnTailBar + '{display:flex;align-items:flex-start;gap:8px;flex-wrap:wrap;padding-top:2px;font:500 11px/1.6 var(--font-mono);color:var(--mc-faint)}',
       MC_MAP.turnTailBar + ' button{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border:1px solid var(--mc-border);border-radius:var(--mc-r-btn);background:var(--mc-surface);color:var(--mc-fg)}',
       MC_MAP.turnTailBar + ' button:active{background:var(--mc-fg);color:var(--mc-surface);border-color:var(--mc-fg)}',
       // 验收⑤(2026-08-31 live 探明):钮组靠左、统计常驻靠右——root[data-time-hover-root] 下
@@ -1408,9 +1439,47 @@ var McFlow = {
       [MC_MAP.kindModelRetry, '--pulse-delay', CLOCK.PULSE],
       [MC_MAP.flowColumn + ' ' + MC_MAP.statusRow, '--pulse-delay', CLOCK.PULSE],
     ];
-    var mo = null, tries = 0, timer = null;
+    // 验收二轮⑥(spec §3 修订):折叠卡开合四拍。flowColumn 捕获阶段 click 委托,命中四卡头
+    // (think/context 的 DisclosureRow、model-retry 的 summary、双 compaction 的头部钮——
+    // live 实测 click target=button 本体,[data-compaction-disclosure] span 是其子节点、closest
+    // 只上溯不下降,故头锚取 kind 行内 button 元素;锚点语义见 MC_MAP.compactionDisclosure 注)
+    // → 对卡容器(=各 kind 行/think 卡)走 cardFlash 四拍:
+    // ①ghost ②flash ③React 自管高度瞬切(本拍仅清 inline 残高,开合由宿主 onClick 自理)
+    // ④撤——拍4 连 mcfx 同伴一并撤净(流上零残留,position:relative 不长留宿主行;lib accToggle
+    // 不撤 mcfx——自有元素可容,宿主行不容,故本地实现);dataset.busy 防重入(断连/异常路径也清);
+    // REDUCED 跳过(开合功能不受影响,纯装饰拍);teardown 一并注销
+    var TOGGLE = [
+      [MC_MAP.thinkCard + ' ' + MC_MAP.disclosureRow, MC_MAP.thinkCard],
+      [MC_MAP.kindContext + ' ' + MC_MAP.disclosureRow, MC_MAP.kindContext],
+      [MC_MAP.kindModelRetry + ' summary', MC_MAP.kindModelRetry],
+      [':is(' + MC_MAP.kindCompaction + ',' + MC_MAP.kindManualCompaction + ') button', ':is(' + MC_MAP.kindCompaction + ',' + MC_MAP.kindManualCompaction + ')'],
+    ];
+    var mo = null, tries = 0, timer = null, offClick = null;
     var seen = new WeakSet();
     var flashLast = new WeakMap(); // 验收④b:摘要 span → 上次挂 flash 时刻(100ms 窗节流合一拍)
+    function cardFlash(card) { // 四拍:ghost → flash → 清残高 → 撤净(含 mcfx)
+      try {
+        if (!card || !card.isConnected) return;
+        if (card.dataset.busy) return; // 防重入(同 accToggle 协议)
+        card.dataset.busy = '1';
+        card.classList.add('mcfx', 'mc-ghost');
+      } catch (e) { return; }
+      var done = function () { try { delete card.dataset.busy; } catch (e2) {} };
+      CLOCK.next(function () { try {
+        if (!card.isConnected) { done(); return; }
+        card.classList.remove('mc-ghost'); card.classList.add('mc-flash');
+      } catch (e) { done(); return; }
+        CLOCK.next(function () { try {
+          if (!card.isConnected) { done(); return; }
+          try { card.style.height = ''; } catch (e2) {} // 清展开残高(宿主卡无 inline 高亦无害)
+        } catch (e) { /* 仍走撤拍 */ }
+          CLOCK.next(function () {
+            try { if (card.isConnected) card.classList.remove('mc-flash', 'mc-ghost', 'mcfx'); } catch (e) {}
+            done();
+          }, 100);
+        }, 100);
+      }, 100);
+    }
     function syncEl(el) {
       for (var i = 0; i < SYNC.length; i++) { try {
         if (el.matches(SYNC[i][0])) CLOCK.syncAnim(el, SYNC[i][2], SYNC[i][1]);
@@ -1461,6 +1530,22 @@ var McFlow = {
         if (!REDUCED) enterFlash(it);
       }
     }
+    function onHeadClick(ev) { // 验收二轮⑥:卡头捕获委托(见 TOGGLE 表注释)
+      if (REDUCED) return;
+      try {
+        var t = ev.target;
+        if (!(t instanceof Element)) return;
+        for (var i = 0; i < TOGGLE.length; i++) {
+          var head = null;
+          try { head = t.closest(TOGGLE[i][0]); } catch (e) { head = null; }
+          if (!head) continue;
+          var card = null;
+          try { card = head.closest(TOGGLE[i][1]); } catch (e) { card = null; }
+          if (card) cardFlash(card);
+          break; // 卡头互不嵌套,单命中即止
+        }
+      } catch (e) { /* 委托失败不影响宿主自身开合 */ }
+    }
     function attach(root) {
       try { // 存量行标记不闪（历史加载）
         var q = root.querySelectorAll(MC_MAP.flowItem); for (var i = 0; i < q.length; i++) seen.add(q[i]);
@@ -1479,6 +1564,7 @@ var McFlow = {
         } catch (e) {}
       });
       mo.observe(root, { childList: true, subtree: true, characterData: true });
+      try { root.addEventListener('click', onHeadClick, true); offClick = function () { try { root.removeEventListener('click', onHeadClick, true); } catch (e) {} }; } catch (e) {}
     }
     timer = CLOCK.next(function poll() { // flowColumn 晚挂载轮询（最多 ~8s）
       tries++;
@@ -1488,6 +1574,7 @@ var McFlow = {
     }, 400);
     return function teardown() {
       try { if (mo) mo.disconnect(); } catch (e) {}
+      try { if (offClick) offClick(); } catch (e) {}
       try { if (timer) CLOCK.clear(timer); } catch (e) {}
     };
   },

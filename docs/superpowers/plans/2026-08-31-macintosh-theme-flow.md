@@ -1,5 +1,7 @@
 # Macintosh 主题 · 二期 flow(会话流)模块 Implementation Plan
 
+> **续作状态(2026-08-31 下班存档)**:Task 1-10 全部完成并通过终审;用户验收一轮 5 项已修(5692331);**验收二轮 9 项待修**(修复波派发前用户下班取消)——清单见文末「验收二轮待办」,从那里恢复。本地 ledger 在 `.superpowers/sdd/2026-08-31-macintosh-theme-flow/progress.md`(git-ignored,不随库走,恢复时以本节为准)。
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** 交付 flow 会话流模块——11+unknown 种 ChatNodeKind 的 Macintosh 语汇覆写(纯层3 CSS + 官方变量通道)、observer 出场三拍/相位同步管道、kit 会话流分区与五帧演示、双 verify 门禁。
@@ -383,3 +385,23 @@ if (typeof module !== 'undefined') module.exports = { MC_FLOW_ICONS: MC_FLOW_ICO
 - **占位符**:Task 4 `<DOC_URI>` 等四处为显式待内联常量(svg 文件路径与编码模式均已指定,非 TBD);Task 8 五帧驱动以结构+行为规格给出(90 行 DOM 照原型行号直抄,源行已指明);无其它占位。
 - **类型一致**:MC_MAP 键名、`MC_FLOW_ICONS`、`McFlow = {css, mount}`、`CLOCK.next/syncAnim/PULSE/SWEEP/clear`(clear 缺口已注明补齐路径)、kit 类名沿一期。
 - **顺序依赖**:Task 1 是全部前置;Task 2-6 相互独立可并行;Task 7 依赖 4(SYNC 引用 kindModelRetry);Task 8 依赖 5(演示卡样式);Task 9/10 收尾。
+
+---
+
+## 验收二轮待办(2026-08-31,恢复点)
+
+**状态**:spec §3/§4 修订已提交(开合四拍 + 摘要行 flash 入本期);9 项修复未做。**恢复动作 = 派单个实施子代理一次处理全部 9 项,逐项截图证据(教训:computed 断言不能替代视觉),修完走范围化复审 → finishing 菜单。**
+
+1. **注入条图标**:instructions/notice/relay 换 sprite `#i-doc` 经典款(从 client.js McSprite 段提取 symbol 做 data-URI mask;现用 pixelarticons doc 与原型不符);catalog/snapshot/recall/compaction 保持。
+2. **think 摘要行 flash 白块未渲染**:`.mc-line-flash` 类出现但视觉无白块——live debug(疑 inline 定位/React 节点替换),修到截图可见(深白浅黑)。
+3. **think running 诡异渐变**:`animation:none` 只停动画,宿主渐变元素静态残留——探明来源 `background:none` 清除。
+4. **turn-tail 产物行**(dsh-client-ui-deliverables):column root 下不靠左——探明结构对齐之。
+5. **context 行宿主 hover 箭头占位**(图标与文本间距大):探明位置 `display:none` + 收间距;think/retry 同款占位一并清。
+6. **折叠卡开合四拍 flash**(spec §3 已修订):click 捕获委托于 flowColumn,命中 think/context/model-retry/compaction 卡头 → 卡壳 mcfx 四拍(CLOCK 100ms/拍,REDUCED 跳过,dataset.busy 防重入,卡需 position:relative)。
+7. **think 箭头像素化**:参考侧栏折叠面板三角形实现(T10 换锚后的像素 mask,client.js McFinder/McSidebar 段),复用同款;宿主 chevron 残留一并清。
+8. **retry 图标闪烁门控**:pulse 无条件挂——探明 active 态锚(data-active/当前 attempt)限定之。
+9. **retry 双图标去重**:藏宿主时钟图标,只留我方八角点(8 门控后)。
+
+建议实施序:⑤①⑦⑨⑧③④ 纯样式先行,②⑥ 压轴(需 live 回合)。验证:每项截图 shots/acc2-*.png + `npm test` 全绿 + commit `fix(mcx-flow): 验收二轮九项…`。
+
+**其余未决(合并前)**:finishing 菜单三选一(本地合 main / PR / 保留分支)——用户尚未选。工具清理批(audit longhand/MO 批级 catch/teardown 三拍/脚本对照/make-persistent-client mods 缺 McFlow/dist 快照旧版)归待办 #11 一并议。

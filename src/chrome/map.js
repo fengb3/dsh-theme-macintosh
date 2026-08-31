@@ -129,5 +129,8 @@ const MC_MAP = {
   // —— 用户验收五项收编（2026-08-31 live 探测，host 0.1.1-rc.2）——
   thinkSummary: '[data-follow-end]',           // stable(running think 卡折叠摘要 span，disclosure 行内直接子；单行 flash 定位锚，spec §4 行5 修订)
   ariaExpanded: '[aria-expanded=',             // 属性前缀键（宿主折叠行展开态；think 像素三角 rotate 用）
+  // —— 用户验收二轮收编（2026-08-31 live 探测 + 部署源复核，host 0.1.1-rc.2）——
+  retryActive: 'details[data-active]',         // stable(ModelRetryItem L5191 "data-active": active||void 0——scheduled 态才有;⑧ pulse 门控锚)
+  compactionDisclosure: '[data-compaction-disclosure]', // stable(CompactionItem 折叠图标 span L4320;⑥ 卡头结构注记——click target 为其外层 button,头锚取 kind 行内 button 元素)
 };
 

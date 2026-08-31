@@ -37,7 +37,8 @@ function fakeClock() {
 }
 
 // —— 假 Element：matches 按种子属性映射 MC_MAP 三键选择器；classList 走 Set；
-// closest 沿 parent 链上溯（lineFlash 摘要锚/running 卡复合选择器两形态）——
+// closest 沿 parent 链上溯（lineFlash 摘要锚/running 卡复合选择器两形态；
+// 验收二轮⑥：head/card 复合选择器亦可种子命中,addEventListener 捕获注册可查）——
 class FakeElement {
   constructor(opts = {}) {
     this.attrs = opts.attrs || {};
@@ -45,6 +46,10 @@ class FakeElement {
     this.qsa = opts.qsa || {};
     this.isConnected = true;
     this.parent = opts.parent || null;
+    this.compound = opts.compound || []; // 验收二轮⑥:closest 可命中的复合选择器种子
+    this.listeners = [];
+    this.dataset = {}; // 验收二轮⑥:cardFlash busy 标记
+    this.style = {};   // 验收二轮⑥:拍2 清残高
     const classes = new Set();
     this.classes = classes;
     this.classList = {
@@ -63,13 +68,18 @@ class FakeElement {
     if (sel === '[data-follow-end]') return 'data-follow-end' in this.attrs;
     if (sel === '[data-variant="think"][data-state="running"]')
       return this.attrs['data-variant'] === 'think' && this.attrs['data-state'] === 'running';
-    return false;
+    return this.compound.includes(sel);
   }
   closest(sel) {
     for (let el = this; el; el = el.parent) if (el.matchesCompound(sel)) return el;
     return null;
   }
   querySelectorAll(sel) { return this.qsa[sel] || []; }
+  addEventListener(type, fn, capture) { this.listeners.push({ type, fn, capture }); }
+  removeEventListener(type, fn, capture) {
+    const i = this.listeners.findIndex((l) => l.type === type && l.fn === fn && l.capture === capture);
+    if (i >= 0) this.listeners.splice(i, 1);
+  }
 }
 
 // —— 假 MutationObserver：记录实例/挂载点/observe 配置，cb 由测试手动驱动 ——
@@ -267,6 +277,91 @@ test('lineFlash REDUCED:跳过(零类零调度)', () => {
   const { span, text } = runningThinkChain();
   mo.cb([{ type: 'characterData', target: text, addedNodes: [] }]);
   assert.equal(span.classes.size, 0, 'REDUCED 不加 flash 类');
+  assert.equal(clock.pending(), 0, '未调度任何拍');
+  td();
+});
+
+// —— 验收二轮⑥:折叠卡开合四拍(捕获 click 委托 → accToggle) ——
+function stubToggleEnv(clock, opts = {}) {
+  stubEnv(clock, { columnReady: true, column: new FakeElement({}), ...opts });
+  G.MC_MAP.thinkCard = '[data-variant="think"]';
+  G.MC_MAP.disclosureRow = '[data-disclosure-row]';
+  G.MC_MAP.kindContext = '[data-chat-flow-kind="context"]';
+  G.MC_MAP.kindCompaction = '[data-chat-flow-kind="compaction"]';
+  G.MC_MAP.kindManualCompaction = '[data-chat-flow-kind="manual-compaction"]';
+  G.MC_MAP.compactionDisclosure = '[data-compaction-disclosure]';
+}
+const THINK_HEAD = '[data-variant="think"] [data-disclosure-row]';
+const THINK_CARD = '[data-variant="think"]';
+const CTX_HEAD = '[data-chat-flow-kind="context"] [data-disclosure-row]';
+const CTX_CARD = '[data-chat-flow-kind="context"]';
+const RETRY_HEAD = '[data-chat-flow-kind="model-retry"] summary';
+const RETRY_CARD = '[data-chat-flow-kind="model-retry"]';
+const COMP_HEAD = ':is([data-chat-flow-kind="compaction"],[data-chat-flow-kind="manual-compaction"]) button';
+const COMP_CARD = ':is([data-chat-flow-kind="compaction"],[data-chat-flow-kind="manual-compaction"])';
+
+test('⑥ 主线:attach 对 flowColumn 注册捕获 click;四卡头命中即对卡容器跑四拍(含 mcfx 撤净)', () => {
+  const clock = fakeClock();
+  stubToggleEnv(clock);
+  const column = new FakeElement({});
+  G.document = { querySelector: (sel) => (sel === '[data-chat-flow]' ? column : null) };
+  const td = McFlow.mount({});
+  clock.flush(); // poll → attach
+  const li = column.listeners.find((l) => l.type === 'click');
+  assert.ok(li, 'flowColumn 上应注册 click 监听');
+  assert.equal(li.capture, true, '捕获阶段(先于宿主 React onClick)');
+
+  // think 卡:点击 disclosure 行 → 卡容器四拍 ghost→flash→残高→撤净(busy 防重入)
+  const thinkCard = new FakeElement({ compound: [THINK_CARD] });
+  const thinkRow = new FakeElement({ compound: [THINK_HEAD], parent: thinkCard });
+  li.fn({ target: thinkRow });
+  assert.ok(thinkCard.classList.contains('mcfx') && thinkCard.classList.contains('mc-ghost'), '拍0:mcfx+mc-ghost');
+  assert.equal(thinkCard.dataset.busy, '1', 'busy 防重入标记');
+  li.fn({ target: thinkRow }); // busy 期间重入
+  clock.flush(); // 拍1
+  assert.ok(thinkCard.classList.contains('mc-flash') && !thinkCard.classList.contains('mc-ghost'), '拍1:换 mc-flash');
+  clock.flush(); // 拍2(清残高)
+  clock.flush(); // 拍3(撤)
+  assert.equal(thinkCard.classes.size, 0, '拍3:mc-flash/mc-ghost/mcfx 全撤净(零残留)');
+  assert.notEqual(thinkCard.dataset.busy, '1', 'busy 清除');
+  assert.equal(clock.pending(), 0);
+
+  // context / model-retry / compaction 三头逐一命中(拍0 即验,撤拍协议同上)
+  const seen = [];
+  const hit = (headSel, cardSel) => {
+    const card = new FakeElement({ compound: [cardSel] });
+    li.fn({ target: new FakeElement({ compound: [headSel], parent: card }) });
+    assert.ok(card.classList.contains('mc-ghost'), headSel + ' 命中拍0');
+    seen.push(card);
+  };
+  hit(CTX_HEAD, CTX_CARD);
+  hit(RETRY_HEAD, RETRY_CARD);
+  hit(COMP_HEAD, COMP_CARD);
+  clock.flush(); clock.flush(); clock.flush();
+  for (const c of seen) assert.equal(c.classes.size, 0, '各卡撤净');
+
+  // 非卡头点击(普通行/非 Element 目标):零触发
+  const plain = new FakeElement({ attrs: { 'data-chat-flow-kind': 'user' } });
+  li.fn({ target: plain });
+  li.fn({ target: {} });
+  assert.equal(plain.classes.size, 0, '非卡头零类');
+
+  td();
+  assert.equal(column.listeners.length, 0, 'teardown 注销 click 监听');
+});
+
+test('⑥ REDUCED:卡头点击零触发(开合交宿主,纯装饰拍跳过)', () => {
+  const clock = fakeClock();
+  stubToggleEnv(clock, { reduced: true });
+  const column = new FakeElement({});
+  G.document = { querySelector: (sel) => (sel === '[data-chat-flow]' ? column : null) };
+  const td = McFlow.mount({});
+  clock.flush();
+  const li = column.listeners.find((l) => l.type === 'click');
+  assert.ok(li, '监听仍注册(轻量早退)');
+  const card = new FakeElement({ compound: [THINK_CARD] });
+  li.fn({ target: new FakeElement({ compound: [THINK_HEAD], parent: card }) });
+  assert.equal(card.classes.size, 0, 'REDUCED 不跑四拍');
   assert.equal(clock.pending(), 0, '未调度任何拍');
   td();
 });
