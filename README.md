@@ -65,5 +65,5 @@ DSH（DeepSeek Harness Web GUI）的 Classic Macintosh 像素风主题插件。�
 
 ## 历史遗留（开发期工具，运行时不再依赖）
 
-- `tools/serve-assets.mjs`：动态插件时期的字体服务（3199 端口）。常驻形态走宿主路由，已不需要。
-- `tools/assemble.mjs`：把 `src/` 装配成动态插件产物 `dist/client-body.js`（`--font-base` URL 模式 / 默认 base64）。`client.js` 已手工接管为常驻格式；修改样式时以 `client.js` 为准，`src/` 为设计参照。
+- `tools/assemble.mjs`：把 `src/` 装配成动态插件产物 `dist/client-body.js`（`--font-base` URL 模式 / 默认 base64），再经 `tools/make-persistent-client.mjs` 变换为常驻 `client.js`。修改样式时以 `client.js` 为准、`src/` 为设计参照，改完同步镜像后可整链重刷。
+- 已清理（2026-09）：`tools/serve-assets.mjs` 字体服务（常驻形态走宿主路由）；acc2~6 验收探针与 probe-*/dbg-* 历史脚本（结论已存 plan 与 shots/）。

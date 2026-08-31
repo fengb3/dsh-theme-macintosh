@@ -1,6 +1,6 @@
 // tools/assemble.mjs — 装配 dist/client-body.js（自包含 client 函数体，plain JS，无 import）
 // 用法: node tools/assemble.mjs [--font-base <base-url>] [--out <file>]
-//   --font-base  http://... 时 @font-face src 用 URL 引用（配合 tools/serve-assets.mjs），默认 base64 内联（自包含）
+//   --font-base  http://... 时 @font-face src 用 URL 引用（自建静态服务器场景），默认 base64 内联（自包含）
 //   --out       输出文件，默认 dist/client-body.js
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
@@ -102,6 +102,7 @@ ${modsInit}
             '--dsw-alias-state-warn-primary': pair('var(--mc-warn)'),
             '--dsw-specific-sidebar-fill': pair('var(--mc-rail-1)'),
             '--dsw-font-family': pair('var(--font-ui)'),
+            '--dsw-specific-bubble': pair('var(--mc-accent)'),
           });
           ctx.effect(() => { try { off(); } catch (e) {} });
           console.log('[mcx] theme.overrideTokens 已叠层');

@@ -13,9 +13,6 @@ window.__ModuleLoader__.load({
 		Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
 		const react = require("react");
 		const React = react;
-		// 验收四轮:primitives 直取(loader 注册表全局可达,无需 inject 声明;缺席时组件降级不注册)
-		var MC_PRIM = null;
-		try { MC_PRIM = require("@deepseek-ai/dsh-client-ui-primitives"); } catch (e) { MC_PRIM = null; }
 // src/core/tokens.js —— 层1：token alias + 最小 --mc-* 底色（深浅两套，值照《笔记》§4.1）
 const McTokens = {
   css: `:root{
@@ -268,13 +265,13 @@ function flashIn(el, show) {
     el.classList.add('mcfx', 'mc-ghost');
     show(); // 拍0：内容在 ghost 遮罩下瞬换（原型 §910-912）
   } catch (e) { /* 单元素失败不拖垮调用方 */ }
-  mcfxSchedule(function () {
+  mcfxSchedule(() => {
     try {
       if (!el || !el.isConnected) return;
       el.classList.remove('mc-ghost');
       el.classList.add('mc-flash');
     } catch (e) { /* 同上 */ }
-    mcfxSchedule(function () {
+    mcfxSchedule(() => {
       try {
         if (!el || !el.isConnected) return;
         el.classList.remove('mc-flash', 'mc-ghost', 'mcfx');
@@ -289,7 +286,7 @@ function flashOut(el, hide) {
     if (!el || !el.isConnected) return;
     el.classList.add('mcfx', 'mc-flash');
   } catch (e) { /* 同上 */ }
-  mcfxSchedule(function () {
+  mcfxSchedule(() => {
     try {
       if (!el || !el.isConnected) return;
       hide();
@@ -298,7 +295,7 @@ function flashOut(el, hide) {
   }, 100);
 }
 
-// 状态切换四拍（验收七轮改版：一切同内容状态切换统一走此——卡片折叠/展开、文字 A→B、元素形 A→形 B；
+// 状态切换四拍（验收七轮改版：一切同内容状态切换统一走此——卡片折叠/展开、文字 A→B；
 // 由五拍并拍而来——原拍1(盖白块)与拍2(瞬变内容)合成一拍，观感更紧凑）：
 // t0 ghost(整卡透明) → t100 flash+清残高+fn(盖白块的同时瞬变被遮内容) →
 // t200 同撤 flash+ghost+mcfx(揭开且显回,一步到位) → t300 什么都不动(滞空拍,只清 busy)。
@@ -310,20 +307,20 @@ function accToggle(card, fn) {
     card.dataset.busy = '1';
     card.classList.add('mcfx', 'mc-ghost');
   } catch (e) { return; }
-  var done = function () { try { delete card.dataset.busy; } catch (e2) {} };
-  mcfxSchedule(function () {
+  const done = () => { try { delete card.dataset.busy; } catch (e) { /* 忽略 */ } };
+  mcfxSchedule(() => {
     try {
       if (!card || !card.isConnected) { done(); return; }
       card.classList.add('mc-flash');
       card.style.height = ''; // 清展开动画残留的 inline 高度
       fn(); // 白块已全遮，被遮内容在此拍瞬变（可大可小）
     } catch (e) { /* fn 抛错仍走完撤拍 */ }
-    mcfxSchedule(function () {
+    mcfxSchedule(() => {
       // 拍2：flash 与 ghost 同时撤（含 mcfx 连撤，元素零残留、内容一步显回）
       try {
         if (card && card.isConnected) card.classList.remove('mc-flash', 'mc-ghost', 'mcfx');
       } catch (e) { /* 同上 */ }
-      mcfxSchedule(function () {
+      mcfxSchedule(() => {
         // 拍3：什么都不动（滞空拍，维持四拍栅格；只清 busy）
         done();
       }, 100);
@@ -645,7 +642,8 @@ const McChrome = {
 };
 
 
-// src/chrome/sidebar.js —— 侧栏 Finder 窗覆写 + 真 DOM 标题栏 + 折叠迷你态 + 官方主题通道（Task 7 + 轮6）
+// src/chrome/sidebar.js —— 侧栏 Finder 窗覆写 + 主题官方通道 + 真 DOM 标题栏
+// 协议：{ css, mount?, slots? }。纪律：宿主选择器一律取自 MC_MAP；无 :hover、无 transition。
 // 协议：{ css, mount(ctx), slots(ctx) }。样式参考 prototype/component-dev-notes.md §7（侧栏 Finder 窗）。
 // 纪律：宿主选择器一律取自 MC_MAP（本文件只做插值）；无 :hover、无 transition（官方的也压平）；
 // 席位注册沿用 kit.js 在 Task 5 运行期验证过的 register(meta, render) 形态。
@@ -812,7 +810,7 @@ const McSidebar = {
     // —— 真 DOM 标题栏：.mc-titlebar 插为 sidebarRoot 首子（React 容器内外来节点，
     //    MutationObserver 监听 childList 自愈重插；sidebarRoot 晚于 apply 出现时经
     //    CLOCK 100ms 栅格轮询定位，上限 ~10s）。tclose = 折叠/展开：accToggle 四拍包裹
-    //    官方隐藏钮的程序化 click（保官方行为与状态持久化）。 ——
+    //    官方隐藏钮的程序化 click（七轮裁定：状态切换统一走库；保官方行为与状态持久化）。 ——
     let stopped = false;
     let bar = null;
     let heal = null;
@@ -822,7 +820,7 @@ const McSidebar = {
       const btn = document.querySelector(MC_MAP.sidebarCollapseBtn);
       if (!btn) return;
       const col = document.querySelector(MC_MAP.sidebar);
-      // 折叠/展开过场：ghost 下瞬切宽度 → 白闪 → 撤（官方 300ms/150ms 过渡已压 0）
+      // 折叠/展开过场：ghost 下瞬切宽度 → 白块+瞬变 → 揭开（官方 300ms/150ms 过渡已压 0）
       if (col) accToggle(col, function () { btn.click(); });
       else btn.click();
     };
@@ -904,6 +902,7 @@ const McSidebar = {
     })));
   },
 };
+
 
 // src/finder.js —— 侧栏内容区重绘：遮蔽 sidebar.workspaces 席位，Finder 树接官方真实数据
 // 协议：{ css, slots(ctx) }。样式全部 .mc- 自有类（宿主选择器零出现，audit §5 安全）；
@@ -1049,6 +1048,7 @@ function McFinderMini(props) {
 
 // 会话行：状态槽（run=脉冲点 / done=✓ / wait=空占位）+ 标题 + 三点菜单钮。
 // 选中行 .on 整行反色方角；onClick 走 accToggle 四拍（七轮裁定：选中=状态切换统一走库；
+// t0 整行隐 → t100 白块+瞬切选中 → t200 揭开 → t300 滞空，走 CLOCK 100ms 栅格）。
 function McFinderSess(props) {
   const h = React.createElement;
   const s = props.sess;
@@ -1072,6 +1072,7 @@ function McFinderSess(props) {
 
 // 工作区分组：group-head（折叠三角 i-tri + 文件夹 i-folder + 名称 + 计数 + dots/plus 小钮）+
 // group-body（会话行 + 超 5 条的「展开其余 N 个会话」钮）。折叠开合走 accToggle 四拍
+// （七轮裁定：状态切换统一走库；「展开其余」=元素出现，仍走 flashIn）。
 function McFinderGroup(props) {
   const h = React.createElement;
   const g = props.group;
@@ -1290,13 +1291,17 @@ const McFinder = {
   },
 };
 
+// src/kit.js —— 检视页骨架（默认关闭零足迹；控制台 window.__MC_KIT_OPEN__ = true 打开）
+// 布局类全部 kit- 前缀，样式不外泄 kit 根之外；组件类直接复用 mc- 原语
+// 纯顶层声明，无模块系统语法；与 tokens/clock/mcfx/sprite 拼进同一作用域
+
 // src/conv/flow.js —— 会话流覆写(spec 2026-08-31)
 // 协议 { css, mount(ctx) }。选择器一律插值 MC_MAP;无 :hover 无 transition。
 // apply 段 overrideTokens 追加 --dsw-specific-bubble(见 client.js apply)
-// MC_FLOW_ICONS:form→icon 名纯数据(kit 与 css 图标位共用;与 src/conv/flow.js 同源。
-// CJS shim(module.exports 守卫)只在 src 镜像——loader 工厂域 module 为自有 boilerplate,勿引入)
+// MC_FLOW_ICONS:form→icon 名纯数据(kit 与 css 图标位共用;client.js McFlow 段同源保留映射)
 var MC_FLOW_ICONS = { instructions:'doc', notice:'doc', relay:'doc', catalog:'list',
   snapshot:'copy', recall:'clock', compaction:'copy', 'manual-compaction':'copy' };
+if (typeof module !== 'undefined') module.exports = { MC_FLOW_ICONS: MC_FLOW_ICONS };
 // 注入条图标位 data-URI。验收二轮①:inject 四型原型(L958/L1245)用 sprite #i-doc(经典 Mac 手绘
 // 款 8×10,FIGMA-ASSETS L633)而非 pixelarticons doc——DOC 常量换成 i-doc 双 path 联合剪影;
 // catalog=list/snapshot=copy/recall=clock 保持 pixelarticons 24 栅格(原型即如此,L1245 特判 i-doc
@@ -1417,7 +1422,7 @@ var McFlow = {
     // McSysCard 重绘(自有 DOM,开合/状态切换在组件内走 lib accToggle);think 卡四轮起已自管。
     // click 委托/onHeadClick/offClick 一并下岗,观察器只剩出场 flashIn/相位同步/pending 嫁接
     // 验收六轮改版:手抄变体全部收编回库——开合走 lib accToggle、新行入场走 lib flashIn,
-    // 协议唯一定义在 mcfx 段(t0 ghost→t100 flash→t200 fn→t300 同撤 flash+ghost→t400 滞空)。
+    // 协议唯一定义在 src/core/mcfx.js(t0 ghost→t100 flash→t200 fn→t300 同撤 flash+ghost→t400 滞空)。
     // 宿主卡 fn=空转+清残高——宿主 React 在捕获拍后自行瞬切,几何变化发生在白块遮盖下
     var mo = null, tries = 0, timer = null;
     var seen = new WeakSet();
@@ -1478,8 +1483,8 @@ var McFlow = {
       }
     }
     function attach() { // 验收三轮⑥ live 探明:切会话时宿主会整体替换 [data-chat-flow] 节点,
-      // observer/click 绑列节点随会话切换失效——一律绑 document.body(稳定根;委托/域限定
-      // 由 MC_MAP 选择器在 closest/matches 内完成,body 级观察回调轻量早退)
+      // observer/click 绑列节点随会话切换失效——一律绑 document.body(稳定根;域限定
+      // 由 MC_MAP 选择器在 matches 内完成,body 级观察回调轻量早退)
       var root = document.body;
       try { // 存量行标记不闪（历史加载）
         var q = root.querySelectorAll(MC_MAP.flowItem); for (var i = 0; i < q.length; i++) seen.add(q[i]);
@@ -1514,6 +1519,12 @@ var McFlow = {
 };
 
 // src/conv/think.js —— assistant-step 节点重写（验收四轮：缓冲区 + 定期吐出）
+// 镜像同步：本段与 client.js McThink 段手工同源维护（audit 直接扫描 client.js 全文）。
+// 差异：MC_PRIM 经 typeof require 守卫获取（loader 域 require 为工厂参数;CJS 测试域同样可用,
+// require 失败静默 null → slots 不注册）。
+var MC_PRIM = null;
+try { if (typeof require === 'function') MC_PRIM = require("@deepseek-ai/dsh-client-ui-primitives"); } catch (e) { MC_PRIM = null; }
+
 // 协议 { css, slots(ctx) }。遮蔽 conversation.chat.node keyed 槽 'assistant-step'
 // (priority:-1 同侧栏先例);reasoning 块走我们自己的 McThinkCard(原型 showThinking 状态机
 // L1362-1450 的 React 版:text prop 增量先进缓冲,500ms 周期末摘要 s-in 只装本次新字
@@ -1785,9 +1796,10 @@ const McThink = {
 };
 
 // src/conv/syscard.js —— 系统卡四族重写（验收七轮：上下文注入 / 自动·手动压缩 / 模型重试）
-// 遮蔽 conversation.chat.node keyed 槽 'context' / 'compaction' / 'manual-compaction' /
-// 'model-retry'（priority:-1 同 user/assistant-step 先例）——宿主卡整体替换为自有 DOM
-// （真·重绘，非 CSS 套壳）；primitives 缺席时不注册（宿主原生渲染兜底）。
+// 镜像同步：本段与 client.js McSysCard 段手工同源维护（audit 直接扫描 client.js 全文）。
+// 协议 { css, slots(ctx) }。遮蔽 conversation.chat.node keyed 槽 'context' / 'compaction' /
+// 'manual-compaction' / 'model-retry'（priority:-1 同 user/assistant-step 先例）——宿主卡整体
+// 替换为自有 DOM（真·重绘，非 CSS 套壳）；primitives 缺席时不注册（宿主原生渲染兜底）。
 // 动效纪律（验收六轮改版沿用）：出场 = flowItem 行级 flashIn（McFlow 观察器供给）；折叠开合与
 // 状态切换（压缩中→已压缩 / 重试 scheduled→started·cancelled）= lib accToggle 四拍，文字 A→B
 // 挂 .s-in span（ghost 拍 color:transparent，白块随 span 宽）；REDUCED 全跳过功能不受影响。
@@ -1831,6 +1843,9 @@ function mcContextText(content, cap) {
     }
   } catch (e) { /* 结构漂移 → 空正文，条头照常 */ }
   return out;
+}
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = { mcCompactionLine, mcRetryParts, mcContextText };
 }
 
 const MC_SYS_TEXT_CAP = 20000; // 宿主 ModelFacingContent 同款上界（20k chars）
@@ -2062,9 +2077,6 @@ const McSysCard = {
 // 会话流分区（T8）：原型 §5 类定义 scoped 到 .kit-panel（Ruling 3，非宿主选择器不进
 // MC_MAP）+ ReasoningDemo 五帧流式驱动（§8.2 状态机 kit 化，延时全走 CLOCK.next）
 // 纯顶层声明，无模块系统语法；与 tokens/clock/mcfx/sprite 拼进同一作用域
-// 镜像同步：本段与 src/kit.js 手工同源维护（无程序化逐字比对测试；audit 自终审 F1 起直接扫描
-// client.js 全文——六项静态纪律含本段在内违禁即红，MC_MAP 段豁免）；唯一差异 = slots 守卫
-// 行改常驻直达 ctx.slots（inject:['slots'] 声明已生效，同 make-persistent-client 变换 2）
 const McKit = {
   css: `/* ===== kit 检视页专属布局（全部 kit- 前缀，不外泄） ===== */
 .kit-scrim{position:fixed;inset:0;z-index:95;overflow-y:auto;box-sizing:border-box;

@@ -56,22 +56,24 @@ const mods = {
   McChrome: McChrome,
   McSidebar: McSidebar,
   McFinder: McFinder,
+  McFlow: McFlow,
+  McThink: McThink,
+  McSysCard: McSysCard,
   McKit: McKit,
 };
-const order = ["McTokens","McClock","McMcfx","McSprite","MC_MAP","McChrome","McSidebar","McFinder","McKit"];
+const order = ["McTokens","McClock","McMcfx","McSprite","MC_MAP","McChrome","McSidebar","McFinder","McFlow","McThink","McSysCard","McKit"];
 
 return {
   inject: ["slots", "theme", "sessions"],
   apply(ctx) {
-    try { console.log('[mcx] apply — 主题注入开始（persistent）'); } catch (e) {}
     const style = document.createElement('style');
     style.setAttribute('data-mc-root','');
     // @font-face ×5 —— 宿主静态路由（index.js 前缀路由 /mcx-assets/ → 本包 assets/）
     let css = "@font-face{font-family:'FindersKeepers';src:url(/mcx-assets/fonts/FindersKeepers.ttf) format('truetype');font-display:swap}\\n@font-face{font-family:'ChiKareGo';src:url(/mcx-assets/fonts/ChiKareGo.ttf) format('truetype');font-display:swap}\\n@font-face{font-family:'Fusion Pixel 12px monospaced';src:url(/mcx-assets/fonts/fusion-pixel-12px-monospaced-latin.ttf) format('truetype');font-display:swap}\\n@font-face{font-family:'Fusion Pixel 12px monospaced zh';src:url(/mcx-assets/fonts/fusion-pixel-12px-monospaced-zh_hans.ttf) format('truetype');font-display:swap}\\n@font-face{font-family:'ChiKareGo Latin';src:url(/mcx-assets/fonts/ChiKareGo.ttf) format('truetype');unicode-range:U+0041-005A,U+0061-007A,U+00C0-024F,U+1E00-1EFF,U+2000-206F;font-display:swap}";
     for (const k of order) { const m = mods[k]; if (!m) continue;
       if (m.css) css += m.css + '\\n';
-      if (m.mount) try { const td = m.mount(ctx); if (typeof td === 'function') ctx.effect(() => td); } catch(e) { try { console.error('[mcx] mount ' + k + ' failed:', e && e.message); } catch (e2) {} }
-      if (m.slots) try { m.slots(ctx) } catch(e) { try { console.error('[mcx] slots ' + k + ' failed:', e && e.message); } catch (e2) {} }
+      if (m.mount) try { const td = m.mount(ctx); if (typeof td === 'function') ctx.effect(() => td); } catch(e) { /* mount 失败不拖垮其余 */ }
+      if (m.slots) try { m.slots(ctx) } catch(e) { /* slots 失败不拖垮其余 */ }
     }
     style.textContent = css; document.head.appendChild(style);
     // 正规主题通道：宿主 ThemePresenter 把活动主题 token 以 inline style 写在 body 上，
@@ -97,14 +99,13 @@ return {
           '--dsw-alias-state-warn-primary': pair('var(--mc-warn)'),
           '--dsw-specific-sidebar-fill': pair('var(--mc-rail-1)'),
           '--dsw-font-family': pair('var(--font-ui)'),
+          '--dsw-specific-bubble': pair('var(--mc-accent)'),
         });
         ctx.effect(() => () => { try { off(); } catch (e) {} });
-        console.log('[mcx] theme.overrideTokens 已叠层');
       } else {
-        console.warn('[mcx] theme 服务不可用，仅 CSS 层生效');
+        /* theme 服务不可用：仅 CSS 层生效（静默降级） */
       }
-    } catch (e) { console.error('[mcx] overrideTokens failed:', e && e.message); }
-    try { console.log('[mcx] apply 完成，样式已入 head'); } catch (e) {}
+    } catch (e) { /* overrideTokens 失败：静默降级，CSS 层仍生效 */ }
     ctx.effect(() => () => {
       style.remove();
     });
@@ -117,7 +118,7 @@ return {
 const out = header + body + tail;
 // 写盘断言：非空 + 关键标记齐全
 if (out.length < 1000) throw new Error('assembled output suspiciously small');
-for (const mark of ['__ModuleLoader__.load', 'dsh-theme-macintosh', '/mcx-assets/fonts/ChiKareGo.ttf', 'inject: ["slots", "theme", "sessions"]', 'McFinder: McFinder', 'return {\n  inject']) {
+for (const mark of ['__ModuleLoader__.load', 'dsh-theme-macintosh', '/mcx-assets/fonts/ChiKareGo.ttf', 'inject: ["slots", "theme", "sessions"]', 'McFinder: McFinder', 'McFlow: McFlow', 'McThink: McThink', 'McSysCard: McSysCard', "--dsw-specific-bubble': pair('var(--mc-accent)')", 'return {\n  inject']) {
   if (!out.includes(mark)) throw new Error('marker missing in output: ' + mark);
 }
 writeFileSync(OUT, out);

@@ -12,7 +12,13 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 test('assemble 产出无 import 且含 dsw alias', () => {
   execFileSync(process.execPath, [path.join(ROOT, 'tools', 'assemble.mjs')], { cwd: ROOT });
   const out = require('node:fs').readFileSync(path.join(ROOT, 'dist', 'client-body.js'), 'utf8');
-  assert.ok(!/\bimport\b|\brequire\b/.test(out), 'client-body.js 不得含 import/require');
+  // think/syscard 镜像的守卫式 require（typeof require === 'function'，CJS 测试域/加载器域各取所需）
+  // 与提及 require 的注释是设计差异，剥除后再检；裸 import/require 仍违禁。
+  const noGuarded = out.split('\n')
+    .filter((l) => !/typeof require === 'function'/.test(l))
+    .map((l) => l.replace(/(^|[^:])\/\/.*$/, '$1'))
+    .join('\n');
+  assert.ok(!/\bimport\b|\brequire\b/.test(noGuarded), 'client-body.js 不得含 import/require');
   assert.ok(out.includes('--dsw-alias-bg-base'), '应包含层1 dsw alias');
   assert.ok(out.includes('data-mc-root'), 'apply 应挂 data-mc-root style');
 });
@@ -99,7 +105,12 @@ test('assemble 产出含 tokens/primitives 全集与 kit 检视页', () => {
     .map((line) => (/base64|url\(/.test(line) ? line : line.replace(/(^|[^:])\/\/.*$/, '$1')))
     .join('\n');
   assert.ok(!/:hover\b/.test(cssScan), '全主题不得出现 :hover');
-  assert.ok(!/(?<!-)transition\s*:/.test(cssScan), '全主题不得出现 transition 声明');
+  // 豁免与 audit §1 同规则：纯压平声明 transition:none(!important) 先剥；reduced-motion 块内的
+  // transition-duration:.01ms!important 属压平关闭过渡，整行剥除后再扫。
+  const flat = cssScan
+    .replace(/transition\s*:\s*none(\s*!important)?(?=[;}'"}\s]|$)/g, 'FLAT')
+    .split('\n').filter((l) => !/transition-duration\s*:\s*\.01ms!important/.test(l)).join('\n');
+  assert.ok(!/(?<!-)transition\s*:/.test(flat), '全主题不得出现 transition 声明（豁免压平 none 与 .01ms）');
 });
 
 test('assemble 产出含侧栏 Finder 覆写与官方主题通道（轮6：去月牙钮）', () => {
