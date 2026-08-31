@@ -18,6 +18,21 @@ const MC_MENUS_CSS = [
   '.mc-menu .m-opt.danger .mo-ic{color:inherit}',
   '.mc-menu .m-sep{height:1px;margin:4px 5px;background:var(--mc-border-soft)}',
 ].join('');
+function mcMenuItems(def, wiring) {
+  return (def && def.items ? def.items : []).filter(function (it) {
+    return !!it.sep || !!(wiring && wiring[it.id]);
+  });
+}
+function mcMenuAlign(anchorRect, viewportW, menuW) {
+  if (!anchorRect) return 'left';
+  return anchorRect.left + menuW > viewportW - 8 ? 'right' : 'left';
+}
+function mcMenuState(state, ev) {
+  var s = state || { open: null };
+  if (!ev) return s;
+  if (ev.t === 'open') return { open: { id: ev.id, anchor: ev.anchor || null } };
+  return { open: null }; // close/esc/pick 一律关
+}
 var McMenus = {
   css: MC_MENUS_CSS,
   mount: function (ctx) {
@@ -25,4 +40,4 @@ var McMenus = {
     return null;
   },
 };
-if (typeof module !== 'undefined') module.exports = { McMenus: McMenus };
+if (typeof module !== 'undefined') module.exports = { McMenus: McMenus, mcMenuItems: mcMenuItems, mcMenuAlign: mcMenuAlign, mcMenuState: mcMenuState };
