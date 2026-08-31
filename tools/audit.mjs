@@ -79,7 +79,9 @@ const rel = (f) => relative(ROOT, f).replace(/\\/g, '/');
       if (/:hover/.test(line)) bad.push(`${rel(f)}: ${line.trim()}`);
       // 豁免：纯压平声明不新增动画——transition:none(!important)(flow T5 think 卡)与
       // reduced-motion 块内的 transition-duration:.01ms!important(tokens.js)。剥压平项后再扫。
-      const scan = line.replace(/transition\s*:\s*none(\s*!important)?/g, 'FLAT');
+      // 右边界断言(?=[;}'"}\s]|$,T10 加固):仅当 none 后随声明边界才剥——防
+      // `transition:nonexistent` 这类前缀撞车被误剥而漏检(应留在线上被下方 transition: 检出)。
+      const scan = line.replace(/transition\s*:\s*none(\s*!important)?(?=[;}'"}\s]|$)/g, 'FLAT');
       if (/transition\s*:/.test(scan) &&
           !/transition-duration\s*:\s*\.01ms!important/.test(scan))
         bad.push(`${rel(f)}: ${line.trim()}`);
