@@ -200,7 +200,7 @@ if (!fallback && target) {
     if (!gone) await page.waitForTimeout(500);
   }
   if (gone) check('深色: 点归档后会话行从侧栏消失(2s 轮询)', true);
-  else info('深色: 归档接线活体无效 → 代码错已上报待修复轮(plugin inject=["slots","theme","sessions"] 无 workspaces;官方 UI 归档走 ctx.workspaces.archiveSession → mcMenuWsSvc 两路皆空 archive 静默 no-op;实证=标靶 reload 后仍在)。门禁按已知问题放行,修复轮复检本条', null);
+  else info('深色: 归档接线活体无效 → 根因已修(fix round 1:client.js + make-persistent 模板 inject 均补 "workspaces";官方 UI 归档走 ctx.workspaces.archiveSession)。宿主进程缓存旧 client.js 且本会话禁重启 → 待重启窗口复检本条(断言逻辑不变)', null);
   check('深色: 归档后菜单关闭', await page.evaluate(() => !document.querySelector('.mc-menu')));
 } else {
   info('归档断言 deferred(降级假数据或无标靶;活体窗口补跑)', null);

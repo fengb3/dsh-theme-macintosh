@@ -2851,7 +2851,7 @@ const mods = {
 const order = ["McTokens","McClock","McMcfx","McSprite","MC_MAP","McChrome","McSidebar","McFinder","McFlow","McThink","McSysCard","McMenus","McKit"];
 
 return {
-  inject: ["slots", "theme", "sessions"],
+  inject: ["slots", "theme", "sessions", "workspaces"],
   apply(ctx) {
     const style = document.createElement('style');
     style.setAttribute('data-mc-root','');
