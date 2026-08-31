@@ -132,5 +132,9 @@ const MC_MAP = {
   // —— 用户验收二轮收编（2026-08-31 live 探测 + 部署源复核，host 0.1.1-rc.2）——
   retryActive: 'details[data-active]',         // stable(ModelRetryItem L5191 "data-active": active||void 0——scheduled 态才有;⑧ pulse 门控锚)
   compactionDisclosure: '[data-compaction-disclosure]', // stable(CompactionItem 折叠图标 span L4320;⑥ 卡头结构注记——click target 为其外层 button,头锚取 kind 行内 button 元素)
+  // —— 用户验收三轮④收编（2026-09 live 探测，host 0.1.1-rc.2）——
+  deliverRoot: '.P4kPIW_root',   // DRIFT-RISK: build-hash class(dsh-client-ui-deliverables 产物行;无 data-* 稳定锚,宿主升级先复核)
+  deliverFile: '.P4kPIW_file',   // DRIFT-RISK: 同上(文件名 chip 按钮;含 measure 探针 P4kPIW_probe 同类复用)
+  deliverMore: '.P4kPIW_more',   // DRIFT-RISK: 同上("+N 个文件"溢出标签)
 };
 

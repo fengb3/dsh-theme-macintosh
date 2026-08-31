@@ -1,6 +1,6 @@
 # Macintosh 主题 · 二期 flow(会话流)模块 Implementation Plan
 
-> **续作状态(2026-09 复验)**:Task 1-10 全部完成并通过终审;用户验收一轮 5 项已修(5692331);**验收二轮 9 项已全部实现于 683b765**(存档 commit 同波落码+截图,存档段此前误记「未做」)并于复验通过——`npm test` 29/29 + audit 全绿,`tools/acc2-recheck.mjs` 活体断言全过(⑤ lead none/间距 17px、① i-doc 8×10 mask、⑦ 11px 像素三角+展开 rotate 90°、⑥ think/context 卡头四拍 mcfx/mc-ghost 命中且拍后零残留、⑧⑨③④② CSS 门控全命中),关键截图(⑤⑥⑦)视觉复核通过。剩余:finishing 菜单三选一(用户未选)。
+> **续作状态(2026-09 三轮后)**:Task 1-10 完成+终审;验收一轮 5 项已修(5692331);验收二轮 9 项已实现复验(683b765);**验收三轮 ②④⑥ 返修完成**(think 摘要积攒-吐出/产物 chip 长方块/开合统一五拍协议,另修 flowColumn 轮询耗尽与切会话换列两宿主生命周期 bug)——`npm test` 30/30+audit 全绿,acc3 活体+视觉双验证,详见文末「验收三轮」。剩余:用户三轮复验 → finishing 菜单三选一。
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -391,6 +391,16 @@ if (typeof module !== 'undefined') module.exports = { MC_FLOW_ICONS: MC_FLOW_ICO
 ## 验收二轮待办(2026-08-31)—— ✅ 2026-09 已全部完成并复验
 
 **状态**:9 项修复已全部实现于 683b765(与存档同 commit 落码,含 acc2-01~09 全套截图证据与 tools/acc2-check1~3.mjs 检查脚本);2026-09 复验:`npm test` 全绿 + `tools/acc2-recheck.mjs` 活体断言全过 + 关键截图视觉复核(复验截图已刷新入库)。原恢复动作(派单实施/复审)不再需要,直接进 finishing。
+
+## 验收三轮(2026-09)—— ✅ 已完成
+
+用户裁定 ①③⑤⑦⑧⑨ 过;②④⑥ 返修,已全部落地并活体+视觉双验证:
+
+1. **② think 摘要「积攒—吐出」**:宿主流式改字冻结回显 ≥400ms,周期末 `.mc-line-flash` 白块盖住→文本瞬换积攒尾部(≤44 字符)→100ms 撤块显现;自触发回写靠值相等判别跳过(不丢积攒)。live 序列验证(冻结 4+ 拍→flash 帧跳变)+截图视觉复核(acc3-02-summary-flash.png 白块可见)。
+2. **④ 产物文件 chip**:`[data-turn-tail] button` 钮壳收窄到 actions 行(`>div:last-child`,原后代规则误伤 P4kPIW_file 把长方块锁成 20×20);chip 经 MC_MAP(deliverRoot/File/More,DRIFT-RISK hash 类)上主题皮肤,自然宽度按文件名(66×20 实测)。
+3. **⑥ 开合动画统一五拍协议**:lib `accToggle` 与 McFlow `cardToggle` 均对齐原型 L1290-1303 逐拍(t0 ghost→t100 flash→t200 内容瞬变→t300 撤块→t400 内容显回);后续一切显隐/换形/换内容动画走本协议。
+4. **附带两个宿主生命周期 bug 修复**:flowColumn 轮询 8s 上限耗尽(boot 停空会话后切会话永不挂载)→不限次;切会话替换列节点致 observer/click 失效→改绑 document.body。
+5. 测试 30/30 + audit 全绿;证据 shots/acc3-*(02 flash 白块/04 长方块/06 五拍时间线)+ tools/acc3-check.mjs;教训入笔记 §8.5。
 
 1. **注入条图标**:instructions/notice/relay 换 sprite `#i-doc` 经典款(从 client.js McSprite 段提取 symbol 做 data-URI mask;现用 pixelarticons doc 与原型不符);catalog/snapshot/recall/compaction 保持。
 2. **think 摘要行 flash 白块未渲染**:`.mc-line-flash` 类出现但视觉无白块——live debug(疑 inline 定位/React 节点替换),修到截图可见(深白浅黑)。

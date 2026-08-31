@@ -48,8 +48,9 @@ class FakeElement {
     this.parent = opts.parent || null;
     this.compound = opts.compound || []; // 验收二轮⑥:closest 可命中的复合选择器种子
     this.listeners = [];
-    this.dataset = {}; // 验收二轮⑥:cardFlash busy 标记
+    this.dataset = {}; // 验收二轮⑥:cardToggle busy 标记
     this.style = {};   // 验收二轮⑥:拍2 清残高
+    this._text = opts.text || ''; // 验收三轮②:摘要 span textContent 冻结/回写
     const classes = new Set();
     this.classes = classes;
     this.classList = {
@@ -58,6 +59,8 @@ class FakeElement {
       contains: (c) => classes.has(c),
     };
   }
+  get textContent() { return this._text; }
+  set textContent(v) { this._text = String(v); }
   matches(sel) {
     if (sel === '[data-chat-flow-kind]') return 'data-chat-flow-kind' in this.attrs;
     if (sel === '[data-chat-flow-kind="model-retry"]') return this.attrs['data-chat-flow-kind'] === 'model-retry';
@@ -111,7 +114,10 @@ function stubEnv(clock, { reduced = false, columnReady = false, column = null } 
   setStub('CLOCK', clock);
   setStub('MutationObserver', FakeMO);
   setStub('Element', FakeElement);
-  setStub('document', { querySelector: (sel) => (sel === '[data-chat-flow]' && columnReady ? column : null) });
+  setStub('document', {
+    querySelector: (sel) => (sel === '[data-chat-flow]' && columnReady ? column : null),
+    body: column || null, // 验收三轮⑥:attach 绑 document.body(列节点会话切换会被替换)
+  });
   setStub('window', { matchMedia: () => ({ matches: reduced }) });
 }
 
@@ -127,7 +133,7 @@ test('mount 主线：轮询晚挂载→存量不闪→新行三拍(mcfx 同伴�
   let ready = false;
   stubEnv(clock, { column });
   // document 桩改用可变 ready 闭包：轮询第二拍才见列（模拟 flowColumn 晚挂载）
-  G.document = { querySelector: (sel) => (sel === '[data-chat-flow]' && ready ? column : null) };
+  G.document = { querySelector: (sel) => (sel === '[data-chat-flow]' && ready ? column : null), body: column };
 
   const td = McFlow.mount({});
   assert.equal(typeof td, 'function', 'mount 应返回 teardown 函数（验证⑤-1）');
@@ -218,64 +224,100 @@ function stubFlashEnv(clock, opts = {}) {
   G.MC_MAP.thinkCard = '[data-variant="think"]';
   G.MC_MAP.dataState = '[data-state=';
 }
-function runningThinkChain() {
+function runningThinkChain(text) {
   const card = new FakeElement({ attrs: { 'data-variant': 'think', 'data-state': 'running' } });
   const row = new FakeElement({ parent: card });
-  const span = new FakeElement({ attrs: { 'data-follow-end': '' }, parent: row });
+  const span = new FakeElement({ attrs: { 'data-follow-end': '' }, parent: row, text: text || '' });
   return { card, row, span, text: { parentElement: span, isConnected: true } };
 }
 
-test('lineFlash 主线:running think 摘要换字即挂类,CLOCK 一拍撤净;100ms 窗内二次变化节流合一拍', () => {
+// 验收三轮②:running think 摘要「积攒—吐出」
+test('thinkStream 主线:宿主改字先冻结回显;400ms 周期末盖块换积攒尾部,100ms 撤块显现', () => {
   const clock = fakeClock();
   stubFlashEnv(clock);
   const td = McFlow.mount({});
   clock.flush(); // poll → attach
   const mo = FakeMO.last;
-  const { span, text } = runningThinkChain();
+  const chain = runningThinkChain('正在思考…');
+  const { span, text } = chain;
+  // 首次观察:建立基线(frozen=当前文本),零干预
   mo.cb([{ type: 'characterData', target: text, addedNodes: [] }]);
-  assert.ok(span.classList.contains('mc-line-flash'), '换字瞬间挂 mc-line-flash');
+  assert.equal(span.classes.size, 0, '首次观察只建基线,不闪不冻结');
+  assert.equal(clock.pending(), 0);
+  // 宿主流式追加:冻结回显(可见文本退回基线),排 400ms 周期
+  span.textContent = '正在思考…用户在问 9.11 与 9.9 哪个大,先比较整数部分';
+  mo.cb([{ type: 'characterData', target: text, addedNodes: [] }]);
+  assert.equal(span.textContent, '正在思考…', '宿主新字被冻结,可见文本停在基线(灭滚动感)');
+  assert.equal(span.classes.size, 0, '冻结期不挂块');
+  assert.equal(clock.pending(), 1, '已排 400ms 周期末拍');
+  // 周期内再变化:只积攒,不重排
+  span.textContent = '正在思考…用户在问 9.11 与 9.9 哪个大,先比较整数部分再比小数';
+  mo.cb([{ type: 'characterData', target: text, addedNodes: [] }]);
+  assert.equal(span.textContent, '正在思考…', '持续冻结');
+  assert.equal(clock.pending(), 1, '不重排周期');
+  // 周期末:白块盖住 + 文本瞬换积攒尾部
   clock.flush();
-  assert.ok(!span.classList.contains('mc-line-flash'), '100ms 拍后撤');
+  assert.ok(span.classList.contains('mc-line-flash'), '周期末挂 mc-line-flash(白块盖住)');
+  assert.ok(span.textContent.includes('再比小数'), '文本已换成积攒尾部');
+  assert.equal(clock.pending(), 1, '已排 100ms 撤块拍');
+  clock.flush();
+  assert.ok(!span.classList.contains('mc-line-flash'), '100ms 后撤块,内容显现');
   assert.equal(span.classes.size, 0, '零残留');
-  assert.equal(clock.pending(), 0);
-  mo.cb([{ type: 'characterData', target: text, addedNodes: [] }]);
-  assert.ok(!span.classList.contains('mc-line-flash'), '同 100ms 窗内二次变化被节流(不重排)');
-  assert.equal(clock.pending(), 0);
   td();
 });
 
-test('lineFlash 域限定:非 running 卡摘要 / 摘要 span 外文本变化不闪', () => {
+test('thinkStream 自触发回写不丢积攒:我方回写值==frozen 的 mutation 被跳过', () => {
   const clock = fakeClock();
   stubFlashEnv(clock);
   const td = McFlow.mount({});
   clock.flush();
   const mo = FakeMO.last;
-  // ok 态卡:closest running 复合选择器不命中
-  const okCard = new FakeElement({ attrs: { 'data-variant': 'think', 'data-state': 'ok' } });
-  const okSpan = new FakeElement({ attrs: { 'data-follow-end': '' }, parent: okCard });
-  mo.cb([{ type: 'characterData', target: { parentElement: okSpan, isConnected: true }, addedNodes: [] }]);
-  assert.ok(!okSpan.classList.contains('mc-line-flash'), 'ok 卡摘要不闪');
-  // 流上普通文本(assistant md 正文):closest 摘要锚不命中
-  const plain = new FakeElement({});
-  mo.cb([{ type: 'characterData', target: { parentElement: plain, isConnected: true }, addedNodes: [] }]);
-  assert.equal(plain.classes.size, 0, '普通文本节点零类');
-  // 文本节点整换(childList addedNodes 非 Element)同走判定
-  const { span } = runningThinkChain();
-  mo.cb([{ addedNodes: [{ parentElement: span, isConnected: true }] }]);
-  assert.ok(span.classList.contains('mc-line-flash'), '宿主换节点式文本更新同样触发');
+  const { span, text } = runningThinkChain('基线');
+  mo.cb([{ type: 'characterData', target: text, addedNodes: [] }]); // 建基线
+  span.textContent = '基线+新段落内容';
+  mo.cb([{ type: 'characterData', target: text, addedNodes: [] }]); // 冻结回写发生(见主线)
+  // 回写触发自 mutation:此时 textContent==frozen,应被跳过,latest 不被覆盖
+  assert.equal(span.textContent, '基线'); // 冻结回写后的现场
+  mo.cb([{ type: 'characterData', target: text, addedNodes: [] }]); // 自触发
+  clock.flush(); // 周期末 reveal
+  assert.ok(span.textContent.includes('新段落内容'), '积攒未丢,reveal 取到宿主最新全文');
   clock.flush();
-  assert.equal(span.classes.size, 0);
   td();
 });
 
-test('lineFlash REDUCED:跳过(零类零调度)', () => {
+test('thinkStream 域限定:非 running 卡摘要 / 摘要 span 外文本变化零干预', () => {
+  const clock = fakeClock();
+  stubFlashEnv(clock);
+  const td = McFlow.mount({});
+  clock.flush();
+  const mo = FakeMO.last;
+  // ok 态卡:closest running 复合选择器不命中 → 宿主文本原样直出
+  const okCard = new FakeElement({ attrs: { 'data-variant': 'think', 'data-state': 'ok' }, text: '完成摘要' });
+  const okSpan = new FakeElement({ attrs: { 'data-follow-end': '' }, parent: okCard, text: '完成摘要' });
+  okSpan.textContent = '完成摘要+改字';
+  mo.cb([{ type: 'characterData', target: { parentElement: okSpan, isConnected: true }, addedNodes: [] }]);
+  assert.equal(okSpan.textContent, '完成摘要+改字', 'ok 卡摘要不冻结不闪');
+  assert.equal(okSpan.classes.size, 0);
+  // 流上普通文本(assistant md 正文):closest 摘要锚不命中
+  const plain = new FakeElement({});
+  plain.textContent = 'x';
+  mo.cb([{ type: 'characterData', target: { parentElement: plain, isConnected: true }, addedNodes: [] }]);
+  assert.equal(plain.classes.size, 0, '普通文本节点零类');
+  assert.equal(clock.pending(), 0, '零调度');
+  td();
+});
+
+test('thinkStream REDUCED:跳过(零冻结零类零调度)', () => {
   const clock = fakeClock();
   stubFlashEnv(clock, { reduced: true });
   const td = McFlow.mount({});
   clock.flush();
   const mo = FakeMO.last;
-  const { span, text } = runningThinkChain();
+  const { span, text } = runningThinkChain('正在思考…');
   mo.cb([{ type: 'characterData', target: text, addedNodes: [] }]);
+  span.textContent = '正在思考…新内容';
+  mo.cb([{ type: 'characterData', target: text, addedNodes: [] }]);
+  assert.equal(span.textContent, '正在思考…新内容', 'REDUCED 宿主原生行为(不冻结)');
   assert.equal(span.classes.size, 0, 'REDUCED 不加 flash 类');
   assert.equal(clock.pending(), 0, '未调度任何拍');
   td();
@@ -300,29 +342,31 @@ const RETRY_CARD = '[data-chat-flow-kind="model-retry"]';
 const COMP_HEAD = ':is([data-chat-flow-kind="compaction"],[data-chat-flow-kind="manual-compaction"]) button';
 const COMP_CARD = ':is([data-chat-flow-kind="compaction"],[data-chat-flow-kind="manual-compaction"])';
 
-test('⑥ 主线:attach 对 flowColumn 注册捕获 click;四卡头命中即对卡容器跑四拍(含 mcfx 撤净)', () => {
+test('⑥ 主线:attach 对 flowColumn 注册捕获 click;四卡头命中即对卡容器跑五拍(含 mcfx 撤净)', () => {
   const clock = fakeClock();
   stubToggleEnv(clock);
   const column = new FakeElement({});
-  G.document = { querySelector: (sel) => (sel === '[data-chat-flow]' ? column : null) };
+  G.document = { querySelector: (sel) => (sel === '[data-chat-flow]' ? column : null), body: column };
   const td = McFlow.mount({});
   clock.flush(); // poll → attach
   const li = column.listeners.find((l) => l.type === 'click');
   assert.ok(li, 'flowColumn 上应注册 click 监听');
   assert.equal(li.capture, true, '捕获阶段(先于宿主 React onClick)');
 
-  // think 卡:点击 disclosure 行 → 卡容器四拍 ghost→flash→残高→撤净(busy 防重入)
+  // think 卡:点击 disclosure 行 → 卡容器五拍(原型 accToggle 同款;busy 防重入)
   const thinkCard = new FakeElement({ compound: [THINK_CARD] });
   const thinkRow = new FakeElement({ compound: [THINK_HEAD], parent: thinkCard });
   li.fn({ target: thinkRow });
   assert.ok(thinkCard.classList.contains('mcfx') && thinkCard.classList.contains('mc-ghost'), '拍0:mcfx+mc-ghost');
   assert.equal(thinkCard.dataset.busy, '1', 'busy 防重入标记');
   li.fn({ target: thinkRow }); // busy 期间重入
-  clock.flush(); // 拍1
-  assert.ok(thinkCard.classList.contains('mc-flash') && !thinkCard.classList.contains('mc-ghost'), '拍1:换 mc-flash');
-  clock.flush(); // 拍2(清残高)
-  clock.flush(); // 拍3(撤)
-  assert.equal(thinkCard.classes.size, 0, '拍3:mc-flash/mc-ghost/mcfx 全撤净(零残留)');
+  clock.flush(); // 拍1(t100):+flash,ghost 保留
+  assert.ok(thinkCard.classList.contains('mc-flash') && thinkCard.classList.contains('mc-ghost'), '拍1:白块遮盖,内容仍隐');
+  clock.flush(); // 拍2(t200):清残高(被遮内容瞬变拍)
+  clock.flush(); // 拍3(t300):撤 flash 揭开,ghost 保留
+  assert.ok(!thinkCard.classList.contains('mc-flash') && thinkCard.classList.contains('mc-ghost'), '拍3:块撤内容未显');
+  clock.flush(); // 拍4(t400):撤 ghost 显回 + 清 busy
+  assert.equal(thinkCard.classes.size, 0, '拍4:mc-flash/mc-ghost/mcfx 全撤净(零残留)');
   assert.notEqual(thinkCard.dataset.busy, '1', 'busy 清除');
   assert.equal(clock.pending(), 0);
 
@@ -337,7 +381,7 @@ test('⑥ 主线:attach 对 flowColumn 注册捕获 click;四卡头命中即对�
   hit(CTX_HEAD, CTX_CARD);
   hit(RETRY_HEAD, RETRY_CARD);
   hit(COMP_HEAD, COMP_CARD);
-  clock.flush(); clock.flush(); clock.flush();
+  clock.flush(); clock.flush(); clock.flush(); clock.flush();
   for (const c of seen) assert.equal(c.classes.size, 0, '各卡撤净');
 
   // 非卡头点击(普通行/非 Element 目标):零触发
@@ -354,7 +398,7 @@ test('⑥ REDUCED:卡头点击零触发(开合交宿主,纯装饰拍跳过)', ()
   const clock = fakeClock();
   stubToggleEnv(clock, { reduced: true });
   const column = new FakeElement({});
-  G.document = { querySelector: (sel) => (sel === '[data-chat-flow]' ? column : null) };
+  G.document = { querySelector: (sel) => (sel === '[data-chat-flow]' ? column : null), body: column };
   const td = McFlow.mount({});
   clock.flush();
   const li = column.listeners.find((l) => l.type === 'click');

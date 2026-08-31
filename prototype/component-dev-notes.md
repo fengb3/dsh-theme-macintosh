@@ -264,6 +264,24 @@ state = { view, mode, current, sessions, busy:{}, fallback:{}, queue:{}, stats:{
 - **气泡四层锚**：同上——四子级直击宿主 `.bubble` 类；底色另走 `--dsw-specific-bubble` 变量通道
   （overrideTokens 供值），与选择器通道分层降级
 
+### 8.5 flow 验收三轮差异（2026-09 实录，host 0.1.1-rc.2）
+- **开合动画统一协议（五拍）**：用户裁定一切显示/隐藏/换形/换内容动画与原型 `accToggle`（§7 注释 L1290）
+  逐拍同款——t0 ghost → t100 flash 白块 → t200 被遮内容瞬变（可大可小）→ t300 撤块 → t400 内容显回。
+  lib `accToggle` 与 McFlow `cardToggle`（宿主卡版，fn=空转+清残高）均已对齐；宿主卡因 React 自管开合，
+  捕获拍（t0 ghost）必须先于宿主 onClick 才能遮住瞬切
+- **running think 摘要「积攒—吐出」**：宿主摘要流式改字=滚动跑马灯观感，须冻结回显（`textContent`
+  回写 frozen 值）≥400ms，周期末白块（`.mc-line-flash`）盖住→文本瞬换积攒尾部（≤44 字符，原型同款窗口）
+  →100ms 撤块显现；我方回写值==frozen 的自触发 mutation 靠「值相等即跳过」判别，不丢积攒
+- **产物文件 chip（dsh-client-ui-deliverables）**：`[data-turn-tail]` 后代 `button` 规则会误伤
+  `P4kPIW_file` 文件钮（宿主按文件名测宽，被锁 20×20 方块）——钮壳规则必须收窄到 actions 行
+  （`>div:last-child`）；chip 皮肤与 measure 探针同类复用（测宽即所见）；`.P4kPIW_*` 为 build-hash
+  类，无 data-* 稳定锚，DRIFT-RISK 入 MC_MAP
+- **flowColumn 两个生命周期陷阱**（McFlow mount）：① boot 停在空会话（hero 态无列）时轮询 8s 上限会
+  耗尽，之后切会话永不挂载——轮询不限次；② 切会话时宿主整体替换 `[data-chat-flow]` 节点，绑列节点的
+  observer/click 随之失效——一律绑 `document.body`（域限定由 MC_MAP 选择器在 closest/matches 内完成）
+- **headless 验证节流**：Playwright headless 下 100ms 栅格拍会被节流到 ~200ms/拍，五拍全程 ~800ms；
+  验证脚本采样窗口须按 2× 放宽，勿误判卡死
+
 ---
 
 ## 9 · §6 输入坞

@@ -293,7 +293,10 @@ function flashOut(el, hide) {
   }, 100);
 }
 
-// 折叠四拍：ghost → flash → 清残高 + fn()（类切换在此发生）→ 撤 flash+ghost
+// 折叠五拍（验收三轮⑥ 对齐原型 accToggle 逐拍同款 L1290-1303）：
+// t0 ghost(整卡透明) → t100 flash(白块遮盖) → t200 清残高+fn(被遮内容在此拍瞬变,可大可小)
+// → t300 撤 flash(揭开) → t400 撤 ghost(内容显回)+清 busy。
+// ghost 保留到 t400：白块撤后先露卡底再显内容(原型同款两步揭幕)。
 // dataset.busy 防重入；断连/异常路径也要清 busy，避免卡片永久卡死
 function accToggle(card, fn) {
   try {
@@ -306,23 +309,25 @@ function accToggle(card, fn) {
   mcfxSchedule(() => {
     try {
       if (!card || !card.isConnected) { done(); return; }
-      card.classList.remove('mc-ghost');
       card.classList.add('mc-flash');
     } catch (e) { done(); return; }
     mcfxSchedule(() => {
       try {
-        if (!card || !card.isConnected) { done(); return; }
-        card.style.height = ''; // 清展开动画残留的 inline 高度
-        fn();
+        if (card && card.isConnected) {
+          card.style.height = ''; // 清展开动画残留的 inline 高度
+          fn();
+        }
       } catch (e) { /* fn 抛错仍走完撤拍 */ }
       mcfxSchedule(() => {
         try {
-          if (card && card.isConnected) {
-            card.classList.remove('mc-flash');
-            card.classList.remove('mc-ghost');
-          }
+          if (card && card.isConnected) card.classList.remove('mc-flash');
         } catch (e) { /* 同上 */ }
-        done();
+        mcfxSchedule(() => {
+          try {
+            if (card && card.isConnected) card.classList.remove('mc-ghost');
+          } catch (e) { /* 同上 */ }
+          done();
+        }, 100);
       }, 100);
     }, 100);
   }, 100);
@@ -574,6 +579,10 @@ const MC_MAP = {
   // —— 用户验收二轮收编（2026-08-31 live 探测 + 部署源复核，host 0.1.1-rc.2）——
   retryActive: 'details[data-active]',         // stable(ModelRetryItem L5191 "data-active": active||void 0——scheduled 态才有;⑧ pulse 门控锚)
   compactionDisclosure: '[data-compaction-disclosure]', // stable(CompactionItem 折叠图标 span L4320;⑥ 卡头结构注记——click target 为其外层 button,头锚取 kind 行内 button 元素)
+  // —— 用户验收三轮④收编（2026-09 live 探测，host 0.1.1-rc.2）——
+  deliverRoot: '.P4kPIW_root',   // DRIFT-RISK: build-hash class(dsh-client-ui-deliverables 产物行;无 data-* 稳定锚,宿主升级先复核)
+  deliverFile: '.P4kPIW_file',   // DRIFT-RISK: 同上(文件名 chip 按钮;含 measure 探针 P4kPIW_probe 同类复用)
+  deliverMore: '.P4kPIW_more',   // DRIFT-RISK: 同上("+N 个文件"溢出标签)
 };
 
 
@@ -1413,8 +1422,15 @@ var McFlow = {
       // 产物行(chain 槽注入的 .P4kPIW grid 行)水平居中 → 改 flex-start 靠左;actions 行自带
       // align-self:stretch(下条)不受影响
       MC_MAP.turnTailBar + '{display:flex;align-items:flex-start;gap:8px;flex-wrap:wrap;padding-top:2px;font:500 11px/1.6 var(--font-mono);color:var(--mc-faint)}',
-      MC_MAP.turnTailBar + ' button{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border:1px solid var(--mc-border);border-radius:var(--mc-r-btn);background:var(--mc-surface);color:var(--mc-fg)}',
-      MC_MAP.turnTailBar + ' button:active{background:var(--mc-fg);color:var(--mc-surface);border-color:var(--mc-fg)}',
+      // 验收三轮④:钮壳收窄到 actions 行(>div:last-child)——原后代 ' button' 误伤 chain 槽
+      // 注入的产物文件钮(P4kPIW_file,宿主按文件名测宽),把长方形 chip 锁成 20×20 方块
+      MC_MAP.turnTailBar + '>div:last-child button{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border:1px solid var(--mc-border);border-radius:var(--mc-r-btn);background:var(--mc-surface);color:var(--mc-fg)}',
+      MC_MAP.turnTailBar + '>div:last-child button:active{background:var(--mc-fg);color:var(--mc-surface);border-color:var(--mc-fg)}',
+      // 验收三轮④:产物文件 chip——自然宽度按文件名长度(宿主 measure 探针同类复用本皮肤,
+      // 测宽即所见),20px 高小长方块;超长名 220px 封顶截断;溢出标签 "+N 个文件" 同语汇
+      MC_MAP.deliverRoot + ' ' + MC_MAP.deliverFile + '{display:inline-flex;align-items:center;height:20px;padding:0 7px;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;border:1px solid var(--mc-border);border-radius:var(--mc-r-btn);background:var(--mc-surface);color:var(--mc-fg);font:500 11px/1.6 var(--font-mono)}',
+      MC_MAP.deliverRoot + ' ' + MC_MAP.deliverFile + ':active{background:var(--mc-fg);color:var(--mc-surface);border-color:var(--mc-fg)}',
+      MC_MAP.deliverRoot + ' ' + MC_MAP.deliverMore + '{display:inline-flex;align-items:center;height:20px;padding:0 7px;white-space:nowrap;border:1px solid var(--mc-border-soft);border-radius:var(--mc-r-btn);background:var(--mc-surface-2);color:var(--mc-faint);font:500 11px/1.6 var(--font-mono)}',
       // 验收⑤(2026-08-31 live 探明):钮组靠左、统计常驻靠右——root[data-time-hover-root] 下
       // 统计 span(.actions 末子 timeEnd)宿主 opacity:0 hover 显隐 → opacity/visibility 反制
       // (裁定:此两属性允许作为对宿主动效反制)+transition:none 压平;DOM 序本就 [copy,extra
@@ -1439,15 +1455,14 @@ var McFlow = {
       [MC_MAP.kindModelRetry, '--pulse-delay', CLOCK.PULSE],
       [MC_MAP.flowColumn + ' ' + MC_MAP.statusRow, '--pulse-delay', CLOCK.PULSE],
     ];
-    // 验收二轮⑥(spec §3 修订):折叠卡开合四拍。flowColumn 捕获阶段 click 委托,命中四卡头
+    // 验收二轮⑥→三轮⑥(通用五拍):折叠卡开合。flowColumn 捕获阶段 click 委托,命中四卡头
     // (think/context 的 DisclosureRow、model-retry 的 summary、双 compaction 的头部钮——
     // live 实测 click target=button 本体,[data-compaction-disclosure] span 是其子节点、closest
     // 只上溯不下降,故头锚取 kind 行内 button 元素;锚点语义见 MC_MAP.compactionDisclosure 注)
-    // → 对卡容器(=各 kind 行/think 卡)走 cardFlash 四拍:
-    // ①ghost ②flash ③React 自管高度瞬切(本拍仅清 inline 残高,开合由宿主 onClick 自理)
-    // ④撤——拍4 连 mcfx 同伴一并撤净(流上零残留,position:relative 不长留宿主行;lib accToggle
-    // 不撤 mcfx——自有元素可容,宿主行不容,故本地实现);dataset.busy 防重入(断连/异常路径也清);
-    // REDUCED 跳过(开合功能不受影响,纯装饰拍);teardown 一并注销
+    // → 对卡容器(=各 kind 行/think 卡)走 cardToggle 五拍(捕获拍先于宿主 React onClick,
+    // ghost 在宿主瞬切前已把内容隐去;几何变化发生在白块遮盖下;t300 揭开 t400 内容显回)。
+    // dataset.busy 防重入(断连/异常路径也清);REDUCED 跳过(开合功能不受影响,纯装饰拍);
+    // teardown 一并注销
     var TOGGLE = [
       [MC_MAP.thinkCard + ' ' + MC_MAP.disclosureRow, MC_MAP.thinkCard],
       [MC_MAP.kindContext + ' ' + MC_MAP.disclosureRow, MC_MAP.kindContext],
@@ -1456,8 +1471,13 @@ var McFlow = {
     ];
     var mo = null, tries = 0, timer = null, offClick = null;
     var seen = new WeakSet();
-    var flashLast = new WeakMap(); // 验收④b:摘要 span → 上次挂 flash 时刻(100ms 窗节流合一拍)
-    function cardFlash(card) { // 四拍:ghost → flash → 清残高 → 撤净(含 mcfx)
+    // 验收三轮②:running think 摘要「积攒—吐出」状态(span → {pending,latest,frozen})
+    var sumStates = new WeakMap();
+    // 通用开合五拍(验收三轮⑥:与 lib accToggle / 原型 L1290-1303 逐拍同款协议;
+    // 宿主卡 fn=空转+清残高——宿主 React 在捕获拍后自行瞬切,几何变化发生在白块遮盖下):
+    // t0 ghost → t100 flash → t200 清残高(被遮内容瞬变拍) → t300 撤 flash → t400 撤 ghost+清 busy。
+    // 未来一切宿主/自有元素的显示/隐藏/换形/换内容动画均应走本协议(lib: accToggle/flashIn/flashOut)
+    function cardToggle(card, fn) {
       try {
         if (!card || !card.isConnected) return;
         if (card.dataset.busy) return; // 防重入(同 accToggle 协议)
@@ -1467,15 +1487,20 @@ var McFlow = {
       var done = function () { try { delete card.dataset.busy; } catch (e2) {} };
       CLOCK.next(function () { try {
         if (!card.isConnected) { done(); return; }
-        card.classList.remove('mc-ghost'); card.classList.add('mc-flash');
+        card.classList.add('mc-flash');
       } catch (e) { done(); return; }
         CLOCK.next(function () { try {
-          if (!card.isConnected) { done(); return; }
+          if (!card.isConnected) { /* 仍走完撤拍 */ }
           try { card.style.height = ''; } catch (e2) {} // 清展开残高(宿主卡无 inline 高亦无害)
-        } catch (e) { /* 仍走撤拍 */ }
+          if (fn) { try { fn(); } catch (e3) {} }
+        } catch (e) { /* 仍走完撤拍 */ }
           CLOCK.next(function () {
-            try { if (card.isConnected) card.classList.remove('mc-flash', 'mc-ghost', 'mcfx'); } catch (e) {}
-            done();
+            try { if (card.isConnected) card.classList.remove('mc-flash'); } catch (e) {}
+            CLOCK.next(function () {
+              // 拍4:内容显回;mcfx 连撤——宿主行零残留(position:relative 不长留)
+              try { if (card.isConnected) card.classList.remove('mc-ghost', 'mcfx'); } catch (e) {}
+              done();
+            }, 100);
           }, 100);
         }, 100);
       }, 100);
@@ -1497,24 +1522,42 @@ var McFlow = {
         CLOCK.next(function () { try { el.classList.remove('mc-flash', 'mcfx'); } catch (e) {} }, 100);
       } catch (e) {} }, 100);
     }
-    // 验收④b:running think 折叠摘要行单行 flash(spec §4 行5 修订)。流式换字(characterData)
-    // 命中摘要 span([data-follow-end],经 MC_MAP.thinkSummary)且属 running think 卡时挂
-    // .mc-line-flash,CLOCK.next 100ms 撤;同一 span 100ms 窗内多次变化合一拍(与 CLOCK 栅格
-    // 天然对齐);REDUCED 跳过;isConnected + try/catch 防御,零渲染干预(类切换直切)
-    function lineFlash(node) {
-      if (REDUCED) return;
+    // 验收三轮②(spec §4 再修):running think 摘要行「积攒—吐出」(原型 showThinking L1403-1431
+    // 五帧状态机的宿主版):宿主流式改字先冻结回显(消灭滚动感),积攒 ≥400ms 后周期末
+    // 白块盖住(.mc-line-flash)→文本瞬换成积攒尾部(≤44 字符,原型同款窗口)→100ms 后撤块显现;
+    // 我方回写值==frozen 的自触发 mutation 天然跳过,不丢积攒;REDUCED 跳过(宿主原生行为);
+    // 域限定同旧版:仅 running think 卡的摘要 span([data-follow-end]),其余文本零干预
+    function sumTail(s) { s = String(s || ''); return s.length > 44 ? '…' + s.slice(-44) : s; }
+    function sumReveal(span, st) {
+      st.pending = false;
       try {
-        var el = node && node.parentElement;
-        if (!el || !el.isConnected) return;
-        var span = el.closest(MC_MAP.thinkSummary);
-        if (!span || !span.closest(MC_MAP.thinkCard + MC_MAP.dataState + '"running"]')) return;
-        var now = Date.now();
-        if (now - (flashLast.get(span) || 0) < 100) return; // 节流:同拍合一
-        flashLast.set(span, now);
+        if (!span.isConnected || REDUCED) return;
+        st.frozen = sumTail(st.latest);
+        if ((span.textContent || '') !== st.frozen) { try { span.textContent = st.frozen; } catch (e2) {} }
         span.classList.add('mc-line-flash');
         CLOCK.next(function () {
           try { if (span.isConnected) span.classList.remove('mc-line-flash'); } catch (e) {}
         }, 100);
+      } catch (e) { /* 单点失败不拖垮观察管道 */ }
+    }
+    function thinkStream(node) {
+      if (REDUCED) return;
+      try {
+        var el = node && node.parentElement;
+        if (!el || !el.isConnected) return;
+        var span = el.closest ? el.closest(MC_MAP.thinkSummary) : null;
+        if (!span || !span.isConnected) return;
+        if (!span.closest(MC_MAP.thinkCard + MC_MAP.dataState + '"running"]')) return;
+        var txt = span.textContent || '';
+        var st = sumStates.get(span);
+        if (!st) {
+          st = { pending: false, latest: txt, frozen: txt };
+          sumStates.set(span, st);
+        }
+        if (txt === st.frozen) return; // 我方回写 / 无实质变化:跳过(防自触发丢积攒)
+        st.latest = txt;               // 积攒宿主最新全文
+        try { span.textContent = st.frozen; } catch (e) { /* 回写失败不重排 */ } // 冻结回显
+        if (!st.pending) { st.pending = true; CLOCK.next(function () { sumReveal(span, st); }, 400); }
       } catch (e) { /* 单点失败不拖垮观察管道 */ }
     }
     function enter(node) {
@@ -1541,12 +1584,15 @@ var McFlow = {
           if (!head) continue;
           var card = null;
           try { card = head.closest(TOGGLE[i][1]); } catch (e) { card = null; }
-          if (card) cardFlash(card);
+          if (card) cardToggle(card);
           break; // 卡头互不嵌套,单命中即止
         }
       } catch (e) { /* 委托失败不影响宿主自身开合 */ }
     }
-    function attach(root) {
+    function attach() { // 验收三轮⑥ live 探明:切会话时宿主会整体替换 [data-chat-flow] 节点,
+      // observer/click 绑列节点随会话切换失效——一律绑 document.body(稳定根;委托/域限定
+      // 由 MC_MAP 选择器在 closest/matches 内完成,body 级观察回调轻量早退)
+      var root = document.body;
       try { // 存量行标记不闪（历史加载）
         var q = root.querySelectorAll(MC_MAP.flowItem); for (var i = 0; i < q.length; i++) seen.add(q[i]);
       } catch (e) {}
@@ -1554,11 +1600,11 @@ var McFlow = {
         try {
           for (var i = 0; i < muts.length; i++) {
             var m = muts[i];
-            if (m.type === 'characterData') { lineFlash(m.target); continue; }
+            if (m.type === 'characterData') { thinkStream(m.target); continue; }
             for (var j = 0; j < m.addedNodes.length; j++) {
               var n = m.addedNodes[j];
               if (n instanceof Element) enter(n);
-              else lineFlash(n); // 文本节点整换(宿主换节点而非改 data)同走摘要 flash 判定
+              else thinkStream(n); // 文本节点整换(宿主换节点而非改 data)同走摘要积攒判定
             }
           }
         } catch (e) {}
@@ -1566,11 +1612,13 @@ var McFlow = {
       mo.observe(root, { childList: true, subtree: true, characterData: true });
       try { root.addEventListener('click', onHeadClick, true); offClick = function () { try { root.removeEventListener('click', onHeadClick, true); } catch (e) {} }; } catch (e) {}
     }
-    timer = CLOCK.next(function poll() { // flowColumn 晚挂载轮询（最多 ~8s）
+    timer = CLOCK.next(function poll() { // flowColumn 晚挂载轮询（不再限次——boot 停在空会话
+      // (hero 态无列)时 8s 上限会耗尽,之后切会话 observer 永不挂载;验收三轮⑥ live 复现。
+      // 列出现即 attach(绑 body,不再依赖列节点存续);每拍一次 querySelector 开销可忽略)
       tries++;
       var root = null; try { root = document.querySelector(MC_MAP.flowColumn); } catch (e) {}
-      if (root) { attach(root); return; }
-      if (tries < 20) timer = CLOCK.next(poll, 400);
+      if (root) { attach(); return; }
+      timer = CLOCK.next(poll, 400);
     }, 400);
     return function teardown() {
       try { if (mo) mo.disconnect(); } catch (e) {}

@@ -51,7 +51,10 @@ function flashOut(el, hide) {
   }, 100);
 }
 
-// 折叠四拍：ghost → flash → 清残高 + fn()（类切换在此发生）→ 撤 flash+ghost
+// 折叠五拍（验收三轮⑥ 对齐原型 accToggle 逐拍同款 L1290-1303）：
+// t0 ghost(整卡透明) → t100 flash(白块遮盖) → t200 清残高+fn(被遮内容在此拍瞬变,可大可小)
+// → t300 撤 flash(揭开) → t400 撤 ghost(内容显回)+清 busy。
+// ghost 保留到 t400：白块撤后先露卡底再显内容(原型同款两步揭幕)。
 // dataset.busy 防重入；断连/异常路径也要清 busy，避免卡片永久卡死
 function accToggle(card, fn) {
   try {
@@ -64,23 +67,25 @@ function accToggle(card, fn) {
   mcfxSchedule(() => {
     try {
       if (!card || !card.isConnected) { done(); return; }
-      card.classList.remove('mc-ghost');
       card.classList.add('mc-flash');
     } catch (e) { done(); return; }
     mcfxSchedule(() => {
       try {
-        if (!card || !card.isConnected) { done(); return; }
-        card.style.height = ''; // 清展开动画残留的 inline 高度
-        fn();
+        if (card && card.isConnected) {
+          card.style.height = ''; // 清展开动画残留的 inline 高度
+          fn();
+        }
       } catch (e) { /* fn 抛错仍走完撤拍 */ }
       mcfxSchedule(() => {
         try {
-          if (card && card.isConnected) {
-            card.classList.remove('mc-flash');
-            card.classList.remove('mc-ghost');
-          }
+          if (card && card.isConnected) card.classList.remove('mc-flash');
         } catch (e) { /* 同上 */ }
-        done();
+        mcfxSchedule(() => {
+          try {
+            if (card && card.isConnected) card.classList.remove('mc-ghost');
+          } catch (e) { /* 同上 */ }
+          done();
+        }, 100);
       }, 100);
     }, 100);
   }, 100);

@@ -98,28 +98,34 @@ test('flashIn 回调抛错不向外传播（每拍 try/catch）', () => {
   assert.doesNotThrow(() => clock.flush());
 });
 
-test('accToggle 四拍：ghost → flash → 清残高+fn → 撤两类+清 busy', () => {
+test('accToggle 五拍（原型 L1290-1303 逐拍同款）：ghost → flash(ghost 保留) → 清残高+fn → 撤 flash → 撤 ghost+清 busy', () => {
   const card = fakeEl();
   card.style.height = '123px'; // 残高
   let fnArgs = 0;
   let heightAtFn = null;
   accToggle(card, () => { fnArgs++; heightAtFn = card.style.height; });
-  // 拍0：busy + ghost
+  // 拍0：busy + ghost（整卡透明）
   assert.equal(card.dataset.busy, '1');
   assert.ok(card.classList.contains('mc-ghost'));
-  clock.flush(); // 拍1：flash
+  assert.ok(!card.classList.contains('mc-flash'));
+  clock.flush(); // 拍1(t100)：+flash，白块遮盖（ghost 保留——内容仍隐）
   assert.ok(card.classList.contains('mc-flash'));
-  assert.ok(!card.classList.contains('mc-ghost'));
+  assert.ok(card.classList.contains('mc-ghost'), 'ghost 保留到拍4（原型同款）');
   assert.equal(fnArgs, 0);
-  clock.flush(); // 拍2：清残高 + fn()
+  clock.flush(); // 拍2(t200)：清残高 + fn()（被遮内容瞬变拍）
   assert.equal(fnArgs, 1);
   assert.ok(!heightAtFn, 'fn 前已清 inline height'); // '' 即已清（真实 DOM 同款）
   assert.ok(!card.style.height);
-  clock.flush(); // 拍3：撤两类 + 清 busy
+  assert.ok(card.classList.contains('mc-flash'), 'fn 拍仍在白块遮盖下');
+  clock.flush(); // 拍3(t300)：撤 flash（揭开）
+  assert.ok(!card.classList.contains('mc-flash'));
+  assert.ok(card.classList.contains('mc-ghost'), '内容尚未显回');
+  assert.equal(card.dataset.busy, '1', 'busy 未清');
+  clock.flush(); // 拍4(t400)：撤 ghost（内容显回）+ 清 busy
   assert.ok(!card.classList.contains('mc-flash'));
   assert.ok(!card.classList.contains('mc-ghost'));
   assert.equal(card.dataset.busy, undefined);
-  assert.deepEqual(clock.calls, [100, 100, 100]);
+  assert.deepEqual(clock.calls, [100, 100, 100, 100]);
 });
 
 test('accToggle busy 期间重入直接拒绝', () => {
@@ -127,11 +133,11 @@ test('accToggle busy 期间重入直接拒绝', () => {
   let n = 0;
   accToggle(card, () => { n++; });
   accToggle(card, () => { n += 10; }); // 应被 busy 挡下
-  clock.flush(); clock.flush(); clock.flush();
+  clock.flush(); clock.flush(); clock.flush(); clock.flush();
   assert.equal(n, 1);
   // busy 已清，再次可用
   accToggle(card, () => { n += 100; });
-  clock.flush(); clock.flush(); clock.flush();
+  clock.flush(); clock.flush(); clock.flush(); clock.flush();
   assert.equal(n, 101);
 });
 
