@@ -119,5 +119,12 @@ const MC_MAP = {
   thinkCard: '[data-variant="think"]',                        // stable;双锚 [data-state](L9389-9439)
   ctxBody: '[data-context-injection-body]',                   // stable(L4863-4907)
   turnTailBar: '[data-turn-tail]',                            // stable(L9715-9752)
+  // —— 终审 F2 收编（2026-08-31）：此前 flow 规则里直写的宿主选择器一律进管制表（spec §1 唯一管制点）——
+  pendingSteering: '[data-pending-steering]',  // stable(steering 待定态虚线廓，spec §4 行3)
+  disclosureRow: '[data-disclosure-row]',      // stable(context 折叠行；宿主原图标隐藏链的行锚)
+  contextForm: '[data-context-form=',          // 属性前缀键（六 form 任意取值，:has 细分插值；同 kind 前缀先例）
+  statusRow: '[role="status"]',                // stable(TurnStatus 宿主状态行；使用时限定 flowColumn 内，spec §4 行10)
+  commandCard: '[data-variant="others"]',      // stable(command 卡壳锚，spec §4 行9「[data-variant="others"][data-state]」)
+  dataState: '[data-state=',                   // 属性前缀键（任意取值形态；think 双锚第二锚 / command 三态）
 };
 

@@ -78,12 +78,13 @@ function restoreStubs() {
 beforeEach(() => { FakeMO.last = null; });
 afterEach(restoreStubs);
 
-// 标准桩环境：MC_MAP 三键 + 假 CLOCK + document/window 可控
+// 标准桩环境：MC_MAP 四键（statusRow 供 SYNC[1] 组合选择器） + 假 CLOCK + document/window 可控
 function stubEnv(clock, { reduced = false, columnReady = false, column = null } = {}) {
   setStub('MC_MAP', {
     flowItem: '[data-chat-flow-kind]',
     flowColumn: '[data-chat-flow]',
     kindModelRetry: '[data-chat-flow-kind="model-retry"]',
+    statusRow: '[role="status"]',
   });
   setStub('CLOCK', clock);
   setStub('MutationObserver', FakeMO);
