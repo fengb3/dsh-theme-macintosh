@@ -2645,9 +2645,10 @@ const mods = {
   McFlow: McFlow,
   McThink: McThink,
   McSysCard: McSysCard,
+  McMenus: McMenus,
   McKit: McKit,
 };
-const order = ["McTokens","McClock","McMcfx","McSprite","MC_MAP","McChrome","McSidebar","McFinder","McFlow","McThink","McSysCard","McKit"];
+const order = ["McTokens","McClock","McMcfx","McSprite","MC_MAP","McChrome","McSidebar","McFinder","McFlow","McThink","McSysCard","McMenus","McKit"];
 
 return {
   inject: ["slots", "theme", "sessions"],
