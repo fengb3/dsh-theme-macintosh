@@ -1327,6 +1327,19 @@ var McFlow = {
       // 宿主 shimmer 移除(原型 run 态信号=琥珀染;标题染 spark 由行内继承,faint 摘要):
       MC_MAP.thinkCard + '[data-state="running"]::after{content:none}',
       MC_MAP.thinkCard + '[data-state="running"] *::after{animation:none!important}',
+      // T4 补遗(spec §2 行「compaction/manual-compaction → i-px-copy」;T4 裁定并入本 commit):
+      // 压缩条 ::before 图标位,复用 T4 已内联的 copy data-URI 常量插值(context snapshot 同款)
+      ':is(' + MC_MAP.kindCompaction + ',' + MC_MAP.kindManualCompaction + ')::before{content:"";flex:none;width:15px;height:15px;margin-top:1px;background-color:var(--mc-faint);-webkit-mask:url("data:image/svg+xml,' + MC_FLOW_ICON_COPY + '") center/contain no-repeat;mask:url("data:image/svg+xml,' + MC_FLOW_ICON_COPY + '") center/contain no-repeat}',
+      // §10:turn-tail 操作条(spec §4 行6;原型 L533-536)+ 钳形钮壳(只造壳不换宿主图标;
+      // 后代选择器命中 .actions 容器内钮,data-slot 包装层不减后代深度)
+      MC_MAP.turnTailBar + '{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding-top:2px;font:500 11px/1.6 var(--font-mono);color:var(--mc-faint)}',
+      MC_MAP.turnTailBar + ' button{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border:1px solid var(--mc-border);border-radius:var(--mc-r-btn);background:var(--mc-surface);color:var(--mc-fg)}',
+      MC_MAP.turnTailBar + ' button:active{background:var(--mc-fg);color:var(--mc-surface);border-color:var(--mc-fg)}',
+      // §11:command 三态卡壳(spec §4 行9;默认 border / running spark / error danger;
+      // [data-variant="others"] 在 kindCommand 行内任意深度;细节留 toolcard 周期)
+      MC_MAP.kindCommand + ' [data-variant="others"]{background:var(--mc-surface);border:1px solid var(--mc-border);border-radius:var(--mc-r-card);overflow:hidden}',
+      MC_MAP.kindCommand + ' [data-variant="others"][data-state="running"]{border-color:var(--mc-spark)}',
+      MC_MAP.kindCommand + ' [data-variant="others"][data-state="error"]{border-color:var(--mc-danger)}',
     ].join('\n');
   })(),
   mount: function (ctx) {
