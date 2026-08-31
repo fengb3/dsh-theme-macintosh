@@ -72,16 +72,13 @@ turnTailBar  '[data-turn-tail]'                                // stable(L9715-9
 | 10 | TurnStatus | flowColumn 内 role="status" | spark 脉冲点 + muted 小字(宿主特有,低强度) |
 | 11 | unknown 兜底 | kindUnknown | surface-2 + mono 小字,不破版 |
 
-## 5 · dev 热重载管道(Task 0)
+## 5 · dev 热重载管道(§5 已由 spike 定案)
 
-两层设计,第一层通则第二层不建:
+**Spike 结论(2026-08-31 实测,link 安装 + host 0.1.1-rc.2):改 `client.js` → 刷新页面即生效,无需重启宿主**——boot 清单的 rev 查询串虽为扫描期缓存,但插件内容自链接文件现读,页面刷新即拾取新内容(两次标记注入 v1/v2 均复现,主题痕迹完整)。一期「改 client.js 必须重启宿主」结论作废(README 同步更正,见实施计划收尾任务)。
 
-1. **HMR 可行性 spike**:宿主依赖含 cordis-plugin-hmr/dsh-client-hmr,aurum README 言 link 安装「编辑即生效,hot-reload 能升级已加载插件版本」。spike = link 安装态注释级改动 → 不重启 → 触发页内 HMR/刷新 → 验证 rev 与内容更新。通过 → 热重载零自建,只写使用协议。
-2. **自建 reload 管道(spike 不通的 fallback)**:
-   - `apply(ctx)` disposers 化:全部副作用(style/sprite/desk 移除、slot unreg、overrideTokens off、observer disconnect、CLOCK dispose)登记 `window.__MC_DEV__.disposers`,逆序执行——同时强化一期「撤除干净」验收;
-   - `index.js` 加 `GET /mcx-assets/__dev__/client.js`(包根 client.js,`Cache-Control: no-store` 绕 boot rev 缓存);
-   - `window.__MC_DEV__.reload()`:跑旧 disposers → no-store fetch → `new Function` 包裹 eval → 以保存的 ctx 调新 `apply`(React 等 external 全局可用性在 spike 一并验证);
-   - 开关 `localStorage.mcdev==='1'`,生产零影响;失败(fetch/eval)console.error 明示、旧实例保持。
+- **dev 循环 = 编辑 → 浏览器刷新**(playwright `reload` 脚本化);零自建管道,§5 原第二层 fallback(自建 reload/disposers 化)按「第一层通则不建」裁定不实施。
+- `window.__MC_DEV__`/`__dev__` 路由/disposers 化均不再需要;「撤除干净」验收仍按一期协议(bundles 移除 + 重启演练)。
+- 重启宿主仅剩两个场景:改 `package.json`/`index.js`/`cordis.patch.yml`(插件清单级变更),或换插件集。重启脚本:`~/.dsh/restart-web.ps1`(2026-08-31 本机补齐;注意重启会打断进行中的 agent 回合,需用户手动继续)。
 
 ## 6 · kit 扩区(会话流分区)
 
