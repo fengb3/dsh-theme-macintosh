@@ -1125,7 +1125,16 @@ function McFinderTree(props) {
   const current = live ? (list ? list.current : null) : null;
   const selState = React.useState(MC_FINDER_SEL0);
   const sel = live ? current : selState[0];
-  const openState = React.useState(null); // null = 默认全开；记录开合覆盖 {gid:bool}
+  // 开合覆盖 {gid:bool} 持久化 localStorage(七轮修复:刷新回全开 + 点一组全体误折两弊;
+  // null=无记录默认全开;查不到键一律回落「开」——只有显式 false 才折,单组开合互不牵连)
+  const MC_FINDER_OPEN_KEY = 'mcx-finder-open';
+  const openState = React.useState(function () {
+    try {
+      const v = window.localStorage.getItem(MC_FINDER_OPEN_KEY);
+      if (v) { const o = JSON.parse(v); if (o && typeof o === 'object') return o; }
+    } catch (e) { /* 坏值/无存储 → 回落默认全开 */ }
+    return null;
+  });
   const expState = React.useState({});
   const qState = React.useState(MC_FINDER_QUERY); // 迷你态搜索词跨形态接力（惰性初值）
   const q = qState[0].trim().toLowerCase();
@@ -1158,7 +1167,12 @@ function McFinderTree(props) {
     return function () { window.removeEventListener('mcx-finder-query', onQ); };
   }, []);
   const onToggle = function (gid) {
-    openState[1](function (o) { const n = Object.assign({}, o || {}); n[gid] = !(o ? o[gid] : true); return n; });
+    openState[1](function (o) {
+      const n = Object.assign({}, o || {});
+      n[gid] = !(o ? o[gid] !== false : true); // 查无键=当前开 → 翻折;有键按记录翻
+      try { window.localStorage.setItem(MC_FINDER_OPEN_KEY, JSON.stringify(n)); } catch (e) {}
+      return n;
+    });
   };
   const onExpand = function (gid) {
     expState[1](function (m) { const n = Object.assign({}, m); n[gid] = true; return n; });
@@ -1181,7 +1195,7 @@ function McFinderTree(props) {
       shown.map(function (g) {
         return h(McFinderGroup, {
           key: g.id, group: g,
-          open: q !== '' ? true : (openState[0] === null ? true : !!openState[0][g.id]),
+          open: q !== '' ? true : (openState[0] === null ? true : openState[0][g.id] !== false),
           expanded: !!expState[0][g.id] || q !== '',
           selected: sel, onToggle: onToggle, onExpand: onExpand, onPick: onPick,
         });
