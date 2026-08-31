@@ -94,7 +94,65 @@ var McFlow = {
     ].join('\n');
   })(),
   mount: function (ctx) {
-    // Task 7 实装:MutationObserver 三拍 + syncAnim 相位同步
-    return null;
+    // Task 7：MutationObserver 出场三拍 + syncAnim 相位同步管道（spec 2026-08-31）。
+    // 一切延时走 CLOCK.next（audit：禁裸定时器直调）；REDUCED 用户零闪烁（类不加，内容照常）。
+    if (typeof MutationObserver === 'undefined' || typeof CLOCK === 'undefined' || !CLOCK) return null;
+    var REDUCED = false;
+    try { REDUCED = window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) {}
+    var SYNC = [
+      [MC_MAP.kindModelRetry, '--pulse-delay', CLOCK.PULSE],
+      [MC_MAP.flowColumn + ' [role="status"]', '--pulse-delay', CLOCK.PULSE],
+    ];
+    var mo = null, tries = 0, timer = null;
+    var seen = new WeakSet();
+    function syncEl(el) {
+      for (var i = 0; i < SYNC.length; i++) { try {
+        if (el.matches(SYNC[i][0])) CLOCK.syncAnim(el, SYNC[i][2], SYNC[i][1]);
+        var qs = el.querySelectorAll(SYNC[i][0]);
+        for (var j = 0; j < qs.length; j++) CLOCK.syncAnim(qs[j], SYNC[i][2], SYNC[i][1]);
+      } catch (e) {} }
+    }
+    function enterFlash(el) { // 三拍：ghost→flash→撤（无 show 回调变体）。
+      // mcfx 同伴类必挂（css 为组合选择器 .mcfx.mc-ghost/.mcfx.mc-flash，照一期 flashIn 协议），
+      // 拍2 连 mcfx 一并撤净——流上零残留（position:relative 不长留宿主行）
+      try { el.classList.add('mcfx', 'mc-ghost'); } catch (e) { return; }
+      CLOCK.next(function () { try {
+        if (!el.isConnected) return;
+        el.classList.remove('mc-ghost'); el.classList.add('mc-flash');
+        CLOCK.next(function () { try { el.classList.remove('mc-flash', 'mcfx'); } catch (e) {} }, 100);
+      } catch (e) {} }, 100);
+    }
+    function enter(node) {
+      if (!(node instanceof Element)) return;
+      syncEl(node); // 相位同步不限 flowItem 本行：[role=status] 常为 flowColumn 直接子节点，
+      // 新入节点全量试 SYNC 两选择器（syncAnim 幂等，重复触发只是相位刷新）
+      var items = node.matches(MC_MAP.flowItem) ? [node] : [];
+      try { var q = node.querySelectorAll(MC_MAP.flowItem); for (var i = 0; i < q.length; i++) items.push(q[i]); } catch (e) {}
+      for (var i = 0; i < items.length; i++) {
+        var it = items[i];
+        if (seen.has(it)) continue; seen.add(it);
+        syncEl(it);
+        if (!REDUCED) enterFlash(it);
+      }
+    }
+    function attach(root) {
+      try { // 存量行标记不闪（历史加载）
+        var q = root.querySelectorAll(MC_MAP.flowItem); for (var i = 0; i < q.length; i++) seen.add(q[i]);
+      } catch (e) {}
+      mo = new MutationObserver(function (muts) {
+        try { for (var i = 0; i < muts.length; i++) for (var j = 0; j < muts[i].addedNodes.length; j++) enter(muts[i].addedNodes[j]); } catch (e) {}
+      });
+      mo.observe(root, { childList: true, subtree: true });
+    }
+    timer = CLOCK.next(function poll() { // flowColumn 晚挂载轮询（最多 ~8s）
+      tries++;
+      var root = null; try { root = document.querySelector(MC_MAP.flowColumn); } catch (e) {}
+      if (root) { attach(root); return; }
+      if (tries < 20) timer = CLOCK.next(poll, 400);
+    }, 400);
+    return function teardown() {
+      try { if (mo) mo.disconnect(); } catch (e) {}
+      try { if (timer) CLOCK.clear(timer); } catch (e) {}
+    };
   },
 };

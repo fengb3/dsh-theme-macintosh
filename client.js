@@ -204,6 +204,11 @@ const McClock = {
         queue.push(job);
         return () => { queue = queue.filter((j) => j !== job); };
       },
+      // 句柄注销：next 返回的取消句柄经此统一注销（T7 flow mount 轮询 teardown 用）；
+      // dispose 后调用为无害 no-op（句柄闭包只触碰旧 mount 的队列绑定）
+      clear(handle) {
+        if (typeof handle === 'function') { try { handle(); } catch (e) { /* 忽略 */ } }
+      },
       // 负延迟注入：任意时刻挂上的 CSS 动画与全局相位同步
       syncAnim(el, period, prop) {
         if (period === undefined) period = clock.PULSE;
@@ -230,6 +235,10 @@ const McClock = {
     return teardown;
   },
 };
+// CJS 兼容出口（段尾守卫，同 mcfx 尾部模式）：McClock/__clockForTest 供 clear 用例测试；
+// computeNext 早期出口（上方）保留 —— McClock 为 const 声明，出口前移会 TDZ
+if (typeof module !== 'undefined' && module.exports)
+  module.exports = { computeNext, McClock, __clockForTest: function () { return CLOCK; } };
 
 // src/core/mcfx.js —— 层2：闪烁三件套（ghost→flash→swap 三拍协议，照《笔记》§0.3/§5.3/§8.2）
 // 纯顶层声明，无模块系统语法；与 clock.js 拼进同一作用域，直接引用 CLOCK，勿重复声明
@@ -1343,8 +1352,66 @@ var McFlow = {
     ].join('\n');
   })(),
   mount: function (ctx) {
-    // Task 7 实装:MutationObserver 三拍 + syncAnim 相位同步
-    return null;
+    // Task 7：MutationObserver 出场三拍 + syncAnim 相位同步管道（spec 2026-08-31）。
+    // 一切延时走 CLOCK.next（audit：禁裸定时器直调）；REDUCED 用户零闪烁（类不加，内容照常）。
+    if (typeof MutationObserver === 'undefined' || typeof CLOCK === 'undefined' || !CLOCK) return null;
+    var REDUCED = false;
+    try { REDUCED = window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) {}
+    var SYNC = [
+      [MC_MAP.kindModelRetry, '--pulse-delay', CLOCK.PULSE],
+      [MC_MAP.flowColumn + ' [role="status"]', '--pulse-delay', CLOCK.PULSE],
+    ];
+    var mo = null, tries = 0, timer = null;
+    var seen = new WeakSet();
+    function syncEl(el) {
+      for (var i = 0; i < SYNC.length; i++) { try {
+        if (el.matches(SYNC[i][0])) CLOCK.syncAnim(el, SYNC[i][2], SYNC[i][1]);
+        var qs = el.querySelectorAll(SYNC[i][0]);
+        for (var j = 0; j < qs.length; j++) CLOCK.syncAnim(qs[j], SYNC[i][2], SYNC[i][1]);
+      } catch (e) {} }
+    }
+    function enterFlash(el) { // 三拍：ghost→flash→撤（无 show 回调变体）。
+      // mcfx 同伴类必挂（css 为组合选择器 .mcfx.mc-ghost/.mcfx.mc-flash，照一期 flashIn 协议），
+      // 拍2 连 mcfx 一并撤净——流上零残留（position:relative 不长留宿主行）
+      try { el.classList.add('mcfx', 'mc-ghost'); } catch (e) { return; }
+      CLOCK.next(function () { try {
+        if (!el.isConnected) return;
+        el.classList.remove('mc-ghost'); el.classList.add('mc-flash');
+        CLOCK.next(function () { try { el.classList.remove('mc-flash', 'mcfx'); } catch (e) {} }, 100);
+      } catch (e) {} }, 100);
+    }
+    function enter(node) {
+      if (!(node instanceof Element)) return;
+      syncEl(node); // 相位同步不限 flowItem 本行：[role=status] 常为 flowColumn 直接子节点，
+      // 新入节点全量试 SYNC 两选择器（syncAnim 幂等，重复触发只是相位刷新）
+      var items = node.matches(MC_MAP.flowItem) ? [node] : [];
+      try { var q = node.querySelectorAll(MC_MAP.flowItem); for (var i = 0; i < q.length; i++) items.push(q[i]); } catch (e) {}
+      for (var i = 0; i < items.length; i++) {
+        var it = items[i];
+        if (seen.has(it)) continue; seen.add(it);
+        syncEl(it);
+        if (!REDUCED) enterFlash(it);
+      }
+    }
+    function attach(root) {
+      try { // 存量行标记不闪（历史加载）
+        var q = root.querySelectorAll(MC_MAP.flowItem); for (var i = 0; i < q.length; i++) seen.add(q[i]);
+      } catch (e) {}
+      mo = new MutationObserver(function (muts) {
+        try { for (var i = 0; i < muts.length; i++) for (var j = 0; j < muts[i].addedNodes.length; j++) enter(muts[i].addedNodes[j]); } catch (e) {}
+      });
+      mo.observe(root, { childList: true, subtree: true });
+    }
+    timer = CLOCK.next(function poll() { // flowColumn 晚挂载轮询（最多 ~8s）
+      tries++;
+      var root = null; try { root = document.querySelector(MC_MAP.flowColumn); } catch (e) {}
+      if (root) { attach(root); return; }
+      if (tries < 20) timer = CLOCK.next(poll, 400);
+    }, 400);
+    return function teardown() {
+      try { if (mo) mo.disconnect(); } catch (e) {}
+      try { if (timer) CLOCK.clear(timer); } catch (e) {}
+    };
   },
 };
 
