@@ -282,6 +282,26 @@ state = { view, mode, current, sessions, busy:{}, fallback:{}, queue:{}, stats:{
 - **headless 验证节流**：Playwright headless 下 100ms 栅格拍会被节流到 ~200ms/拍，五拍全程 ~800ms；
   验证脚本采样窗口须按 2× 放宽，勿误判卡死
 
+### 8.6 think 卡整体重写（2026-09 验收四轮实录，host 0.1.1-rc.2）
+- **组件化路线（用户裁定）**：不再在宿主 ReasoningRow 上做 CSS/观察器干预——遮蔽
+  `conversation.chat.node` keyed 槽 `assistant-step`（priority:-1），自建 McAssistantNodeView
+  （AssistantMarkdown L9476-9537 平移：text→宿主 primitives MarkdownText 保真、reasoning→自研
+  McThinkCard、image→renderMessageImages、tool-call 跳过）+ McThinkCard（原型 showThinking
+  L1362-1450 的 React 版）
+- **缓冲区 + 定期吐出（核心模型）**：text prop 增量先进 React state 缓冲；每 500ms 周期
+  （400 顿 + 100 揭，CLOCK 栅格）吐 ≤140 字：摘要 `.s-in` 只装本次新字（白块=span 宽=字宽，
+  **零测宽**——被盖元素本身就是文本容器）+ 正文追加 `.mc-app-cover` 行内白块（color:transparent
+  同理）；结束定格前 26 字首行。宿主整段重写（前缀不符）时从头再来（mcThinkTick 纯函数可测）
+- **开合五拍真延迟 flip**：自有 DOM 才能做到「几何变化发生在白块遮盖下」——lib accToggle 的
+  flip 回调在 t200 拍执行（.open 切换），live 实测 body 高度 0→918 精确发生在遮盖期间
+- **ghost 整卡透明**：`.mc-ghost` 须 `background/border-image/box-shadow/outline:transparent!important`
+  （仅子内容 opacity:0 会漏出卡底，用户裁定「先让整个卡片变透明」）
+- **primitives 直取**：`require('@deepseek-ai/dsh-client-ui-primitives')` 在 loader 工厂域无需
+  inject 声明即可解析（注册表全局；缺席静默 null→不遮蔽，宿主原生渲染兜底）——避免了改
+  package.json dsh.client 字段的宿主重启成本
+- **槽位 props 全量**：chat.node 槽把 useSessions/useTurnData/fileMentions/renderMessageImages/
+  node(data.blocks/status) 全数传入遮蔽组件——mentions 的 owner 判定可复刻，仅 t/locale 需自带
+
 ---
 
 ## 9 · §6 输入坞

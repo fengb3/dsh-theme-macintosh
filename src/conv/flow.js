@@ -14,10 +14,7 @@ const MC_FLOW_ICON_DOC = "%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0
 const MC_FLOW_ICON_LIST = "%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23000' d='M2 5h20v14H2V5zm2 2v2h16V7H4zm16 4H4v2h16v-2zm0 4H4v2h16v-2z'/%3E%3C/svg%3E";
 const MC_FLOW_ICON_COPY = "%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23000' d='M4 2h11v2H6v13H4V2zm4 4h12v16H8V6zm2 2v12h8V8h-8z'/%3E%3C/svg%3E";
 const MC_FLOW_ICON_CLOCK = "%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23000' d='M19 3H5v2H3v14h2v2h14v-2h2V5h-2V3zm0 2v14H5V5h14zm-8 2h2v6h4v2h-6V7z'/%3E%3C/svg%3E";
-// 验收二轮⑦:think 折叠三角像素 mask——同款资产 = sprite i-tri(6×11,McFinder 分组头/侧栏折叠
-// 面板 T10 换锚后的像素三角);侧栏 .mc-tri 规格为 11×11 currentColor,此处经 data-URI mask 复刻
-// (mask 只吃 alpha,双色 sprite 单色化即剪影,视觉与 currentColor 版一致)
-const MC_FLOW_ICON_TRI = "%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 6 11'%3E%3Cpath fill='%23000' d='M0 0H1V1H2V2H1V9H2V10H1V11H0V0Z'/%3E%3Cpath fill='%23000' d='M3 8H2V9H3V8Z'/%3E%3Cpath fill='%23000' d='M4 7V8H3V7H4Z'/%3E%3Cpath fill='%23000' d='M5 6V7H4V6H5Z'/%3E%3Cpath fill='%23000' d='M5 5H6V6H5V5Z'/%3E%3Cpath fill='%23000' d='M4 4H5V5H4V4Z'/%3E%3Cpath fill='%23000' d='M3 3H4V4H3V3Z'/%3E%3Cpath fill='%23000' d='M3 3V2H2V3H3Z'/%3E%3C/svg%3E";
+// 验收四轮:MC_FLOW_ICON_TRI(think 折叠三角 mask)退役——think 卡重写后用 sprite #i-tri 直引
 var McFlow = {
   // IIFE 安放 var F:顶层作用域与 tokens/clock/mcfx/sprite 共享,F 不外泄
   css: (function () {
@@ -96,32 +93,11 @@ var McFlow = {
       // §9:TurnStatus(宿主运行中状态行)
       MC_MAP.flowColumn + ' ' + MC_MAP.statusRow + '{display:flex;align-items:center;gap:8px;font:400 12px/1.6 var(--font-ui);color:var(--mc-muted)}',
       MC_MAP.flowColumn + ' ' + MC_MAP.statusRow + '::before{content:"";flex:none;width:6px;height:6px;background:var(--mc-spark);clip-path:polygon(33% 0,67% 0,100% 33%,100% 67%,67% 100%,33% 100%,0 67%,0 33%);animation:mc-pulse 2600ms steps(1,end) infinite;animation-delay:var(--pulse-delay,0ms)}',
-      // §4-5:reasoning think 卡(spec §4 行5;原型 L506-526;双锚 [data-state=running|ok],任意深度)
-      MC_MAP.thinkCard + '{background:var(--mc-surface-3);border:1px solid var(--mc-border);border-radius:var(--mc-r-card);overflow:hidden;transition:none}',
-      MC_MAP.thinkCard + ' *{transition:none!important}',
-      MC_MAP.thinkCard + MC_MAP.dataState + '"running"]{background:color-mix(in oklab,var(--mc-spark) 9%,var(--mc-surface-3))}',
-      MC_MAP.thinkCard + ' [class*="thinkBody"]{font:400 12px/1.8 var(--font-ui);color:var(--mc-muted);white-space:pre-wrap}',
-      // 宿主 shimmer/sweep 移除(原型 run 态信号=琥珀染;标题染 spark 由行内继承,faint 摘要):
-      // 验收二轮③(live 探明):残留渐变来源 = ReasoningRow 宿主 .row::after 扫光(300px 宽
-      // left:0 静态残留,animation 杀掉后伪元素仍在)→ 对 [data-disclosure-row]::after 精准
-      // content:none + background:none 清净;旧两条全局压制保留作纵深
-      MC_MAP.thinkCard + MC_MAP.dataState + '"running"]::after{content:none}',
-      MC_MAP.thinkCard + MC_MAP.dataState + '"running"] *::after{animation:none!important}',
-      MC_MAP.thinkCard + MC_MAP.dataState + '"running"] ' + MC_MAP.disclosureRow + '::after{content:none!important;background:none!important}',
-      // 验收④a→二轮⑦(2026-08-31 live 探明):折叠箭头换像素三角——宿主 leading 图标(running=
-      // iconIdle 原子图标/展开=chevron 直系 svg)全隐,leading ::before 顶上;⑦ 对齐侧栏 McFinder
-      // 折叠面板语汇:同款 sprite i-tri 资产经 data-URI mask 复刻(11×11 currentColor,同 .mc-tri
-      // 规格);展开态 rotate(90deg) 硬切
-      MC_MAP.thinkCard + ' ' + MC_MAP.disclosureRow + '>span:first-of-type svg{display:none}',
-      MC_MAP.thinkCard + ' ' + MC_MAP.disclosureRow + '>span:first-of-type::before{content:"";display:block;width:11px;height:11px;flex:none;background-color:currentColor;-webkit-mask:url("data:image/svg+xml,' + MC_FLOW_ICON_TRI + '") center/contain no-repeat;mask:url("data:image/svg+xml,' + MC_FLOW_ICON_TRI + '") center/contain no-repeat}',
-      MC_MAP.thinkCard + ' ' + MC_MAP.disclosureRow + MC_MAP.ariaExpanded + '"true"]>span:first-of-type::before{transform:rotate(90deg)}',
-      // 验收④b(spec §4 行5 修订):running think 折叠摘要行单行 flash——mount 观察到摘要文本变化即
-      // 挂 .mc-line-flash,CLOCK.next 100ms 撤;类切换直切零过渡;样式照原型 L515-520(s-in)。
-      // 验收二轮②补强:z-index:2——宿主行级遮罩(如 ReasoningRow 扫光 ::after,树序在摘要之后
-      // 平涂其上)永远压不住 flash 块(③ 已 content:none 清扫,此为纵深保险)
-      '.mc-line-flash{position:relative}',
-      '.mc-line-flash::after{content:"";position:absolute;inset:-1px -2px;pointer-events:none;z-index:2;background:#fff;background-image:repeating-linear-gradient(0deg,transparent 0 2px,rgba(0,0,0,.06) 2px 3px)}',
-      'html[data-theme="light"] .mc-line-flash::after{background:#000;background-image:repeating-linear-gradient(0deg,transparent 0 2px,rgba(255,255,255,.07) 2px 3px)}',
+      // 验收四轮:think 卡整体重写(McThink 遮蔽 assistant-step 槽,自有 .mc-think 类)——
+      // 此前对宿主 ReasoningRow 的全部覆写(shimmer/sweep 压制、像素三角替换、摘要行
+      // .mc-line-flash 观察器)一并退役;.mc-app-cover 保留供 McThinkCard 正文追加段复用
+      '.mc-app-cover{color:transparent;background:#fff;background-image:repeating-linear-gradient(0deg,transparent 0 2px,rgba(0,0,0,.06) 2px 3px);border-radius:1px}',
+      'html[data-theme="light"] .mc-app-cover{background:#000;background-image:repeating-linear-gradient(0deg,transparent 0 2px,rgba(255,255,255,.07) 2px 3px)}',
       // T4 补遗(spec §2 行「compaction/manual-compaction → i-px-copy」;T4 裁定并入本 commit):
       // 压缩条 ::before 图标位,复用 T4 已内联的 copy data-URI 常量插值(context snapshot 同款)。
       // 验收二轮⑤ 同款占位清理(原型注入条语汇,无 disclosure 箭头):宿主 compactionButton 的
@@ -167,24 +143,22 @@ var McFlow = {
       [MC_MAP.kindModelRetry, '--pulse-delay', CLOCK.PULSE],
       [MC_MAP.flowColumn + ' ' + MC_MAP.statusRow, '--pulse-delay', CLOCK.PULSE],
     ];
-    // 验收二轮⑥→三轮⑥(通用五拍):折叠卡开合。flowColumn 捕获阶段 click 委托,命中四卡头
-    // (think/context 的 DisclosureRow、model-retry 的 summary、双 compaction 的头部钮——
+    // 验收二轮⑥→三轮⑥(通用五拍):折叠卡开合。flowColumn 捕获阶段 click 委托,命中三卡头
+    // (context 的 DisclosureRow、model-retry 的 summary、双 compaction 的头部钮——
     // live 实测 click target=button 本体,[data-compaction-disclosure] span 是其子节点、closest
-    // 只上溯不下降,故头锚取 kind 行内 button 元素;锚点语义见 MC_MAP.compactionDisclosure 注)
-    // → 对卡容器(=各 kind 行/think 卡)走 cardToggle 五拍(捕获拍先于宿主 React onClick,
+    // 只上溯不下降,故头锚取 kind 行内 button 元素;锚点语义见 MC_MAP.compactionDisclosure 注。
+    // 验收四轮:think 卡头移出表——McThinkCard 自有 DOM,开合走 lib accToggle 真延迟 flip)
+    // → 对卡容器(=各 kind 行)走 cardToggle 五拍(捕获拍先于宿主 React onClick,
     // ghost 在宿主瞬切前已把内容隐去;几何变化发生在白块遮盖下;t300 揭开 t400 内容显回)。
     // dataset.busy 防重入(断连/异常路径也清);REDUCED 跳过(开合功能不受影响,纯装饰拍);
     // teardown 一并注销
     var TOGGLE = [
-      [MC_MAP.thinkCard + ' ' + MC_MAP.disclosureRow, MC_MAP.thinkCard],
       [MC_MAP.kindContext + ' ' + MC_MAP.disclosureRow, MC_MAP.kindContext],
       [MC_MAP.kindModelRetry + ' summary', MC_MAP.kindModelRetry],
       [':is(' + MC_MAP.kindCompaction + ',' + MC_MAP.kindManualCompaction + ') button', ':is(' + MC_MAP.kindCompaction + ',' + MC_MAP.kindManualCompaction + ')'],
     ];
     var mo = null, tries = 0, timer = null, offClick = null;
     var seen = new WeakSet();
-    // 验收三轮②:running think 摘要「积攒—吐出」状态(span → {pending,latest,frozen})
-    var sumStates = new WeakMap();
     // 通用开合五拍(验收三轮⑥:与 lib accToggle / 原型 L1290-1303 逐拍同款协议;
     // 宿主卡 fn=空转+清残高——宿主 React 在捕获拍后自行瞬切,几何变化发生在白块遮盖下):
     // t0 ghost → t100 flash → t200 清残高(被遮内容瞬变拍) → t300 撤 flash → t400 撤 ghost+清 busy。
@@ -234,44 +208,8 @@ var McFlow = {
         CLOCK.next(function () { try { el.classList.remove('mc-flash', 'mcfx'); } catch (e) {} }, 100);
       } catch (e) {} }, 100);
     }
-    // 验收三轮②(spec §4 再修):running think 摘要行「积攒—吐出」(原型 showThinking L1403-1431
-    // 五帧状态机的宿主版):宿主流式改字先冻结回显(消灭滚动感),积攒 ≥400ms 后周期末
-    // 白块盖住(.mc-line-flash)→文本瞬换成积攒尾部(≤44 字符,原型同款窗口)→100ms 后撤块显现;
-    // 我方回写值==frozen 的自触发 mutation 天然跳过,不丢积攒;REDUCED 跳过(宿主原生行为);
-    // 域限定同旧版:仅 running think 卡的摘要 span([data-follow-end]),其余文本零干预
-    function sumTail(s) { s = String(s || ''); return s.length > 44 ? '…' + s.slice(-44) : s; }
-    function sumReveal(span, st) {
-      st.pending = false;
-      try {
-        if (!span.isConnected || REDUCED) return;
-        st.frozen = sumTail(st.latest);
-        if ((span.textContent || '') !== st.frozen) { try { span.textContent = st.frozen; } catch (e2) {} }
-        span.classList.add('mc-line-flash');
-        CLOCK.next(function () {
-          try { if (span.isConnected) span.classList.remove('mc-line-flash'); } catch (e) {}
-        }, 100);
-      } catch (e) { /* 单点失败不拖垮观察管道 */ }
-    }
-    function thinkStream(node) {
-      if (REDUCED) return;
-      try {
-        var el = node && node.parentElement;
-        if (!el || !el.isConnected) return;
-        var span = el.closest ? el.closest(MC_MAP.thinkSummary) : null;
-        if (!span || !span.isConnected) return;
-        if (!span.closest(MC_MAP.thinkCard + MC_MAP.dataState + '"running"]')) return;
-        var txt = span.textContent || '';
-        var st = sumStates.get(span);
-        if (!st) {
-          st = { pending: false, latest: txt, frozen: txt };
-          sumStates.set(span, st);
-        }
-        if (txt === st.frozen) return; // 我方回写 / 无实质变化:跳过(防自触发丢积攒)
-        st.latest = txt;               // 积攒宿主最新全文
-        try { span.textContent = st.frozen; } catch (e) { /* 回写失败不重排 */ } // 冻结回显
-        if (!st.pending) { st.pending = true; CLOCK.next(function () { sumReveal(span, st); }, 400); }
-      } catch (e) { /* 单点失败不拖垮观察管道 */ }
-    }
+    // 验收四轮:think 摘要/正文观察器(thinkStream/thinkBodyStream)随宿主 ReasoningRow 覆写
+    // 一并退役——think 卡由 McThink 组件整体重写(缓冲积攒+周期吐出),不再需要 DOM 干预
     function enter(node) {
       if (!(node instanceof Element)) return;
       syncEl(node); // 相位同步不限 flowItem 本行：[role=status] 常为 flowColumn 直接子节点，
@@ -285,7 +223,8 @@ var McFlow = {
         if (!REDUCED) enterFlash(it);
       }
     }
-    function onHeadClick(ev) { // 验收二轮⑥:卡头捕获委托(见 TOGGLE 表注释)
+    function onHeadClick(ev) { // 验收二轮⑥:卡头捕获委托(见 TOGGLE 表注释;think 卡已由
+      // McThinkCard 自管开合,不在表内)
       if (REDUCED) return;
       try {
         var t = ev.target;
@@ -312,16 +251,15 @@ var McFlow = {
         try {
           for (var i = 0; i < muts.length; i++) {
             var m = muts[i];
-            if (m.type === 'characterData') { thinkStream(m.target); continue; }
+            if (m.type === 'characterData') continue; // 文本变化观察已随 think 重写退役
             for (var j = 0; j < m.addedNodes.length; j++) {
               var n = m.addedNodes[j];
               if (n instanceof Element) enter(n);
-              else thinkStream(n); // 文本节点整换(宿主换节点而非改 data)同走摘要积攒判定
             }
           }
         } catch (e) {}
       });
-      mo.observe(root, { childList: true, subtree: true, characterData: true });
+      mo.observe(root, { childList: true, subtree: true });
       try { root.addEventListener('click', onHeadClick, true); offClick = function () { try { root.removeEventListener('click', onHeadClick, true); } catch (e) {} }; } catch (e) {}
     }
     timer = CLOCK.next(function poll() { // flowColumn 晚挂载轮询（不再限次——boot 停在空会话

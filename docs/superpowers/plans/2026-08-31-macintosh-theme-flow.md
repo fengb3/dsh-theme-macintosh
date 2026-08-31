@@ -1,6 +1,6 @@
 # Macintosh 主题 · 二期 flow(会话流)模块 Implementation Plan
 
-> **续作状态(2026-09 三轮后)**:Task 1-10 完成+终审;验收一轮 5 项已修(5692331);验收二轮 9 项已实现复验(683b765);**验收三轮 ②④⑥ 返修完成**(think 摘要积攒-吐出/产物 chip 长方块/开合统一五拍协议,另修 flowColumn 轮询耗尽与切会话换列两宿主生命周期 bug)——`npm test` 30/30+audit 全绿,acc3 活体+视觉双验证,详见文末「验收三轮」。剩余:用户三轮复验 → finishing 菜单三选一。
+> **续作状态(2026-09 四轮后)**:Task 1-10 完成+终审;验收一/二/三轮均已修验;**验收四轮 = think 卡整体重写**(用户裁定组件化:遮蔽 `conversation.chat.node` keyed 槽 assistant-step,McAssistantNodeView+McThinkCard 缓冲区+定期吐出,ghost 整卡透明,五拍真延迟 flip,primitives 直取零重启)——旧 ReasoningRow 全部 CSS/观察器干预退役,`npm test` 31/31+audit 绿,acc4 活体+视觉双验证,详见文末「验收四轮」。剩余:用户四轮复验 → finishing 菜单三选一。
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -401,6 +401,17 @@ if (typeof module !== 'undefined') module.exports = { MC_FLOW_ICONS: MC_FLOW_ICO
 3. **⑥ 开合动画统一五拍协议**:lib `accToggle` 与 McFlow `cardToggle` 均对齐原型 L1290-1303 逐拍(t0 ghost→t100 flash→t200 内容瞬变→t300 撤块→t400 内容显回);后续一切显隐/换形/换内容动画走本协议。
 4. **附带两个宿主生命周期 bug 修复**:flowColumn 轮询 8s 上限耗尽(boot 停空会话后切会话永不挂载)→不限次;切会话替换列节点致 observer/click 失效→改绑 document.body。
 5. 测试 30/30 + audit 全绿;证据 shots/acc3-*(02 flash 白块/04 长方块/06 五拍时间线)+ tools/acc3-check.mjs;教训入笔记 §8.5。
+
+## 验收四轮(2026-09)—— ✅ think 卡整体重写完成
+
+用户四项裁定:①ghost 须整卡透明(非仅子内容) ②摘要白块宽=将出文字宽(勿整卡铺白) ③一切出场元素先透明再白块 ④正文追加同样走 flashIn;并裁定**重写组件**而非继续改宿主(「流式文字先进容器存下,定期拿出来显示」)。已落地:
+
+1. **架构**:遮蔽 `conversation.chat.node` keyed 槽 `assistant-step`(priority:-1)→ McAssistantNodeView(AssistantMarkdown 平移,text 块复用宿主 MarkdownText 保真)+ McThinkCard(原型 showThinking 状态机 React 版)。`require('@deepseek-ai/dsh-client-ui-primitives')` 直取零重启;缺席不遮蔽,宿主原生兜底。
+2. **缓冲+吐出**:mcThinkTick 纯函数(140 字/500ms 周期,前缀不符整体重写);摘要 `.s-in` 只装本次新字(白块=span 宽=字宽,零测宽)+正文 `.mc-app-cover` 行内白块,100ms 揭盖;结束定格 26 字首行。
+3. **五拍真延迟 flip**:自有 DOM,accToggle flip 回调 t200 拍切 .open——live 实测 body 高度 0→918 精确发生在白块遮盖下。
+4. **ghost 整卡透明**:`.mc-ghost` 增 background/border-image/box-shadow/outline !important 清除。
+5. **退役清单**:宿主 ReasoningRow 全部覆写(thinkCard 段 CSS、MC_FLOW_ICON_TRI、thinkStream/thinkBodyStream 观察器、thinkCard/thinkSummary/ariaExpanded 三 MC_MAP 键、TOGGLE think 表项);MO 撤 characterData。
+6. 测试 31/31(think.test.mjs×5 新增)+audit 绿;证据 shots/acc4-*(01 存量渲染/02 展开/03 flash 帧)+ tools/acc4-check.mjs;教训入笔记 §8.6。
 
 1. **注入条图标**:instructions/notice/relay 换 sprite `#i-doc` 经典款(从 client.js McSprite 段提取 symbol 做 data-URI mask;现用 pixelarticons doc 与原型不符);catalog/snapshot/recall/compaction 保持。
 2. **think 摘要行 flash 白块未渲染**:`.mc-line-flash` 类出现但视觉无白块——live debug(疑 inline 定位/React 节点替换),修到截图可见(深白浅黑)。

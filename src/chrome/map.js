@@ -116,7 +116,8 @@ const MC_MAP = {
   userGallery: '[data-align="end"] [data-variant]',            // stable(ATT L705-746)
   refChip: '[data-ref-chip]',                                 // stable(L5315-5324)
   mdRoot: '[data-chat-flow-kind="assistant-step"] > div > div', /* DRIFT-RISK: structural;第一层 div 为 data-slot 包装层,原一层值命中包装层——当前无消费者,防未来误用(裁定10;Sxvs8a_*,L9461-9521) */
-  thinkCard: '[data-variant="think"]',                        // stable;双锚 [data-state](L9389-9439)
+  // 验收四轮:thinkCard/thinkSummary/ariaExpanded 三键随宿主 ReasoningRow 覆写退役
+  // (McThink 组件整体重写 assistant-step,自有 .mc-think 类零宿主锚)
   ctxBody: '[data-context-injection-body]',                   // stable(L4863-4907)
   turnTailBar: '[data-turn-tail]',                            // stable(L9715-9752)
   // —— 终审 F2 收编（2026-08-31）：此前 flow 规则里直写的宿主选择器一律进管制表（spec §1 唯一管制点）——
@@ -125,10 +126,7 @@ const MC_MAP = {
   contextForm: '[data-context-form=',          // 属性前缀键（六 form 任意取值，:has 细分插值；同 kind 前缀先例）
   statusRow: '[role="status"]',                // stable(TurnStatus 宿主状态行；使用时限定 flowColumn 内，spec §4 行10)
   commandCard: '[data-variant="others"]',      // stable(command 卡壳锚，spec §4 行9「[data-variant="others"][data-state]」)
-  dataState: '[data-state=',                   // 属性前缀键（任意取值形态；think 双锚第二锚 / command 三态）
-  // —— 用户验收五项收编（2026-08-31 live 探测，host 0.1.1-rc.2）——
-  thinkSummary: '[data-follow-end]',           // stable(running think 卡折叠摘要 span，disclosure 行内直接子；单行 flash 定位锚，spec §4 行5 修订)
-  ariaExpanded: '[aria-expanded=',             // 属性前缀键（宿主折叠行展开态；think 像素三角 rotate 用）
+  dataState: '[data-state=',                   // 属性前缀键（任意取值形态；command 三态）
   // —— 用户验收二轮收编（2026-08-31 live 探测 + 部署源复核，host 0.1.1-rc.2）——
   retryActive: 'details[data-active]',         // stable(ModelRetryItem L5191 "data-active": active||void 0——scheduled 态才有;⑧ pulse 门控锚)
   compactionDisclosure: '[data-compaction-disclosure]', // stable(CompactionItem 折叠图标 span L4320;⑥ 卡头结构注记——click target 为其外层 button,头锚取 kind 行内 button 元素)

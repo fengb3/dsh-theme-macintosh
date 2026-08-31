@@ -13,6 +13,9 @@ window.__ModuleLoader__.load({
 		Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
 		const react = require("react");
 		const React = react;
+		// 验收四轮:primitives 直取(loader 注册表全局可达,无需 inject 声明;缺席时组件降级不注册)
+		var MC_PRIM = null;
+		try { MC_PRIM = require("@deepseek-ai/dsh-client-ui-primitives"); } catch (e) { MC_PRIM = null; }
 // src/core/tokens.js —— 层1：token alias + 最小 --mc-* 底色（深浅两套，值照《笔记》§4.1）
 const McTokens = {
   css: `:root{
@@ -78,14 +81,17 @@ html body, html body[data-ds-dark-theme]{
   --dsw-specific-sidebar-fill:var(--mc-rail-1);
   --dsw-font-family:var(--font-ui);
 }
-/* mcfx 闪烁类（照原型 interactive §172-183 逐行）：flash = ::after 全覆盖遮罩（z-index:3）；
-   ghost = 边框透明 + 子内容透明。使用方须同时挂 'mcfx' 类（flashIn/flashOut/accToggle 自动加）。 */
+/* mcfx 闪烁类（原型 interactive §172-183 + 验收四轮①修订）：
+   flash = ::after 全覆盖遮罩（z-index:3）；ghost = 整卡透明——底色/底图/边框/投影/子内容全隐
+   （!important 压过宿主与我方覆写的 specificity；::after 非元素自身绘制不受影响,白块照常）。
+   使用方须同时挂 'mcfx' 类（flashIn/flashOut/accToggle 自动加）。 */
 .mcfx{position:relative}
 .mcfx::after{content:'';position:absolute;inset:0;pointer-events:none;opacity:0;z-index:3;
   background:#fff;
   background-image:repeating-linear-gradient(0deg,transparent 0 2px,rgba(0,0,0,.06) 2px 3px)}
 .mcfx.mc-flash::after{opacity:1}
-.mcfx.mc-ghost{border-color:transparent}
+.mcfx.mc-ghost{border-color:transparent!important;background:transparent!important;
+  background-image:none!important;box-shadow:none!important;outline:none!important}
 .mcfx.mc-ghost>*{opacity:0}
 html[data-theme="light"] .mcfx::after{
   background:#000;
@@ -563,7 +569,8 @@ const MC_MAP = {
   userGallery: '[data-align="end"] [data-variant]',            // stable(ATT L705-746)
   refChip: '[data-ref-chip]',                                 // stable(L5315-5324)
   mdRoot: '[data-chat-flow-kind="assistant-step"] > div > div', /* DRIFT-RISK: structural;第一层 div 为 data-slot 包装层,原一层值命中包装层——当前无消费者,防未来误用(裁定10;Sxvs8a_*,L9461-9521) */
-  thinkCard: '[data-variant="think"]',                        // stable;双锚 [data-state](L9389-9439)
+  // 验收四轮:thinkCard/thinkSummary/ariaExpanded 三键随宿主 ReasoningRow 覆写退役
+  // (McThink 组件整体重写 assistant-step,自有 .mc-think 类零宿主锚)
   ctxBody: '[data-context-injection-body]',                   // stable(L4863-4907)
   turnTailBar: '[data-turn-tail]',                            // stable(L9715-9752)
   // —— 终审 F2 收编（2026-08-31）：此前 flow 规则里直写的宿主选择器一律进管制表（spec §1 唯一管制点）——
@@ -572,10 +579,7 @@ const MC_MAP = {
   contextForm: '[data-context-form=',          // 属性前缀键（六 form 任意取值，:has 细分插值；同 kind 前缀先例）
   statusRow: '[role="status"]',                // stable(TurnStatus 宿主状态行；使用时限定 flowColumn 内，spec §4 行10)
   commandCard: '[data-variant="others"]',      // stable(command 卡壳锚，spec §4 行9「[data-variant="others"][data-state]」)
-  dataState: '[data-state=',                   // 属性前缀键（任意取值形态；think 双锚第二锚 / command 三态）
-  // —— 用户验收五项收编（2026-08-31 live 探测，host 0.1.1-rc.2）——
-  thinkSummary: '[data-follow-end]',           // stable(running think 卡折叠摘要 span，disclosure 行内直接子；单行 flash 定位锚，spec §4 行5 修订)
-  ariaExpanded: '[aria-expanded=',             // 属性前缀键（宿主折叠行展开态；think 像素三角 rotate 用）
+  dataState: '[data-state=',                   // 属性前缀键（任意取值形态；command 三态）
   // —— 用户验收二轮收编（2026-08-31 live 探测 + 部署源复核，host 0.1.1-rc.2）——
   retryActive: 'details[data-active]',         // stable(ModelRetryItem L5191 "data-active": active||void 0——scheduled 态才有;⑧ pulse 门控锚)
   compactionDisclosure: '[data-compaction-disclosure]', // stable(CompactionItem 折叠图标 span L4320;⑥ 卡头结构注记——click target 为其外层 button,头锚取 kind 行内 button 元素)
@@ -1302,10 +1306,7 @@ const MC_FLOW_ICON_DOC = "%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0
 const MC_FLOW_ICON_LIST = "%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23000' d='M2 5h20v14H2V5zm2 2v2h16V7H4zm16 4H4v2h16v-2zm0 4H4v2h16v-2z'/%3E%3C/svg%3E";
 const MC_FLOW_ICON_COPY = "%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23000' d='M4 2h11v2H6v13H4V2zm4 4h12v16H8V6zm2 2v12h8V8h-8z'/%3E%3C/svg%3E";
 const MC_FLOW_ICON_CLOCK = "%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23000' d='M19 3H5v2H3v14h2v2h14v-2h2V5h-2V3zm0 2v14H5V5h14zm-8 2h2v6h4v2h-6V7z'/%3E%3C/svg%3E";
-// 验收二轮⑦:think 折叠三角像素 mask——同款资产 = sprite i-tri(6×11,McFinder 分组头/侧栏折叠
-// 面板 T10 换锚后的像素三角);侧栏 .mc-tri 规格为 11×11 currentColor,此处经 data-URI mask 复刻
-// (mask 只吃 alpha,双色 sprite 单色化即剪影,视觉与 currentColor 版一致)
-const MC_FLOW_ICON_TRI = "%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 6 11'%3E%3Cpath fill='%23000' d='M0 0H1V1H2V2H1V9H2V10H1V11H0V0Z'/%3E%3Cpath fill='%23000' d='M3 8H2V9H3V8Z'/%3E%3Cpath fill='%23000' d='M4 7V8H3V7H4Z'/%3E%3Cpath fill='%23000' d='M5 6V7H4V6H5Z'/%3E%3Cpath fill='%23000' d='M5 5H6V6H5V5Z'/%3E%3Cpath fill='%23000' d='M4 4H5V5H4V4Z'/%3E%3Cpath fill='%23000' d='M3 3H4V4H3V3Z'/%3E%3Cpath fill='%23000' d='M3 3V2H2V3H3Z'/%3E%3C/svg%3E";
+// 验收四轮:MC_FLOW_ICON_TRI(think 折叠三角 mask)退役——think 卡重写后用 sprite #i-tri 直引
 var McFlow = {
   // IIFE 安放 var F:顶层作用域与 tokens/clock/mcfx/sprite 共享,F 不外泄
   css: (function () {
@@ -1384,32 +1385,11 @@ var McFlow = {
       // §9:TurnStatus(宿主运行中状态行)
       MC_MAP.flowColumn + ' ' + MC_MAP.statusRow + '{display:flex;align-items:center;gap:8px;font:400 12px/1.6 var(--font-ui);color:var(--mc-muted)}',
       MC_MAP.flowColumn + ' ' + MC_MAP.statusRow + '::before{content:"";flex:none;width:6px;height:6px;background:var(--mc-spark);clip-path:polygon(33% 0,67% 0,100% 33%,100% 67%,67% 100%,33% 100%,0 67%,0 33%);animation:mc-pulse 2600ms steps(1,end) infinite;animation-delay:var(--pulse-delay,0ms)}',
-      // §4-5:reasoning think 卡(spec §4 行5;原型 L506-526;双锚 [data-state=running|ok],任意深度)
-      MC_MAP.thinkCard + '{background:var(--mc-surface-3);border:1px solid var(--mc-border);border-radius:var(--mc-r-card);overflow:hidden;transition:none}',
-      MC_MAP.thinkCard + ' *{transition:none!important}',
-      MC_MAP.thinkCard + MC_MAP.dataState + '"running"]{background:color-mix(in oklab,var(--mc-spark) 9%,var(--mc-surface-3))}',
-      MC_MAP.thinkCard + ' [class*="thinkBody"]{font:400 12px/1.8 var(--font-ui);color:var(--mc-muted);white-space:pre-wrap}',
-      // 宿主 shimmer/sweep 移除(原型 run 态信号=琥珀染;标题染 spark 由行内继承,faint 摘要):
-      // 验收二轮③(live 探明):残留渐变来源 = ReasoningRow 宿主 .row::after 扫光(300px 宽
-      // left:0 静态残留,animation 杀掉后伪元素仍在)→ 对 [data-disclosure-row]::after 精准
-      // content:none + background:none 清净;旧两条全局压制保留作纵深
-      MC_MAP.thinkCard + MC_MAP.dataState + '"running"]::after{content:none}',
-      MC_MAP.thinkCard + MC_MAP.dataState + '"running"] *::after{animation:none!important}',
-      MC_MAP.thinkCard + MC_MAP.dataState + '"running"] ' + MC_MAP.disclosureRow + '::after{content:none!important;background:none!important}',
-      // 验收④a→二轮⑦(2026-08-31 live 探明):折叠箭头换像素三角——宿主 leading 图标(running=
-      // iconIdle 原子图标/展开=chevron 直系 svg)全隐,leading ::before 顶上;⑦ 对齐侧栏 McFinder
-      // 折叠面板语汇:同款 sprite i-tri 资产经 data-URI mask 复刻(11×11 currentColor,同 .mc-tri
-      // 规格);展开态 rotate(90deg) 硬切
-      MC_MAP.thinkCard + ' ' + MC_MAP.disclosureRow + '>span:first-of-type svg{display:none}',
-      MC_MAP.thinkCard + ' ' + MC_MAP.disclosureRow + '>span:first-of-type::before{content:"";display:block;width:11px;height:11px;flex:none;background-color:currentColor;-webkit-mask:url("data:image/svg+xml,' + MC_FLOW_ICON_TRI + '") center/contain no-repeat;mask:url("data:image/svg+xml,' + MC_FLOW_ICON_TRI + '") center/contain no-repeat}',
-      MC_MAP.thinkCard + ' ' + MC_MAP.disclosureRow + MC_MAP.ariaExpanded + '"true"]>span:first-of-type::before{transform:rotate(90deg)}',
-      // 验收④b(spec §4 行5 修订):running think 折叠摘要行单行 flash——mount 观察到摘要文本变化即
-      // 挂 .mc-line-flash,CLOCK.next 100ms 撤;类切换直切零过渡;样式照原型 L515-520(s-in)。
-      // 验收二轮②补强:z-index:2——宿主行级遮罩(如 ReasoningRow 扫光 ::after,树序在摘要之后
-      // 平涂其上)永远压不住 flash 块(③ 已 content:none 清扫,此为纵深保险)
-      '.mc-line-flash{position:relative}',
-      '.mc-line-flash::after{content:"";position:absolute;inset:-1px -2px;pointer-events:none;z-index:2;background:#fff;background-image:repeating-linear-gradient(0deg,transparent 0 2px,rgba(0,0,0,.06) 2px 3px)}',
-      'html[data-theme="light"] .mc-line-flash::after{background:#000;background-image:repeating-linear-gradient(0deg,transparent 0 2px,rgba(255,255,255,.07) 2px 3px)}',
+      // 验收四轮:think 卡整体重写(McThink 遮蔽 assistant-step 槽,自有 .mc-think 类)——
+      // 此前对宿主 ReasoningRow 的全部覆写(shimmer/sweep 压制、像素三角替换、摘要行
+      // .mc-line-flash 观察器)一并退役;.mc-app-cover 保留供 McThinkCard 正文追加段复用
+      '.mc-app-cover{color:transparent;background:#fff;background-image:repeating-linear-gradient(0deg,transparent 0 2px,rgba(0,0,0,.06) 2px 3px);border-radius:1px}',
+      'html[data-theme="light"] .mc-app-cover{background:#000;background-image:repeating-linear-gradient(0deg,transparent 0 2px,rgba(255,255,255,.07) 2px 3px)}',
       // T4 补遗(spec §2 行「compaction/manual-compaction → i-px-copy」;T4 裁定并入本 commit):
       // 压缩条 ::before 图标位,复用 T4 已内联的 copy data-URI 常量插值(context snapshot 同款)。
       // 验收二轮⑤ 同款占位清理(原型注入条语汇,无 disclosure 箭头):宿主 compactionButton 的
@@ -1455,24 +1435,22 @@ var McFlow = {
       [MC_MAP.kindModelRetry, '--pulse-delay', CLOCK.PULSE],
       [MC_MAP.flowColumn + ' ' + MC_MAP.statusRow, '--pulse-delay', CLOCK.PULSE],
     ];
-    // 验收二轮⑥→三轮⑥(通用五拍):折叠卡开合。flowColumn 捕获阶段 click 委托,命中四卡头
-    // (think/context 的 DisclosureRow、model-retry 的 summary、双 compaction 的头部钮——
+    // 验收二轮⑥→三轮⑥(通用五拍):折叠卡开合。flowColumn 捕获阶段 click 委托,命中三卡头
+    // (context 的 DisclosureRow、model-retry 的 summary、双 compaction 的头部钮——
     // live 实测 click target=button 本体,[data-compaction-disclosure] span 是其子节点、closest
-    // 只上溯不下降,故头锚取 kind 行内 button 元素;锚点语义见 MC_MAP.compactionDisclosure 注)
-    // → 对卡容器(=各 kind 行/think 卡)走 cardToggle 五拍(捕获拍先于宿主 React onClick,
+    // 只上溯不下降,故头锚取 kind 行内 button 元素;锚点语义见 MC_MAP.compactionDisclosure 注。
+    // 验收四轮:think 卡头移出表——McThinkCard 自有 DOM,开合走 lib accToggle 真延迟 flip)
+    // → 对卡容器(=各 kind 行)走 cardToggle 五拍(捕获拍先于宿主 React onClick,
     // ghost 在宿主瞬切前已把内容隐去;几何变化发生在白块遮盖下;t300 揭开 t400 内容显回)。
     // dataset.busy 防重入(断连/异常路径也清);REDUCED 跳过(开合功能不受影响,纯装饰拍);
     // teardown 一并注销
     var TOGGLE = [
-      [MC_MAP.thinkCard + ' ' + MC_MAP.disclosureRow, MC_MAP.thinkCard],
       [MC_MAP.kindContext + ' ' + MC_MAP.disclosureRow, MC_MAP.kindContext],
       [MC_MAP.kindModelRetry + ' summary', MC_MAP.kindModelRetry],
       [':is(' + MC_MAP.kindCompaction + ',' + MC_MAP.kindManualCompaction + ') button', ':is(' + MC_MAP.kindCompaction + ',' + MC_MAP.kindManualCompaction + ')'],
     ];
     var mo = null, tries = 0, timer = null, offClick = null;
     var seen = new WeakSet();
-    // 验收三轮②:running think 摘要「积攒—吐出」状态(span → {pending,latest,frozen})
-    var sumStates = new WeakMap();
     // 通用开合五拍(验收三轮⑥:与 lib accToggle / 原型 L1290-1303 逐拍同款协议;
     // 宿主卡 fn=空转+清残高——宿主 React 在捕获拍后自行瞬切,几何变化发生在白块遮盖下):
     // t0 ghost → t100 flash → t200 清残高(被遮内容瞬变拍) → t300 撤 flash → t400 撤 ghost+清 busy。
@@ -1522,44 +1500,8 @@ var McFlow = {
         CLOCK.next(function () { try { el.classList.remove('mc-flash', 'mcfx'); } catch (e) {} }, 100);
       } catch (e) {} }, 100);
     }
-    // 验收三轮②(spec §4 再修):running think 摘要行「积攒—吐出」(原型 showThinking L1403-1431
-    // 五帧状态机的宿主版):宿主流式改字先冻结回显(消灭滚动感),积攒 ≥400ms 后周期末
-    // 白块盖住(.mc-line-flash)→文本瞬换成积攒尾部(≤44 字符,原型同款窗口)→100ms 后撤块显现;
-    // 我方回写值==frozen 的自触发 mutation 天然跳过,不丢积攒;REDUCED 跳过(宿主原生行为);
-    // 域限定同旧版:仅 running think 卡的摘要 span([data-follow-end]),其余文本零干预
-    function sumTail(s) { s = String(s || ''); return s.length > 44 ? '…' + s.slice(-44) : s; }
-    function sumReveal(span, st) {
-      st.pending = false;
-      try {
-        if (!span.isConnected || REDUCED) return;
-        st.frozen = sumTail(st.latest);
-        if ((span.textContent || '') !== st.frozen) { try { span.textContent = st.frozen; } catch (e2) {} }
-        span.classList.add('mc-line-flash');
-        CLOCK.next(function () {
-          try { if (span.isConnected) span.classList.remove('mc-line-flash'); } catch (e) {}
-        }, 100);
-      } catch (e) { /* 单点失败不拖垮观察管道 */ }
-    }
-    function thinkStream(node) {
-      if (REDUCED) return;
-      try {
-        var el = node && node.parentElement;
-        if (!el || !el.isConnected) return;
-        var span = el.closest ? el.closest(MC_MAP.thinkSummary) : null;
-        if (!span || !span.isConnected) return;
-        if (!span.closest(MC_MAP.thinkCard + MC_MAP.dataState + '"running"]')) return;
-        var txt = span.textContent || '';
-        var st = sumStates.get(span);
-        if (!st) {
-          st = { pending: false, latest: txt, frozen: txt };
-          sumStates.set(span, st);
-        }
-        if (txt === st.frozen) return; // 我方回写 / 无实质变化:跳过(防自触发丢积攒)
-        st.latest = txt;               // 积攒宿主最新全文
-        try { span.textContent = st.frozen; } catch (e) { /* 回写失败不重排 */ } // 冻结回显
-        if (!st.pending) { st.pending = true; CLOCK.next(function () { sumReveal(span, st); }, 400); }
-      } catch (e) { /* 单点失败不拖垮观察管道 */ }
-    }
+    // 验收四轮:think 摘要/正文观察器(thinkStream/thinkBodyStream)随宿主 ReasoningRow 覆写
+    // 一并退役——think 卡由 McThink 组件整体重写(缓冲积攒+周期吐出),不再需要 DOM 干预
     function enter(node) {
       if (!(node instanceof Element)) return;
       syncEl(node); // 相位同步不限 flowItem 本行：[role=status] 常为 flowColumn 直接子节点，
@@ -1573,7 +1515,8 @@ var McFlow = {
         if (!REDUCED) enterFlash(it);
       }
     }
-    function onHeadClick(ev) { // 验收二轮⑥:卡头捕获委托(见 TOGGLE 表注释)
+    function onHeadClick(ev) { // 验收二轮⑥:卡头捕获委托(见 TOGGLE 表注释;think 卡已由
+      // McThinkCard 自管开合,不在表内)
       if (REDUCED) return;
       try {
         var t = ev.target;
@@ -1600,16 +1543,15 @@ var McFlow = {
         try {
           for (var i = 0; i < muts.length; i++) {
             var m = muts[i];
-            if (m.type === 'characterData') { thinkStream(m.target); continue; }
+            if (m.type === 'characterData') continue; // 文本变化观察已随 think 重写退役
             for (var j = 0; j < m.addedNodes.length; j++) {
               var n = m.addedNodes[j];
               if (n instanceof Element) enter(n);
-              else thinkStream(n); // 文本节点整换(宿主换节点而非改 data)同走摘要积攒判定
             }
           }
         } catch (e) {}
       });
-      mo.observe(root, { childList: true, subtree: true, characterData: true });
+      mo.observe(root, { childList: true, subtree: true });
       try { root.addEventListener('click', onHeadClick, true); offClick = function () { try { root.removeEventListener('click', onHeadClick, true); } catch (e) {} }; } catch (e) {}
     }
     timer = CLOCK.next(function poll() { // flowColumn 晚挂载轮询（不再限次——boot 停在空会话
@@ -1625,6 +1567,173 @@ var McFlow = {
       try { if (offClick) offClick(); } catch (e) {}
       try { if (timer) CLOCK.clear(timer); } catch (e) {}
     };
+  },
+};
+
+// src/conv/think.js —— assistant-step 节点重写（验收四轮：缓冲区 + 定期吐出）
+// 协议 { css, slots(ctx) }。遮蔽 conversation.chat.node keyed 槽 'assistant-step'
+// (priority:-1 同侧栏先例);reasoning 块走我们自己的 McThinkCard(原型 showThinking 状态机
+// L1362-1450 的 React 版:text prop 增量先进缓冲,500ms 周期末摘要 s-in 只装本次新字
+// (白块=span 宽=字宽,零测宽)+正文追加 mc-app-cover 行内白块,100ms 揭盖;text/image 块
+// 复用宿主 primitives MarkdownText/renderMessageImages 保真)。primitives 缺席时不注册
+// (宿主原生渲染兜底)。选择器零宿主锚——全部 .mc-think 自有类,audit §5 安全。
+// CJS shim 供 mcThinkTick 纯函数测试(src 镜像;loader 域 module 为自有 boilerplate)。
+function mcThinkTick(shown, text, cap) {
+  // 追加前缀不符 = 宿主整段重写:从头再来(base='')
+  var base = shown && text.slice(0, shown.length) === shown ? shown : '';
+  var rest = text.slice(base.length);
+  var take = rest.slice(0, cap);
+  return { shown: base + take, delta: take, rewritten: shown !== '' && base === '' };
+}
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = { mcThinkTick };
+}
+const MC_THINK_CAP = 140; // 每周期最多吐出字符数(对齐原型 PER_TICK=28 token 的节奏量级)
+const McThink = {
+  css: [
+    /* AssistantMarkdown 布局平移(Sxvs8a_root/body/stopped → mc-amd-*;typography 由
+       McFlow 的 F 段(.md 全要素)在 flowItem 级供给) */
+    '.mc-amd-root{flex-direction:column;display:flex}',
+    '.mc-amd-body{flex-direction:column;gap:16px;display:flex}',
+    '.mc-amd-stopped{align-self:flex-start;padding:0 6px;font-size:11px;line-height:18px;border-radius:var(--mc-r-btn);background:var(--mc-surface-2);color:var(--mc-muted)}',
+    /* 原型 .reasoning 段(interactive L339-366)平移,.mc-think 前缀 */
+    '.mc-think{background:var(--mc-surface-3);border:1px solid var(--mc-border);border-radius:var(--mc-r-card);overflow:hidden}',
+    '.mc-think.run{background:color-mix(in oklab,var(--mc-spark) 9%,var(--mc-surface-3))}',
+    '.mc-think-head{display:flex;align-items:center;gap:6px;width:100%;padding:6px 9px;background:none;border:none;cursor:pointer;text-align:left;color:inherit}',
+    '.mc-think-head .mc-think-tag{font:400 13px/1.3 \'FindersKeepers\',\'Fusion Pixel 12px monospaced zh\',\'Noto Sans SC\',monospace;letter-spacing:.03em;color:var(--mc-fg)}',
+    '.mc-think.run .mc-think-head .mc-think-tag{color:var(--mc-spark)}',
+    '.mc-think-head .mc-think-sum{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:400 12px/1.5 var(--font-ui);color:var(--mc-faint)}',
+    '.mc-think-head .mc-think-dur{font:500 10px/1.5 var(--font-mono);color:var(--mc-faint);flex:none}',
+    '.mc-think-body{overflow:hidden;height:auto}',
+    '.mc-think:not(.open) .mc-think-body{height:0}',
+    '.mc-think-body .mc-think-txt{padding:2px 9px 9px 26px;font:400 12px/1.8 var(--font-ui);color:var(--mc-muted);white-space:pre-wrap}',
+    '.mc-think.run .mc-think-txt .mc-app-cover{color:transparent}',
+    /* 摘要行切换 = 白块盖住 → 换字 → 块瞬间消失(s-in 只装本次新字,块宽=字宽) */
+    '.mc-think-head .mc-think-sum .s-in{position:relative}',
+    '.mc-think-head .mc-think-sum .s-in::after{content:\'\';position:absolute;inset:-1px -2px;opacity:0;pointer-events:none;background:#fff;background-image:repeating-linear-gradient(0deg,transparent 0 2px,rgba(0,0,0,.06) 2px 3px)}',
+    '.mc-think-head .mc-think-sum .s-in.flash::after{opacity:1}',
+    'html[data-theme="light"] .mc-think-head .mc-think-sum .s-in::after{background:#000;background-image:repeating-linear-gradient(0deg,transparent 0 2px,rgba(255,255,255,.07) 2px 3px)}',
+  ].join('\n'),
+  slots(ctx) {
+    if (!MC_PRIM || typeof React === 'undefined') return; // primitives 缺席:不遮蔽,宿主原生渲染兜底
+    const S = ctx.slots;
+    if (!S || typeof S.register !== 'function' || typeof S.inject !== 'function') return;
+    const h = React.createElement;
+    const MarkdownText = MC_PRIM.MarkdownText;
+    const JsonBlock = MC_PRIM.JsonBlock;
+
+    /* —— McThinkCard:缓冲积攒 + 周期吐出(原型 showThinking 五帧状态机) —— */
+    function McThinkCard(props) {
+      var text = props.text || '', running = !!props.running;
+      var st = React.useRef({ committed: '', pending: '', sum: '', flash: false, open: false, timer: null, mounted: true });
+      st.current.text = text;
+      var cardRef = React.useRef(null);
+      var version = React.useState(0), setV = version[1];
+      function paint() { setV(function (x) { return x + 1; }); }
+      function tick() {
+        var s = st.current;
+        if (!s.mounted || !s.running) return;
+        var r = mcThinkTick(s.committed, s.text, MC_THINK_CAP);
+        if (r.delta) {
+          s.committed = r.shown;
+          s.pending = r.delta;
+          s.sum = r.delta.replace(/\n/g, ' ');
+          s.flash = true;
+          paint();
+          CLOCK.next(function () {
+            var s2 = st.current;
+            if (!s2.mounted) return;
+            s2.pending = ''; s2.flash = false; paint();
+          }, 100);
+        }
+        s.timer = CLOCK.next(tick, 400); // 500ms 周期 = 400 顿 + 100 揭
+      }
+      React.useEffect(function () {
+        var s = st.current; s.mounted = true;
+        return function () { s.mounted = false; if (s.timer) { try { CLOCK.clear(s.timer); } catch (e) {} } };
+      }, []);
+      React.useEffect(function () {
+        var s = st.current;
+        s.running = running;
+        if (running) {
+          if (!s.timer) s.timer = CLOCK.next(tick, 200);
+        } else {
+          if (s.timer) { try { CLOCK.clear(s.timer); } catch (e) {} s.timer = null; }
+          s.committed = text; s.pending = ''; s.flash = false;
+          s.sum = text ? (text.length > 26 ? text.slice(0, 26) + '…' : text) : '';
+          paint();
+        }
+      }, [running]);
+      function toggleCard() {
+        var card = cardRef.current; if (!card) return;
+        accToggle(card, function () { st.current.open = !st.current.open; paint(); });
+      }
+      var s = st.current;
+      return h('div', { className: 'mc-think' + (running ? ' run' : '') + (s.open ? ' open' : ''), ref: cardRef },
+        h('button', { className: 'mc-think-head', type: 'button', onClick: toggleCard },
+          h('svg', { className: 'mc-tri' + (s.open ? ' open' : ''), 'aria-hidden': true }, h('use', { href: '#i-tri' })),
+          h('span', { className: 'mc-think-tag' }, 'Think'),
+          h('span', { className: 'mc-think-sum' },
+            h('span', { className: 's-in' + (s.flash ? ' flash' : '') }, running ? (s.sum || '正在思考…') : s.sum)),
+          h('span', { className: 'mc-think-dur' }, running ? 'streaming' : '')),
+        h('div', { className: 'mc-think-body' },
+          h('div', { className: 'mc-think-txt' }, s.committed,
+            s.pending ? h('span', { className: 'mc-app-cover' }, s.pending) : null)));
+    }
+
+    /* —— McAssistantNodeView:AssistantMarkdown 平移(L9476-9537) ——
+       text→MarkdownText(宿主保真)/reasoning→McThinkCard/image→renderMessageImages/
+       tool-call→跳过/其他→JsonBlock;mentions 复刻 owner 判定(useTurnData 可选)。 */
+    function McAssistantNodeView(props) {
+      var node = props.node, data = (node && node.data) || {};
+      var blocks = data.blocks || [];
+      var streaming = data.status === 'running';
+      var interrupted = data.status === 'interrupted';
+      var renderMessageImages = props.renderMessageImages, fileMentions = props.fileMentions;
+      var useTurnData = props.useTurnData, openFile = props.openFile;
+      var tail = useTurnData ? useTurnData('turn-tail') : undefined;
+      var turn = node && (node.location.kind === 'turn' || node.location.kind === 'step') ? node.location.turn : undefined;
+      var mentions = React.useMemo(function () {
+        try {
+          if (turn === undefined || (turn && turn.status) !== 'closed' || data.finalNode === undefined) return undefined;
+          if (tail && tail.closing && tail.closing.finalNode && tail.closing.finalNode.seq !== data.finalNode.seq) return undefined;
+          return fileMentions({ turn: turn, seq: data.finalNode.seq, openFile: openFile });
+        } catch (e) { return undefined; }
+      }, [tail, turn, data.finalNode, openFile]);
+      if (!(streaming || interrupted === true || blocks.some(function (b) { return b.kind !== 'tool-call'; }))) return null;
+      var codeLabels = { copyLabel: '复制', copiedLabel: '已复制' };
+      var rendered = [];
+      var last = blocks.length - 1;
+      for (var i = 0; i < blocks.length; i++) {
+        var block = blocks[i];
+        if (block === undefined) continue;
+        if (block.kind === 'text') {
+          rendered.push(h(MarkdownText, { key: i, text: block.text, streaming: streaming, codeLabels: codeLabels, fileMentions: mentions }));
+        } else if (block.kind === 'reasoning') {
+          rendered.push(h(McThinkCard, { key: i, text: block.text, running: streaming && i === last }));
+        } else if (block.kind === 'image') {
+          var start = i, group = [block];
+          while (i + 1 < blocks.length) {
+            var next = blocks[i + 1];
+            if (next === undefined || next.kind !== 'image') break;
+            group.push(next); i += 1;
+          }
+          rendered.push(h(React.Fragment, { key: start }, renderMessageImages({ images: group.map(function (g) { return { attachment: g.attachment }; }), align: 'start' })));
+        } else if (block.kind !== 'tool-call') {
+          rendered.push(h(JsonBlock, { key: i, label: 'unknown', payload: block.block }));
+        }
+      }
+      return h('div', { className: 'mc-amd-root', 'data-streaming': streaming || undefined },
+        h('div', { className: 'mc-amd-body' }, rendered,
+          interrupted ? h('span', { className: 'mc-amd-stopped' }, '已停止') : null));
+    }
+
+    ctx.effect(() => S.inject('conversation.chat.node', () => S.register({
+      name: 'conversation.chat.node',
+      key: 'assistant-step',
+      priority: -1,
+      registrant: 'macintosh',
+    }, McAssistantNodeView)));
   },
 };
 
@@ -2165,9 +2274,10 @@ const mods = {
   McSidebar: McSidebar,
   McFinder: McFinder,
   McFlow: McFlow,
+  McThink: McThink,
   McKit: McKit,
 };
-const order = ["McTokens","McClock","McMcfx","McSprite","MC_MAP","McChrome","McSidebar","McFinder","McFlow","McKit"];
+const order = ["McTokens","McClock","McMcfx","McSprite","MC_MAP","McChrome","McSidebar","McFinder","McFlow","McThink","McKit"];
 
 return {
   inject: ["slots", "theme", "sessions"],
