@@ -104,8 +104,12 @@ function McFinderListbar(props) {
     h('span', { className: 'mc-sb-lb' }, '工作区'),
     h('span', { className: 'mc-sb-la' },
       btn('搜索会话', '#i-px-search', onSearch),
-      btn('视图选项（二期）', '#i-px-sliders'),
-      btn('添加新工作区（二期）', '#i-px-plus')));
+      btn('视图选项', '#i-px-sliders', function (e) { // view 菜单（勘定全项不通时 openMenu 静默 no-op）
+        if (MC_MENU_OPEN) MC_MENU_OPEN('view', e.currentTarget, null);
+      }),
+      btn('添加', '#i-px-plus', function (e) {
+        if (MC_MENU_OPEN) MC_MENU_OPEN('add', e.currentTarget, null);
+      })));
 }
 
 // —— 折叠态迷你条（原型 .sb-mini）：官方 sidebar.workspaces 席位在折叠轨（wide:false）时的形态。
@@ -160,7 +164,10 @@ function McFinderSess(props) {
     h('span', { className: 'mc-s-slot' }, slot),
     h('button', {
       className: 'mc-s-menu', type: 'button', title: '会话菜单', 'aria-label': '会话菜单', 'data-mc-finder': '',
-      onClick: function (e) { e.stopPropagation(); }, // 菜单钮不触发行选中
+      onClick: function (e) { // 菜单钮不触发行选中；开 sess 菜单（上下文=会话 id）
+        e.stopPropagation();
+        if (MC_MENU_OPEN) MC_MENU_OPEN('sess', e.currentTarget, { sess: s.id });
+      },
     }, h('svg', { viewBox: '0 0 24 24', 'aria-hidden': true }, h('use', { href: '#i-px-dots' }))));
 }
 
@@ -177,9 +184,10 @@ function McFinderGroup(props) {
     const grp = e.currentTarget.closest('.mc-group');
     accToggle(grp, function () { props.onToggle(g.id); });
   };
-  const ghBtn = function (title, icon) {
-    return h('button', { className: 'mc-gh-btn', type: 'button', title: title, 'aria-label': title, 'data-mc-finder': '' },
-      h('svg', { viewBox: '0 0 24 24', 'aria-hidden': true }, h('use', { href: icon })));
+  const ghBtn = function (title, icon, onClick) {
+    const p = { className: 'mc-gh-btn', type: 'button', title: title, 'aria-label': title, 'data-mc-finder': '' };
+    if (onClick) p.onClick = onClick;
+    return h('button', p, h('svg', { viewBox: '0 0 24 24', 'aria-hidden': true }, h('use', { href: icon })));
   };
   return h('div', { className: 'mc-group' + (expanded ? ' expanded' : '') },
     h('div', { className: 'mc-group-head' },
@@ -189,8 +197,12 @@ function McFinderGroup(props) {
         h('span', { className: 'mc-g-name' }, esc(g.name)),
         h('span', { className: 'mc-g-count' }, esc(String(g.sessions.length)))),
       h('span', { className: 'mc-gh-act' },
-        ghBtn('工作区菜单', '#i-px-dots'),
-        ghBtn('新建会话', '#i-px-plus'))),
+        ghBtn('工作区菜单', '#i-px-dots', function (e) { // group 菜单（上下文=工作区 id）
+          if (MC_MENU_OPEN) MC_MENU_OPEN('group', e.currentTarget, { ws: g.id });
+        }),
+        ghBtn('新建', '#i-px-plus', function (e) { // groupNew 菜单（上下文=工作区 id）
+          if (MC_MENU_OPEN) MC_MENU_OPEN('groupNew', e.currentTarget, { ws: g.id });
+        }))),
     h('div', { className: 'mc-group-body' + (open ? ' open' : '') },
       g.sessions.map(function (s) {
         return h(McFinderSess, { key: s.id, sess: s, selected: props.selected === s.id, onPick: props.onPick });
@@ -350,6 +362,11 @@ const McFinder = {
   color:var(--mc-accent);font:400 12px/1.6 var(--font-sb);border-radius:var(--mc-r-tag)}
 .mc-sb-more:active{color:var(--mc-fg)}
 .mc-sb-find .mc-sb-more svg{width:11px;height:11px;flex:none}
+/* Task 5 菜单锚定：触发钮的 offsetParent 须收敛到按钮近旁容器（否则 .mc-menu 挂到侧栏大容器）——
+   五处触发钮的容器（listbar 按钮组/分组头按钮组/会话行）预置 position:relative，
+   openMenu 里 host.offsetParent 即命中这些容器，菜单出现在其正下方 */
+.mc-sb-find .mc-sb-la,.mc-sb-find .mc-gh-act,.mc-sb-find .mc-sess{position:relative}
+.mc-sb-find .mc-anchor{position:relative}
 /* ===== 折叠态迷你条（原型 .sb-mini；56px 官方轨内一列 26px 图标钮）===== */
 .mc-sb-mini{display:flex;flex-direction:column;align-items:center;gap:6px;flex:1;min-height:0;padding:8px 0}
 .mc-mini-btn{display:grid;place-items:center;width:34px;height:30px;flex:none;

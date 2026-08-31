@@ -1018,8 +1018,12 @@ function McFinderListbar(props) {
     h('span', { className: 'mc-sb-lb' }, '工作区'),
     h('span', { className: 'mc-sb-la' },
       btn('搜索会话', '#i-px-search', onSearch),
-      btn('视图选项（二期）', '#i-px-sliders'),
-      btn('添加新工作区（二期）', '#i-px-plus')));
+      btn('视图选项', '#i-px-sliders', function (e) { // view 菜单（勘定全项不通时 openMenu 静默 no-op）
+        if (MC_MENU_OPEN) MC_MENU_OPEN('view', e.currentTarget, null);
+      }),
+      btn('添加', '#i-px-plus', function (e) {
+        if (MC_MENU_OPEN) MC_MENU_OPEN('add', e.currentTarget, null);
+      })));
 }
 
 // —— 折叠态迷你条（原型 .sb-mini）：官方 sidebar.workspaces 席位在折叠轨（wide:false）时的形态。
@@ -1074,7 +1078,10 @@ function McFinderSess(props) {
     h('span', { className: 'mc-s-slot' }, slot),
     h('button', {
       className: 'mc-s-menu', type: 'button', title: '会话菜单', 'aria-label': '会话菜单', 'data-mc-finder': '',
-      onClick: function (e) { e.stopPropagation(); }, // 菜单钮不触发行选中
+      onClick: function (e) { // 菜单钮不触发行选中；开 sess 菜单（上下文=会话 id）
+        e.stopPropagation();
+        if (MC_MENU_OPEN) MC_MENU_OPEN('sess', e.currentTarget, { sess: s.id });
+      },
     }, h('svg', { viewBox: '0 0 24 24', 'aria-hidden': true }, h('use', { href: '#i-px-dots' }))));
 }
 
@@ -1091,9 +1098,10 @@ function McFinderGroup(props) {
     const grp = e.currentTarget.closest('.mc-group');
     accToggle(grp, function () { props.onToggle(g.id); });
   };
-  const ghBtn = function (title, icon) {
-    return h('button', { className: 'mc-gh-btn', type: 'button', title: title, 'aria-label': title, 'data-mc-finder': '' },
-      h('svg', { viewBox: '0 0 24 24', 'aria-hidden': true }, h('use', { href: icon })));
+  const ghBtn = function (title, icon, onClick) {
+    const p = { className: 'mc-gh-btn', type: 'button', title: title, 'aria-label': title, 'data-mc-finder': '' };
+    if (onClick) p.onClick = onClick;
+    return h('button', p, h('svg', { viewBox: '0 0 24 24', 'aria-hidden': true }, h('use', { href: icon })));
   };
   return h('div', { className: 'mc-group' + (expanded ? ' expanded' : '') },
     h('div', { className: 'mc-group-head' },
@@ -1103,8 +1111,12 @@ function McFinderGroup(props) {
         h('span', { className: 'mc-g-name' }, esc(g.name)),
         h('span', { className: 'mc-g-count' }, esc(String(g.sessions.length)))),
       h('span', { className: 'mc-gh-act' },
-        ghBtn('工作区菜单', '#i-px-dots'),
-        ghBtn('新建会话', '#i-px-plus'))),
+        ghBtn('工作区菜单', '#i-px-dots', function (e) { // group 菜单（上下文=工作区 id）
+          if (MC_MENU_OPEN) MC_MENU_OPEN('group', e.currentTarget, { ws: g.id });
+        }),
+        ghBtn('新建', '#i-px-plus', function (e) { // groupNew 菜单（上下文=工作区 id）
+          if (MC_MENU_OPEN) MC_MENU_OPEN('groupNew', e.currentTarget, { ws: g.id });
+        }))),
     h('div', { className: 'mc-group-body' + (open ? ' open' : '') },
       g.sessions.map(function (s) {
         return h(McFinderSess, { key: s.id, sess: s, selected: props.selected === s.id, onPick: props.onPick });
@@ -1264,6 +1276,11 @@ const McFinder = {
   color:var(--mc-accent);font:400 12px/1.6 var(--font-sb);border-radius:var(--mc-r-tag)}
 .mc-sb-more:active{color:var(--mc-fg)}
 .mc-sb-find .mc-sb-more svg{width:11px;height:11px;flex:none}
+/* Task 5 菜单锚定：触发钮的 offsetParent 须收敛到按钮近旁容器（否则 .mc-menu 挂到侧栏大容器）——
+   五处触发钮的容器（listbar 按钮组/分组头按钮组/会话行）预置 position:relative，
+   openMenu 里 host.offsetParent 即命中这些容器，菜单出现在其正下方 */
+.mc-sb-find .mc-sb-la,.mc-sb-find .mc-gh-act,.mc-sb-find .mc-sess{position:relative}
+.mc-sb-find .mc-anchor{position:relative}
 /* ===== 折叠态迷你条（原型 .sb-mini；56px 官方轨内一列 26px 图标钮）===== */
 .mc-sb-mini{display:flex;flex-direction:column;align-items:center;gap:6px;flex:1;min-height:0;padding:8px 0}
 .mc-mini-btn{display:grid;place-items:center;width:34px;height:30px;flex:none;
@@ -2116,24 +2133,124 @@ function mcMenuState(state, ev) {
   if (ev.t === 'open') return { open: { id: ev.id, anchor: ev.anchor || null } };
   return { open: null }; // close/esc/pick 一律关
 }
-var MC_MENU_DEFS = {}; // Task 5 填充具体菜单
-var MC_MENU_WIRING = {}; // Task 5 填充动作接线
+// Task 5 定义表：项集按附录 A 勘定对齐宿主实有菜单（会话=rename/fork/archive workspace L700-716；
+// 工作区=rename/delete L459-468；新建类=sessions.create/workspaces.create）。
+// view 两项宿主无对应服务/勘不通 → 不写 WIRING 键（mcMenuItems 自动滤除，菜单整体 no-op）。
+// 图标勘定：#i-px-box/#i-px-list 不在 sprite → 归档用 #i-suitcase、排序用 #i-px-clock。
+var MC_MENU_DEFS = {
+  sess: { items: [
+    { id: 'rename', label: '重命名', icon: '#i-px-edit' },
+    { id: 'fork', label: '复制会话', icon: '#i-px-copy' },
+    { id: 'archive', label: '归档', icon: '#i-suitcase' },
+  ] },
+  group: { items: [
+    { id: 'groupRename', label: '重命名工作区', icon: '#i-px-edit' },
+    { id: 'groupNew', label: '在此新建会话', icon: '#i-px-plus' },
+    { sep: true },
+    { id: 'groupDelete', label: '删除工作区', icon: '#i-px-trash', danger: true },
+  ] },
+  groupNew: { items: [
+    { id: 'groupNewSess', label: '新建会话', icon: '#i-px-plus' },
+    { id: 'groupNewWs', label: '新建工作区', icon: '#i-folder' },
+  ] },
+  view: { items: [
+    { id: 'viewGroup', label: '按工作区分组', icon: '#i-folder', on: true },
+    { id: 'viewSortTime', label: '按时间排序', icon: '#i-px-clock' },
+  ] },
+  add: { items: [
+    { id: 'addSess', label: '新建会话', icon: '#i-px-plus' },
+    { id: 'addWs', label: '新建工作区', icon: '#i-folder' },
+  ] },
+};
+// Task 5 接线（附录 A：宿主菜单受控 React onSelect 不可外部伪造 → 全走官方服务面）。
+// 签名统一 function (w)：w.ctx=插件 ctx；w.ctxData=触发钮 openMenu 时写入的 {sess,ws} 上下文。
+// 动作外层已有 try/catch（onDocClick 派发段），失败静默、官方状态为准。
+// workspaces 服务不在 inject 直达面：ctx.workspaces 缺席时经 ctx.get('workspaces') 可选读取（附录 A ⚠ 行）。
+function mcMenuWsSvc(w) {
+  var c = w && w.ctx;
+  if (!c) return null;
+  if (c.workspaces && typeof c.workspaces.archiveSession === 'function') return c.workspaces;
+  try {
+    if (typeof c.get === 'function') {
+      var s = c.get('workspaces');
+      if (s && typeof s.archiveSession === 'function') return s;
+    }
+  } catch (e) {}
+  return null;
+}
+function mcMenuNewSess(w) { // sessions.create(opts)→id（附录 A sessions 方法面）
+  var c = w && w.ctx;
+  if (c && c.sessions && typeof c.sessions.create === 'function') c.sessions.create({});
+}
+function mcMenuNewWs(w) { // workspaces.create(input)（附录 A L9541-9570/L10036）
+  var ws = mcMenuWsSvc(w);
+  if (ws && typeof ws.create === 'function') ws.create({});
+}
+var MC_MENU_WIRING = {
+  // —— sess（会话行 dots）——
+  rename: function (w) { // sessions.binding(id).session.rename(title)（附录 A L7346）
+    var id = w.ctxData && w.ctxData.sess;
+    if (!id || !w.ctx.sessions || typeof w.ctx.sessions.binding !== 'function') return;
+    var b = w.ctx.sessions.binding(id);
+    if (!b || !b.session || typeof b.session.rename !== 'function') return;
+    var t = window.prompt('重命名会话', '');
+    if (t === null || t.trim() === '') return;
+    b.session.rename(t.trim());
+  },
+  fork: function (w) { // sessions.fork({sessionId})→childId（附录 A sessions 方法面）
+    var id = w.ctxData && w.ctxData.sess;
+    if (!id || !w.ctx.sessions || typeof w.ctx.sessions.fork !== 'function') return;
+    w.ctx.sessions.fork({ sessionId: id });
+  },
+  archive: function (w) { // 无 sessions.archive（附录 A）：归档在 workspaces.archiveSession
+    var id = w.ctxData && w.ctxData.sess;
+    if (!id) return;
+    var ws = mcMenuWsSvc(w);
+    if (ws) ws.archiveSession(id);
+  },
+  // —— group（分组头 dots）——
+  groupRename: function (w) {
+    var id = w.ctxData && w.ctxData.ws;
+    if (!id) return;
+    var ws = mcMenuWsSvc(w);
+    if (!ws) return;
+    var t = window.prompt('重命名工作区', '');
+    if (t === null || t.trim() === '') return;
+    ws.rename(id, t.trim());
+  },
+  groupDelete: function (w) {
+    var id = w.ctxData && w.ctxData.ws;
+    if (!id) return;
+    var ws = mcMenuWsSvc(w);
+    if (ws) ws.delete(id);
+  },
+  // —— 新建类 ——
+  groupNew: mcMenuNewSess,
+  groupNewSess: mcMenuNewSess,
+  groupNewWs: mcMenuNewWs,
+  addSess: mcMenuNewSess,
+  addWs: mcMenuNewWs,
+  // viewGroup/viewSortTime：勘不通 → 不写键（菜单项自动不出现）
+};
+var MC_MENU_OPEN = null; // Task 5 桥：McFinder 触发钮经此调 openMenu（mount 时赋值、teardown 置空）
 var McMenus = {
   css: MC_MENUS_CSS,
   mount: function (ctx) {
     var state = { open: null };
     var wrap = null;           // 当前活动菜单 DOM
-    var wiringCtx = { ctx: ctx }; // 接线函数收到的统一上下文
+    var wiringCtx = { ctx: ctx, ctxData: null }; // 接线函数收到的统一上下文（ctxData 随 openMenu 刷新）
+    MC_MENU_OPEN = openMenu;
     function closeMenu() {
       if (!wrap) { state = mcMenuState(state, { t: 'close' }); return; }
       var w = wrap; wrap = null;
       state = mcMenuState(state, { t: 'close' });
       flashOut(w, function () { try { w.remove(); } catch (e) {} });
     }
-    function openMenu(id, host) { // host=触发钮(button);菜单挂其 offsetParent
+    function openMenu(id, host, ctxData) { // host=触发钮(button);菜单挂其 offsetParent;ctxData={sess,ws} 触发上下文
       var def = MC_MENU_DEFS[id]; if (!def) return;
       var anchor = host.offsetParent || host.parentElement; if (!anchor) return;
       closeMenu();
+      wiringCtx.ctxData = ctxData || null; // 供 WIRING 内读取会话/工作区 id
       var items = mcMenuItems(def, MC_MENU_WIRING);
       if (!items.length) return; // 控制器裁定:无可见项静默 no-op,不渲染空壳
       anchor.classList.add('mc-anchor');
@@ -2182,6 +2299,7 @@ var McMenus = {
       document.head.appendChild(styleEl);
     }
     return function teardown() {
+      MC_MENU_OPEN = null; // 撤桥：卸载后触发钮回调安全空转
       try { document.removeEventListener('click', onDocClick, true); } catch (e) {}
       try { document.removeEventListener('keydown', onKey, true); } catch (e) {}
       try { if (styleEl) styleEl.remove(); } catch (e) {}

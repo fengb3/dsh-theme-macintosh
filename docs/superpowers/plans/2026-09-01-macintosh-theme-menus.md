@@ -392,7 +392,28 @@ MC_MENU_WIRING.archive = function (w) { try { w.ctx.sessions.archive(currentSess
 | ctx.sessions 方法面 | `sessions` 服务（dsh-client-runtime reflect.provide("sessions")，SessionRuntime）：`open(id)`、`openSubagent(addr)`、`create(opts)`→id、`fork({sessionId,atSeq?,increaseTitle?})`→childId、`scope(id)`、`binding(id)`（binding.session 有 `rename(title)` 异步方法，L7346）、`list`(snapshot store: ids/byId/current/phase)、`clear()`。**无 sessions.archive/delete**——归档在 `workspaces` 服务（WorkspaceRuntime）：`archiveSession(sessionId)`、`create(input)`、`rename(workspaceId,title)`、`delete(workspaceId)`（L9541-9570/L10036）。⚠ 两服务均需 inject 声明（现 inject 列表须加 `'@deepseek-ai/dsh-client-runtime'` 已有；workspaces 走 ctx.get 可选读取） |
 | menu 相关 keyed 槽 | **无**。dsh-client-ui-slots 注册表零 menu 槽位；workspace 侧仅 `sidebar.workspaces` / `sidebar.workspaces.directoryFlow` / `conversation.hero.workspace` 三键（lib L2434-2444）。Menu 原语完全内部受控（open/onSelect props），不可槽位注入 → 五菜单 Task 4 走自绘（McMenus 自有 .mc-menu 类零宿主锚），menuPortal/menuHostItem 仅作遮蔽失败时藏原生菜单的兜底样式通道 |
 
+### Task 5 接线勘定回填（实装记录）
+
+接线清单（WIRING 键 → 服务方法 → 勘定来源）：
+
+| 菜单项 | 服务方法 | 勘定来源（本附录 A） |
+|--------|----------|----------------------|
+| sess.rename | `sessions.binding(id).session.rename(title)`（L7346） | 附录 A「ctx.sessions 方法面」行 |
+| sess.fork | `sessions.fork({sessionId})` | 同上 |
+| sess.archive | `workspaces.archiveSession(sessionId)`（L9541-9570） | 附录 A「无 sessions.archive」勘定 |
+| group.groupRename | `workspaces.rename(workspaceId,title)`（L9541-9570） | 附录 A workspaces 服务行 |
+| group.groupDelete | `workspaces.delete(workspaceId)` | 同上 |
+| group.groupNew / groupNewSess / addSess | `sessions.create(opts)` | 附录 A sessions 方法面 |
+| groupNewWs / addWs | `workspaces.create(input)`（L10036） | 附录 A workspaces 服务行 |
+| viewGroup / viewSortTime | — 勘不通，不写键 | 附录 A「menu 相关 keyed 槽」行（无宿主对应服务） |
+
+- workspaces 服务读取路径：`ctx.workspaces` 直达，缺席时 `ctx.get('workspaces')` 可选读取（附录 A ⚠ 行）；两者均缺席时归档/删除/新建工作区项静默降级（无 id/无服务即 return，WIRING 外层 try/catch 兜底）。
+- DEFS 项集按附录 A「宿主实有菜单项」对齐：sess=rename/fork/archive（宿主无 delete 会话动作，原型基准版的 delete 项删除）；group=rename/delete+新建；view 保留定义但全项无接线 → 菜单整体 no-op。
+- 图标勘定：#i-px-box/#i-px-list 不在 sprite → 归档用 #i-suitcase、排序用 #i-px-clock。
+- 触发钮五处（listbar view/add、分组头 dots/plus、会话行 dots）经模块级 `MC_MENU_OPEN` 桥调 openMenu；锚定容器（.mc-sb-la/.mc-gh-act/.mc-sess）预置 position:relative 使 offsetParent 收敛到按钮近旁。
+
 ## Self-Review 结论
+
 
 - **Spec 覆盖**：§1 三层策略（Task 1 探针 + Task 4 兜底隐藏 + 附录A 槽勘定）、§2 原语与五菜单（Task 2/5）、§3 状态机/接线三降序/定位（Task 3/4/5）、§4 动画纪律（Global Constraints + Task 4 flashIn/flashOut）、§5 测试/门禁/失配演练/kit/验收规则（Task 3/6/7）。无缺口。
 - **占位符**：Task 5 接线与附录 A 为显式探针依赖（spec §0 裁定 4 与 Self-Review 已声明该模式）；定义表给了原型基准版可编译运行，勘定只增删。无 TBD。
