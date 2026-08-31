@@ -111,7 +111,6 @@ function stubEnv(clock, { reduced = false, columnReady = false, column = null } 
   setStub('MC_MAP', {
     flowItem: '[data-chat-flow-kind]',
     flowColumn: '[data-chat-flow]',
-    kindModelRetry: '[data-chat-flow-kind="model-retry"]',
     statusRow: '[role="status"]',
   });
   setStub('CLOCK', clock);
@@ -175,11 +174,13 @@ test('mount 主线：轮询晚挂载→存量不闪→新行三拍(mcfx 同伴�
   assert.equal(userRow.classes.size, 0, 'user 行不吃整行三拍');
   assert.equal(steerRow.classes.size, 0, 'steering 行不吃整行三拍');
 
-  // retry 行：SYNC[0] 负延迟注入（kindModelRetry）
-  const retryRow = new FakeElement({ attrs: { 'data-chat-flow-kind': 'model-retry' } });
+  // 验收七轮:model-retry 行已重绘(McSysCard 自有八角点相位)——观察器只供给行级三拍出场
+  const retryRow = new FakeEl2({ attrs: { 'data-chat-flow-kind': 'model-retry' } });
   mo.cb([{ addedNodes: [retryRow] }]);
-  const s0 = clock.synced.find((s) => s.el === retryRow);
-  assert.ok(s0 && s0.period === 2600 && s0.prop === '--pulse-delay', 'retry 行应注入 PULSE 相位');
+  assert.ok(retryRow.classList.contains('mcfx') && retryRow.classList.contains('mc-ghost'), 'retry 行拍0:mcfx+mc-ghost(出场三拍)');
+  assert.equal(clock.synced.filter((s) => s.el === retryRow).length, 0, 'retry 行不再走观察器 SYNC(组件内自管相位)');
+  clock.flush(); clock.flush();
+  assert.equal(retryRow.classes.size, 0, 'retry 行拍2 撤净');
 
   // status 行（flowColumn 直接子节点、非 flowItem）：经 enter 顶层 syncEl 命中 SYNC[1]
   const statusRow = new FakeElement({ isStatusInColumn: true });
@@ -216,10 +217,10 @@ test('REDUCED：新行零闪烁类，相位同步照常（验证④逻辑）', (
   const retry = new FakeElement({ attrs: { 'data-chat-flow-kind': 'model-retry' } });
   mo.cb([{ addedNodes: [row, retry] }]);
   assert.equal(row.classes.size, 0, 'REDUCED 不加闪烁类');
+  assert.equal(retry.classes.size, 0, 'REDUCED 重试行同样零类');
   clock.flush(); clock.flush();
   assert.equal(row.classes.size, 0, '后续拍也无类可撤（根本未排三拍）');
   assert.equal(clock.pending(), 0, 'enterFlash 未调度任何拍');
-  assert.ok(clock.synced.some((s) => s.el === retry), '相位同步不受 REDUCED 门控');
   td();
 });
 
@@ -230,87 +231,16 @@ test('无 MutationObserver 环境静默返回 null', () => {
   assert.strictEqual(McFlow.mount({}), null);
 });
 
-// —— 验收二轮⑥:折叠卡开合五拍(捕获 click 委托 → accToggle;四轮起 think 卡由 McThinkCard
-//    自管,不在表内) ——
-function stubToggleEnv(clock, opts = {}) {
-  stubEnv(clock, { columnReady: true, column: new FakeElement({}), ...opts });
-  G.MC_MAP.disclosureRow = '[data-disclosure-row]';
-  G.MC_MAP.kindContext = '[data-chat-flow-kind="context"]';
-  G.MC_MAP.kindCompaction = '[data-chat-flow-kind="compaction"]';
-  G.MC_MAP.kindManualCompaction = '[data-chat-flow-kind="manual-compaction"]';
-  G.MC_MAP.compactionDisclosure = '[data-compaction-disclosure]';
-}
-const CTX_HEAD = '[data-chat-flow-kind="context"] [data-disclosure-row]';
-const CTX_CARD = '[data-chat-flow-kind="context"]';
-const RETRY_HEAD = '[data-chat-flow-kind="model-retry"] summary';
-const RETRY_CARD = '[data-chat-flow-kind="model-retry"]';
-const COMP_HEAD = ':is([data-chat-flow-kind="compaction"],[data-chat-flow-kind="manual-compaction"]) button';
-const COMP_CARD = ':is([data-chat-flow-kind="compaction"],[data-chat-flow-kind="manual-compaction"])';
-
-test('⑥ 主线:attach 对 flowColumn 注册捕获 click;三卡头命中即对卡容器跑五拍(含 mcfx 撤净)', () => {
+// —— 验收七轮:卡头 click 委托整体退役(context/model-retry/双 compaction 四卡由 McSysCard
+//    重绘自管开合,think 四轮起自管)——attach 后不得再注册任何 click 监听 ——
+test('⑦ 卡头委托退役:attach 零 click 监听(四卡开合由 McSysCard 组件内 accToggle 自管)', () => {
   const clock = fakeClock();
-  stubToggleEnv(clock);
+  stubEnv(clock, { columnReady: true, column: new FakeElement({}) });
   const column = new FakeElement({});
   G.document = { querySelector: (sel) => (sel === '[data-chat-flow]' ? column : null), body: column };
   const td = McFlow.mount({});
   clock.flush(); // poll → attach
   const li = column.listeners.find((l) => l.type === 'click');
-  assert.ok(li, 'flowColumn 上应注册 click 监听');
-  assert.equal(li.capture, true, '捕获阶段(先于宿主 React onClick)');
-
-  // context 卡:点击 disclosure 行 → 卡容器五拍(原型 accToggle 同款;busy 防重入)
-  const ctxCard = new FakeElement({ compound: [CTX_CARD] });
-  const ctxRow = new FakeElement({ compound: [CTX_HEAD], parent: ctxCard });
-  li.fn({ target: ctxRow });
-  assert.ok(ctxCard.classList.contains('mcfx') && ctxCard.classList.contains('mc-ghost'), '拍0:mcfx+mc-ghost');
-  assert.equal(ctxCard.dataset.busy, '1', 'busy 防重入标记');
-  li.fn({ target: ctxRow }); // busy 期间重入
-  clock.flush(); // 拍1(t100):+flash,ghost 保留
-  assert.ok(ctxCard.classList.contains('mc-flash') && ctxCard.classList.contains('mc-ghost'), '拍1:白块遮盖,内容仍隐');
-  clock.flush(); // 拍2(t200):清残高+fn(被遮内容瞬变拍)
-  clock.flush(); // 拍3(t300):flash+ghost+mcfx 同撤(揭开且显回,一步到位)
-  assert.equal(ctxCard.classes.size, 0, '拍3:mc-flash/mc-ghost/mcfx 同撤净(零残留)');
-  assert.equal(ctxCard.dataset.busy, '1', 'busy 未清(滞空拍守防重入)');
-  clock.flush(); // 拍4(t400):什么都不动,只清 busy
-  assert.equal(ctxCard.classes.size, 0, '拍4:滞空拍零类操作');
-  assert.notEqual(ctxCard.dataset.busy, '1', 'busy 清除');
-  assert.equal(clock.pending(), 0);
-
-  // model-retry / compaction 两头逐一命中(拍0 即验,撤拍协议同上)
-  const seen = [];
-  const hit = (headSel, cardSel) => {
-    const card = new FakeElement({ compound: [cardSel] });
-    li.fn({ target: new FakeElement({ compound: [headSel], parent: card }) });
-    assert.ok(card.classList.contains('mc-ghost'), headSel + ' 命中拍0');
-    seen.push(card);
-  };
-  hit(RETRY_HEAD, RETRY_CARD);
-  hit(COMP_HEAD, COMP_CARD);
-  clock.flush(); clock.flush(); clock.flush(); clock.flush();
-  for (const c of seen) assert.equal(c.classes.size, 0, '各卡撤净');
-
-  // 非卡头点击(普通行/非 Element 目标):零触发
-  const plain = new FakeElement({ attrs: { 'data-chat-flow-kind': 'user' } });
-  li.fn({ target: plain });
-  li.fn({ target: {} });
-  assert.equal(plain.classes.size, 0, '非卡头零类');
-
-  td();
-  assert.equal(column.listeners.length, 0, 'teardown 注销 click 监听');
-});
-
-test('⑥ REDUCED:卡头点击零触发(开合交宿主,纯装饰拍跳过)', () => {
-  const clock = fakeClock();
-  stubToggleEnv(clock, { reduced: true });
-  const column = new FakeElement({});
-  G.document = { querySelector: (sel) => (sel === '[data-chat-flow]' ? column : null), body: column };
-  const td = McFlow.mount({});
-  clock.flush();
-  const li = column.listeners.find((l) => l.type === 'click');
-  assert.ok(li, '监听仍注册(轻量早退)');
-  const card = new FakeElement({ compound: [CTX_CARD] });
-  li.fn({ target: new FakeElement({ compound: [CTX_HEAD], parent: card }) });
-  assert.equal(card.classes.size, 0, 'REDUCED 不跑五拍');
-  assert.equal(clock.pending(), 0, '未调度任何拍');
+  assert.equal(li, undefined, '七轮起不再注册卡头捕获 click(McSysCard 重绘接管)');
   td();
 });

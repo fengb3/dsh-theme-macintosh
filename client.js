@@ -550,14 +550,11 @@ const MC_MAP = {
   flowScroll: '[data-conversation-scroll]',                    // stable(L7276)
   flowColumn: '[data-chat-flow]',                             // stable(L5829)
   flowItem: '[data-chat-flow-kind]',                          // stable(L5506-5510)
-  kindUser: '[data-chat-flow-kind="user"]',
-  kindSteering: '[data-chat-flow-kind="steering"]',
-  kindContext: '[data-chat-flow-kind="context"]',
+  // 验收七轮:kindUser/kindSteering/kindContext/kindCompaction/kindManualCompaction/kindModelRetry
+  // 六键随 McSysCard 重绘退役(user/steering 六轮、context/compaction/manual-compaction/model-retry
+  // 七轮——四卡自有 .mc-* 类零宿主锚;行级出场 flashIn 走 flowItem 泛锚即可)
   kindAssistantStep: '[data-chat-flow-kind="assistant-step"]',
   kindCommand: '[data-chat-flow-kind="command"]',
-  kindCompaction: '[data-chat-flow-kind="compaction"]',
-  kindManualCompaction: '[data-chat-flow-kind="manual-compaction"]',
-  kindModelRetry: '[data-chat-flow-kind="model-retry"]',
   kindTurnError: '[data-chat-flow-kind="turn-error"]',
   kindTurnMaxTokens: '[data-chat-flow-kind="turn-max-tokens"]',
   kindTurnTail: '[data-chat-flow-kind="turn-tail"]',
@@ -568,18 +565,15 @@ const MC_MAP = {
   mdRoot: '[data-chat-flow-kind="assistant-step"] > div > div', /* DRIFT-RISK: structural;第一层 div 为 data-slot 包装层,原一层值命中包装层——当前无消费者,防未来误用(裁定10;Sxvs8a_*,L9461-9521) */
   // 验收四轮:thinkCard/thinkSummary/ariaExpanded 三键随宿主 ReasoningRow 覆写退役
   // (McThink 组件整体重写 assistant-step,自有 .mc-think 类零宿主锚)
-  ctxBody: '[data-context-injection-body]',                   // stable(L4863-4907)
+  // 验收七轮:ctxBody/disclosureRow/contextForm/retryActive/compactionDisclosure 五键随 McSysCard
+  // 重绘退役(宿主 context/retry/compaction DOM 整体被遮蔽,皮肤锚与 :has 图标细分、pulse 门控
+  // data-active 锚、折叠图标 span 锚全部无消费者;重绘卡自有 .mc-* 类零宿主锚)
   turnTailBar: '[data-turn-tail]',                            // stable(L9715-9752)
   // —— 终审 F2 收编（2026-08-31）：此前 flow 规则里直写的宿主选择器一律进管制表（spec §1 唯一管制点）——
   pendingSteering: '[data-pending-steering]',  // stable(steering 待定态虚线廓，spec §4 行3)
-  disclosureRow: '[data-disclosure-row]',      // stable(context 折叠行；宿主原图标隐藏链的行锚)
-  contextForm: '[data-context-form=',          // 属性前缀键（六 form 任意取值，:has 细分插值；同 kind 前缀先例）
   statusRow: '[role="status"]',                // stable(TurnStatus 宿主状态行；使用时限定 flowColumn 内，spec §4 行10)
   commandCard: '[data-variant="others"]',      // stable(command 卡壳锚，spec §4 行9「[data-variant="others"][data-state]」)
   dataState: '[data-state=',                   // 属性前缀键（任意取值形态；command 三态）
-  // —— 用户验收二轮收编（2026-08-31 live 探测 + 部署源复核，host 0.1.1-rc.2）——
-  retryActive: 'details[data-active]',         // stable(ModelRetryItem L5191 "data-active": active||void 0——scheduled 态才有;⑧ pulse 门控锚)
-  compactionDisclosure: '[data-compaction-disclosure]', // stable(CompactionItem 折叠图标 span L4320;⑥ 卡头结构注记——click target 为其外层 button,头锚取 kind 行内 button 元素)
   // —— 用户验收三轮④收编（2026-09 live 探测，host 0.1.1-rc.2）——
   deliverRoot: '.P4kPIW_root',   // DRIFT-RISK: build-hash class(dsh-client-ui-deliverables 产物行;无 data-* 稳定锚,宿主升级先复核)
   deliverFile: '.P4kPIW_file',   // DRIFT-RISK: 同上(文件名 chip 按钮;含 measure 探针 P4kPIW_probe 同类复用)
@@ -1355,30 +1349,12 @@ var McFlow = {
       // 六轮续:pending steering 重绘改观察器嫁接(见 skinPending)——结构位皮肤规则退役,
       // 只留 .mc-pending 虚线待定廓(嫁接标记)
       '.mc-pending{outline:1px dashed var(--mc-faint);outline-offset:2px;border-radius:8px}',
-      // §7:注入条(context + 双 compaction 同款;kind 行即条壳)
-      // 验收③:行改 align-items:center、图标位去 margin-top(宿主行高下 flex-start+1px 不居中);
-      // ctxBody 展开体在行外,不受影响
-      ':is(' + MC_MAP.kindContext + ',' + MC_MAP.kindCompaction + ',' + MC_MAP.kindManualCompaction + '){display:flex;align-items:center;gap:7px;padding:7px 9px;background:var(--mc-surface-2);border:1px dashed var(--mc-border-soft);border-radius:var(--mc-r-card);font:400 12px/1.7 var(--font-ui);color:var(--mc-muted)}',
-      MC_MAP.ctxBody + '{font:400 12px/1.7 var(--font-ui);color:var(--mc-muted);padding-left:22px}',
-      // 图标:mask + data-URI;:has() 细分 form(Chromium 105+;form 锚在展开体 data-context-form 上,
-      // 折叠态回落 DOC 基础位——宿主 children 仅展开渲染,裁定内既有行为)
-      // 验收二轮⑤(live 探明):宿主 DisclosureRow 的 leading 槽(16px 定宽 + margin 6px,内藏
-      // hover 才显的 chevronHover 绝对定位 svg)整槽占位 → 图标与文本间距虚大;原型注入条(L332-337)
-      // 无 disclosure 箭头语汇 → 整槽 display:none(行点击开合保留,role=button 在行上)
-      MC_MAP.kindContext + ' ' + MC_MAP.disclosureRow + '>span:first-of-type{display:none}',
-      MC_MAP.kindContext + '::before{content:"";flex:none;width:15px;height:15px;background-color:var(--mc-faint);-webkit-mask:url("data:image/svg+xml,' + MC_FLOW_ICON_DOC + '") center/contain no-repeat;mask:url("data:image/svg+xml,' + MC_FLOW_ICON_DOC + '") center/contain no-repeat}',
-      MC_MAP.kindContext + ':has(' + MC_MAP.contextForm + '"catalog"])::before{-webkit-mask-image:url("data:image/svg+xml,' + MC_FLOW_ICON_LIST + '");mask-image:url("data:image/svg+xml,' + MC_FLOW_ICON_LIST + '")}',
-      MC_MAP.kindContext + ':has(' + MC_MAP.contextForm + '"snapshot"])::before{-webkit-mask-image:url("data:image/svg+xml,' + MC_FLOW_ICON_COPY + '");mask-image:url("data:image/svg+xml,' + MC_FLOW_ICON_COPY + '")}',
-      MC_MAP.kindContext + ':has(' + MC_MAP.contextForm + '"recall"])::before{-webkit-mask-image:url("data:image/svg+xml,' + MC_FLOW_ICON_CLOCK + '");mask-image:url("data:image/svg+xml,' + MC_FLOW_ICON_CLOCK + '")}',
-      // §8:细长条组(实线 soft 边,非虚线——inject 专属语汇)
-      ':is(' + MC_MAP.kindModelRetry + ',' + MC_MAP.kindTurnMaxTokens + ',' + MC_MAP.kindUnknown + '){display:flex;align-items:center;gap:8px;padding:6px 9px;background:var(--mc-surface-2);border:1px solid var(--mc-border-soft);border-radius:var(--mc-r-card);font:400 12px/1.6 var(--font-ui);color:var(--mc-muted)}',
-      // 验收二轮⑧+⑨:八角点静态常驻、pulse 仅限 active 态(宿主 <details data-active>——scheduled
-      // 时才有,RetryNodeView active=data.current.retryState==="scheduled";live 探明 finished 行
-      // 无此属性)→ 重试结束即停闪;宿主 summary::after chevron(6×6 旋转方块,行内唯一宿主图形
-      // ——用户所见「时钟图标」即它)content:none 去重,只留我方八角点
-      MC_MAP.kindModelRetry + '::before{content:"";flex:none;width:6px;height:6px;background:var(--mc-spark);clip-path:polygon(33% 0,67% 0,100% 33%,100% 67%,67% 100%,33% 100%,0 67%,0 33%)}',
-      MC_MAP.kindModelRetry + ':has(' + MC_MAP.retryActive + ')::before{animation:mc-pulse 2600ms steps(1,end) infinite;animation-delay:var(--pulse-delay,0ms)}',
-      MC_MAP.kindModelRetry + ' summary::after{content:none}',
+      // 验收七轮:注入条/压缩条/重试条 CSS 皮肤随 syscard 重绘退役(McSysCard 遮蔽 context/
+      // compaction/manual-compaction/model-retry 四槽,自有 .mc-inject/.mc-comp/.mc-retry 类)——
+      // 原 §7 虚线条 + 表单图标 + leading 槽清理 + §8 重试八角点/chevron 规则与 T4 压缩图标位一并下岗;
+      // 行级出场 flashIn(观察器)对四 kind 照常供给
+      // §8:细长条组(实线 soft 边;retry 已重绘移出,余 unknown 同款壳)
+      ':is(' + MC_MAP.kindTurnMaxTokens + ',' + MC_MAP.kindUnknown + '){display:flex;align-items:center;gap:8px;padding:6px 9px;background:var(--mc-surface-2);border:1px solid var(--mc-border-soft);border-radius:var(--mc-r-card);font:400 12px/1.6 var(--font-ui);color:var(--mc-muted)}',
       MC_MAP.kindTurnError + '{display:flex;align-items:center;gap:8px;padding:6px 9px;background:var(--mc-surface-2);border-left:2px solid var(--mc-danger);border-radius:var(--mc-r-card);font:400 12px/1.6 var(--font-ui);color:var(--mc-danger)}',
       MC_MAP.kindTurnMaxTokens + '::before{content:"";flex:none;border-left:5px solid var(--mc-faint);border-top:4px solid transparent;border-bottom:4px solid transparent}',
       // §9:TurnStatus(宿主运行中状态行)
@@ -1389,12 +1365,7 @@ var McFlow = {
       // .mc-line-flash 观察器)一并退役;.mc-app-cover 保留供 McThinkCard 正文追加段复用
       '.mc-app-cover{color:transparent;background:#fff;background-image:repeating-linear-gradient(0deg,transparent 0 2px,rgba(0,0,0,.06) 2px 3px);border-radius:1px}',
       'html[data-theme="light"] .mc-app-cover{background:#000;background-image:repeating-linear-gradient(0deg,transparent 0 2px,rgba(255,255,255,.07) 2px 3px)}',
-      // T4 补遗(spec §2 行「compaction/manual-compaction → i-px-copy」;T4 裁定并入本 commit):
-      // 压缩条 ::before 图标位,复用 T4 已内联的 copy data-URI 常量插值(context snapshot 同款)。
-      // 验收二轮⑤ 同款占位清理(原型注入条语汇,无 disclosure 箭头):宿主 compactionButton 的
-      // leading 槽(16px 定宽 + margin 6px,内藏 API 图标/hover chevron 双叠 span)整槽 display:none
-      ':is(' + MC_MAP.kindCompaction + ',' + MC_MAP.kindManualCompaction + ')::before{content:"";flex:none;width:15px;height:15px;background-color:var(--mc-faint);-webkit-mask:url("data:image/svg+xml,' + MC_FLOW_ICON_COPY + '") center/contain no-repeat;mask:url("data:image/svg+xml,' + MC_FLOW_ICON_COPY + '") center/contain no-repeat}',
-      ':is(' + MC_MAP.kindCompaction + ',' + MC_MAP.kindManualCompaction + ') button>span:first-of-type{display:none}',
+      // 验收七轮:压缩条图标位/leading 槽清理随 syscard 重绘退役(.mc-comp 自有图标)
       // §10:turn-tail 操作条(spec §4 行6;原型 L533-536)+ 钳形钮壳(只造壳不换宿主图标;
       // 后代选择器命中 .actions 容器内钮,data-slot 包装层不减后代深度)
       // 验收二轮④(live 探明):root 宿主为 column flex,原 align-items:center 会把 deliverables
@@ -1431,27 +1402,15 @@ var McFlow = {
     var REDUCED = false;
     try { REDUCED = window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) {}
     var SYNC = [
-      [MC_MAP.kindModelRetry, '--pulse-delay', CLOCK.PULSE],
       [MC_MAP.flowColumn + ' ' + MC_MAP.statusRow, '--pulse-delay', CLOCK.PULSE],
     ];
-    // 验收二轮⑥→三轮⑥(通用五拍):折叠卡开合。flowColumn 捕获阶段 click 委托,命中三卡头
-    // (context 的 DisclosureRow、model-retry 的 summary、双 compaction 的头部钮——
-    // live 实测 click target=button 本体,[data-compaction-disclosure] span 是其子节点、closest
-    // 只上溯不下降,故头锚取 kind 行内 button 元素;锚点语义见 MC_MAP.compactionDisclosure 注。
-    // 验收四轮:think 卡头移出表——McThinkCard 自有 DOM,开合走 lib accToggle 真延迟 flip)
-    // → 对卡容器(=各 kind 行)走 cardToggle 五拍(捕获拍先于宿主 React onClick,
-    // ghost 在宿主瞬切前已把内容隐去;几何变化发生在白块遮盖下;t300 揭开 t400 内容显回)。
-    // dataset.busy 防重入(断连/异常路径也清);REDUCED 跳过(开合功能不受影响,纯装饰拍);
-    // teardown 一并注销
-    var TOGGLE = [
-      [MC_MAP.kindContext + ' ' + MC_MAP.disclosureRow, MC_MAP.kindContext],
-      [MC_MAP.kindModelRetry + ' summary', MC_MAP.kindModelRetry],
-      [':is(' + MC_MAP.kindCompaction + ',' + MC_MAP.kindManualCompaction + ') button', ':is(' + MC_MAP.kindCompaction + ',' + MC_MAP.kindManualCompaction + ')'],
-    ];
+    // 验收七轮:折叠卡开合点击委托表整体退役——context/model-retry/双 compaction 四卡已由
+    // McSysCard 重绘(自有 DOM,开合/状态切换在组件内走 lib accToggle);think 卡四轮起已自管。
+    // click 委托/onHeadClick/offClick 一并下岗,观察器只剩出场 flashIn/相位同步/pending 嫁接
     // 验收六轮改版:手抄变体全部收编回库——开合走 lib accToggle、新行入场走 lib flashIn,
     // 协议唯一定义在 mcfx 段(t0 ghost→t100 flash→t200 fn→t300 同撤 flash+ghost→t400 滞空)。
     // 宿主卡 fn=空转+清残高——宿主 React 在捕获拍后自行瞬切,几何变化发生在白块遮盖下
-    var mo = null, tries = 0, timer = null, offClick = null;
+    var mo = null, tries = 0, timer = null;
     var seen = new WeakSet();
     function syncEl(el) {
       for (var i = 0; i < SYNC.length; i++) { try {
@@ -1509,23 +1468,6 @@ var McFlow = {
         if (!REDUCED && mk !== 'user' && mk !== 'steering') enterFlash(it);
       }
     }
-    function onHeadClick(ev) { // 验收二轮⑥:卡头捕获委托(见 TOGGLE 表注释;think 卡已由
-      // McThinkCard 自管开合,不在表内)
-      if (REDUCED) return;
-      try {
-        var t = ev.target;
-        if (!(t instanceof Element)) return;
-        for (var i = 0; i < TOGGLE.length; i++) {
-          var head = null;
-          try { head = t.closest(TOGGLE[i][0]); } catch (e) { head = null; }
-          if (!head) continue;
-          var card = null;
-          try { card = head.closest(TOGGLE[i][1]); } catch (e) { card = null; }
-          if (card) accToggle(card, function () {});
-          break; // 卡头互不嵌套,单命中即止
-        }
-      } catch (e) { /* 委托失败不影响宿主自身开合 */ }
-    }
     function attach() { // 验收三轮⑥ live 探明:切会话时宿主会整体替换 [data-chat-flow] 节点,
       // observer/click 绑列节点随会话切换失效——一律绑 document.body(稳定根;委托/域限定
       // 由 MC_MAP 选择器在 closest/matches 内完成,body 级观察回调轻量早退)
@@ -1546,7 +1488,6 @@ var McFlow = {
         } catch (e) {}
       });
       mo.observe(root, { childList: true, subtree: true });
-      try { root.addEventListener('click', onHeadClick, true); offClick = function () { try { root.removeEventListener('click', onHeadClick, true); } catch (e) {} }; } catch (e) {}
     }
     timer = CLOCK.next(function poll() { // flowColumn 晚挂载轮询（不再限次——boot 停在空会话
       // (hero 态无列)时 8s 上限会耗尽,之后切会话 observer 永不挂载;验收三轮⑥ live 复现。
@@ -1558,7 +1499,6 @@ var McFlow = {
     }, 400);
     return function teardown() {
       try { if (mo) mo.disconnect(); } catch (e) {}
-      try { if (offClick) offClick(); } catch (e) {}
       try { if (timer) CLOCK.clear(timer); } catch (e) {}
     };
   },
@@ -1832,6 +1772,279 @@ const McThink = {
       priority: -1,
       registrant: 'macintosh',
     }, McUserNodeView)));
+  },
+};
+
+// src/conv/syscard.js —— 系统卡四族重写（验收七轮：上下文注入 / 自动·手动压缩 / 模型重试）
+// 遮蔽 conversation.chat.node keyed 槽 'context' / 'compaction' / 'manual-compaction' /
+// 'model-retry'（priority:-1 同 user/assistant-step 先例）——宿主卡整体替换为自有 DOM
+// （真·重绘，非 CSS 套壳）；primitives 缺席时不注册（宿主原生渲染兜底）。
+// 动效纪律（验收六轮改版沿用）：出场 = flowItem 行级 flashIn（McFlow 观察器供给）；折叠开合与
+// 状态切换（压缩中→已压缩 / 重试 scheduled→started·cancelled）= lib accToggle 五拍，文字 A→B
+// 挂 .s-in span（ghost 拍 color:transparent，白块随 span 宽）；REDUCED 全跳过功能不受影响。
+// 纯函数经 CJS 兼容出口供测试 createRequire 使用。
+var MC_SYS_PRIM = null;
+try { if (typeof require === 'function') MC_SYS_PRIM = require("@deepseek-ai/dsh-client-ui-primitives"); } catch (e) { MC_SYS_PRIM = null; }
+
+// 图标位 data-URI（与 McFlow 注入条四型同款；本段自持副本保持自包含，避免拼接顺序耦合）
+const MC_SYS_ICON_DOC = "%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 10'%3E%3Cpath fill='%23000' fill-rule='evenodd' clip-rule='evenodd' d='M0 0H6V1H8V10H0V0ZM7 3H5V1H1V9H7V3Z'/%3E%3Cpath fill='%23000' d='M5 1H1V9H7V3H5V1Z'/%3E%3C/svg%3E";
+const MC_SYS_ICON_LIST = "%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23000' d='M2 5h20v14H2V5zm2 2v2h16V7H4zm16 4H4v2h16v-2zm0 4H4v2h16v-2z'/%3E%3C/svg%3E";
+const MC_SYS_ICON_COPY = "%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23000' d='M4 2h11v2H6v13H4V2zm4 4h12v16H8V6zm2 2v12h8V8h-8z'/%3E%3C/svg%3E";
+const MC_SYS_ICON_CLOCK = "%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23000' d='M19 3H5v2H3v14h2v2h14v-2h2V5h-2V3zm0 2v14H5V5h14zm-8 2h2v6h4v2h-6V7z'/%3E%3C/svg%3E";
+
+// —— 纯函数（测试出口）——
+// 压缩条一行摘要：全空 = 压缩进行中；双计数 = 完成语；有摘要无计数 = 展开提示；余 = 不可用/命令文案
+function mcCompactionLine(summary, items, tokens, fallback) {
+  if (items === null && tokens === null) return fallback ? String(fallback) : '正在压缩…';
+  if (items !== null && tokens !== null) return '已压缩 ' + items + ' 条历史记录（约 ' + tokens + ' tokens）';
+  return fallback ? String(fallback) : '压缩摘要不可用';
+}
+// 重试卡文案三件：active（=scheduled，八角点脉冲）+ 标签 + 上限（normal=数字 / 其余=∞）
+function mcRetryParts(cur) {
+  var state = cur ? cur.retryState : '';
+  var active = state === 'scheduled';
+  var label = active ? '正在重试模型请求'
+    : state === 'cancelled' ? '模型请求重试已取消'
+    : state === 'started' ? '已重试模型请求'
+    : '等待重试模型请求';
+  var maximum = cur && cur.mode === 'normal' ? cur.maxRetries : '∞';
+  return { active: active, label: label, maximum: maximum };
+}
+// 上下文注入正文：文本块按模型所见顺序连缀（相邻无分隔），超 cap 截断；非文本块另册走 JsonBlock
+function mcContextText(content, cap) {
+  var out = '';
+  try {
+    var blocks = content || [];
+    for (var i = 0; i < blocks.length; i++) {
+      var b = blocks[i];
+      if (b && b.type === 'text' && typeof b.text === 'string') out += b.text;
+      if (out.length >= cap) return out.slice(0, cap) + '…';
+    }
+  } catch (e) { /* 结构漂移 → 空正文，条头照常 */ }
+  return out;
+}
+
+const MC_SYS_TEXT_CAP = 20000; // 宿主 ModelFacingContent 同款上界（20k chars）
+
+const McSysCard = {
+  css: [
+    /* —— 注入条（context）：虚线壳 + 表单图标；head 全宽按钮，body 折叠 height:0 —— */
+    '.mc-inject-head{display:flex;align-items:center;gap:7px;box-sizing:border-box;width:100%;padding:7px 9px;background:var(--mc-surface-2);border:1px dashed var(--mc-border-soft);border-radius:var(--mc-r-card);font:400 12px/1.7 var(--font-ui);color:var(--mc-muted);cursor:pointer;text-align:left}',
+    '.mc-inject-head::before{content:"";flex:none;width:15px;height:15px;background-color:var(--mc-faint);-webkit-mask:url("data:image/svg+xml,' + MC_SYS_ICON_DOC + '") center/contain no-repeat;mask:url("data:image/svg+xml,' + MC_SYS_ICON_DOC + '") center/contain no-repeat}',
+    '.mc-inject[data-mc-form="catalog"] .mc-inject-head::before{-webkit-mask-image:url("data:image/svg+xml,' + MC_SYS_ICON_LIST + '");mask-image:url("data:image/svg+xml,' + MC_SYS_ICON_LIST + '")}',
+    '.mc-inject[data-mc-form="snapshot"] .mc-inject-head::before{-webkit-mask-image:url("data:image/svg+xml,' + MC_SYS_ICON_COPY + '");mask-image:url("data:image/svg+xml,' + MC_SYS_ICON_COPY + '")}',
+    '.mc-inject[data-mc-form="recall"] .mc-inject-head::before,.mc-inject[data-mc-role="recall"] .mc-inject-head::before{-webkit-mask-image:url("data:image/svg+xml,' + MC_SYS_ICON_CLOCK + '");mask-image:url("data:image/svg+xml,' + MC_SYS_ICON_CLOCK + '")}',
+    '.mc-inject-head .mc-tri{flex:none;width:8px;height:8px;color:var(--mc-faint);transition:none}',
+    '.mc-inject-src{flex:none;max-width:40%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--mc-faint)}',
+    '.mc-inject-sum{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--mc-faint)}',
+    '.mc-inject-body{height:0;overflow:hidden}',
+    '.mc-inject.open .mc-inject-body{height:auto}',
+    '.mc-inject-body-in{padding:4px 9px 8px 24px;font:400 12px/1.7 var(--font-ui);color:var(--mc-muted);white-space:pre-wrap;word-break:break-word}',
+    /* —— 压缩条（compaction / manual-compaction）：同注入条语汇 + copy 图标；摘要文字 A→B 走 .s-in —— */
+    '.mc-comp-head{display:flex;align-items:center;gap:7px;box-sizing:border-box;width:100%;padding:7px 9px;background:var(--mc-surface-2);border:1px dashed var(--mc-border-soft);border-radius:var(--mc-r-card);font:400 12px/1.7 var(--font-ui);color:var(--mc-muted);cursor:pointer;text-align:left}',
+    '.mc-comp-head::before{content:"";flex:none;width:15px;height:15px;background-color:var(--mc-faint);-webkit-mask:url("data:image/svg+xml,' + MC_SYS_ICON_COPY + '") center/contain no-repeat;mask:url("data:image/svg+xml,' + MC_SYS_ICON_COPY + '") center/contain no-repeat}',
+    '.mc-comp-head[disabled]{cursor:default}',
+    '.mc-comp-head .mc-tri{flex:none;width:8px;height:8px;color:var(--mc-faint);transition:none}',
+    '.mc-comp-sum{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
+    '.mc-comp-sum .s-in{position:relative}',
+    '.mc-comp-sum .s-in.mc-ghost{color:transparent}',
+    '.mc-comp-body{height:0;overflow:hidden}',
+    '.mc-comp.open .mc-comp-body{height:auto}',
+    '.mc-comp-body-in{padding:2px 9px 9px 26px;font:400 12px/1.8 var(--font-ui);color:var(--mc-muted)}',
+    /* —— 重试条（model-retry）：实线 soft 壳 + 八角点（scheduled 脉冲）；状态文字 A→B 走 .s-in —— */
+    '.mc-retry-head{display:flex;align-items:center;gap:8px;box-sizing:border-box;width:100%;padding:6px 9px;background:var(--mc-surface-2);border:1px solid var(--mc-border-soft);border-radius:var(--mc-r-card);font:400 12px/1.6 var(--font-ui);color:var(--mc-muted);cursor:pointer;text-align:left}',
+    '.mc-retry-dot{flex:none;width:6px;height:6px;background:var(--mc-spark);clip-path:polygon(33% 0,67% 0,100% 33%,100% 67%,67% 100%,33% 100%,0 67%,0 33%)}',
+    '.mc-retry.run .mc-retry-dot{animation:mc-pulse 2600ms steps(1,end) infinite;animation-delay:var(--pulse-delay,0ms)}',
+    '.mc-retry-txt{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
+    '.mc-retry-txt .s-in{position:relative}',
+    '.mc-retry-txt .s-in.mc-ghost{color:transparent}',
+    '.mc-retry-head .mc-tri{flex:none;width:8px;height:8px;color:var(--mc-faint);transition:none}',
+    '.mc-retry-body{height:0;overflow:hidden}',
+    '.mc-retry.open .mc-retry-body{height:auto}',
+    '.mc-retry-body-in{display:flex;flex-direction:column;gap:2px;padding:4px 9px 8px 23px;font:400 12px/1.6 var(--font-ui);color:var(--mc-muted)}',
+    '.mc-retry-body-in b{font-weight:500;color:var(--mc-faint)}',
+    '.mc-inject-tt,.mc-comp-tt{flex:none;white-space:nowrap}',
+  ].join('\n'),
+  slots(ctx) {
+    if (!MC_SYS_PRIM || typeof React === 'undefined') return; // primitives 缺席:不遮蔽,宿主原生渲染兜底
+    const S = ctx.slots;
+    if (!S || typeof S.register !== 'function' || typeof S.inject !== 'function') return;
+    const h = React.createElement;
+    const MarkdownText = MC_SYS_PRIM.MarkdownText;
+    const JsonBlock = MC_SYS_PRIM.JsonBlock;
+    let REDUCED = false;
+    try { REDUCED = window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) {}
+
+    // 持值切换：props 变化不在提交拍直出，而是包进 accToggle 五拍（t200 被白块遮盖时瞬变）；
+    // busy 期间到的新值直接落地（accToggle 防重入会吞 fn —— 不丢更新优先）；REDUCED 直出
+    function mcSwap(el, apply) {
+      if (REDUCED || !el || !el.isConnected || (el.dataset && el.dataset.busy)) { apply(); return; }
+      accToggle(el, apply);
+    }
+    // 折叠开合（卡头点击）：REDUCED/busy 直翻，否则五拍（几何变化发生在白块遮盖下）
+    function mcFold(card, flip) {
+      if (!card) { flip(); return; }
+      if (REDUCED || (card.dataset && card.dataset.busy)) { flip(); return; }
+      accToggle(card, flip);
+    }
+
+    /* —— McContextNodeView：上下文注入条（keyed 'context'）——
+       条头 = 表单图标 + 标题（跨会话召回/上下文注入）+ 来源 label + notice 摘要；
+       展开体 = 文本块连缀（模型所见顺序，20k 截断）+ 非文本块 JsonBlock。 */
+    function McContextNodeView(props) {
+      var node = props.node, data = (node && node.data) || {};
+      var prov = data.provenance || {};
+      var role = prov.role || '';
+      var form = data.form || '';
+      var notice = '';
+      try { var sm = (data.source || {}).summary; if (typeof sm === 'string' && sm) notice = sm; } catch (e) {}
+      var rest = [];
+      try {
+        var blocks = data.content || [];
+        for (var i = 0; i < blocks.length; i++) if (!(blocks[i] && blocks[i].type === 'text')) rest.push(blocks[i]);
+      } catch (e) {}
+      var st = React.useRef({ open: false });
+      var cardRef = React.useRef(null);
+      var v = React.useState(0), setV = v[1];
+      function toggle() {
+        var card = cardRef.current;
+        mcFold(card, function () { st.current.open = !st.current.open; setV(function (x) { return x + 1; }); });
+      }
+      return h('div', { className: 'mc-inject' + (st.current.open ? ' open' : ''), ref: cardRef, 'data-mc-form': form, 'data-mc-role': role },
+        h('button', { className: 'mc-inject-head', type: 'button', onClick: toggle, 'aria-expanded': st.current.open ? 'true' : 'false' },
+          h('span', { className: 'mc-inject-tt' }, role === 'recall' ? '跨会话召回' : '上下文注入'),
+          prov.label ? h('span', { className: 'mc-inject-src' }, String(prov.label)) : null,
+          notice ? h('span', { className: 'mc-inject-sum' }, notice) : null,
+          h('svg', { className: 'mc-tri' + (st.current.open ? ' open' : ''), 'aria-hidden': true }, h('use', { href: '#i-tri' }))),
+        h('div', { className: 'mc-inject-body' },
+          h('div', { className: 'mc-inject-body-in' },
+            mcContextText(data.content, MC_SYS_TEXT_CAP),
+            rest.map(function (b, j) { return h(JsonBlock, { key: 'r' + j, label: 'extra', payload: b }); }))));
+    }
+
+    /* —— McCompactionBar：压缩条共用体（自动 compaction / 手动 manual-compaction）——
+       摘要行文字 A→B（正在压缩…→已压缩 N 条…）走 .s-in accToggle；折叠体 = 摘要 markdown。 */
+    function McCompactionBar(props) {
+      var d = props.node || {};
+      var summary = d.summary == null ? null : String(d.summary);
+      var items = d.shadowedItemCount == null ? null : d.shadowedItemCount;
+      var tokens = d.shadowedTokenCount == null ? null : d.shadowedTokenCount;
+      var fallback = props.fallback || '';
+      var line = mcCompactionLine(summary, items, tokens, fallback);
+      var expandable = summary !== null;
+      var st = React.useRef({ open: false, line: line, mounted: true });
+      var cardRef = React.useRef(null);
+      var inRef = React.useRef(null);
+      var v = React.useState(0), setV = v[1];
+      React.useEffect(function () { st.current.mounted = true; return function () { st.current.mounted = false; }; }, []);
+      React.useEffect(function () { // 状态切换（验收六轮裁定）：压缩中→完成 文字换形走五拍
+        var s = st.current;
+        if (s.line === line) return;
+        var apply = function () { s.line = line; if (s.mounted) setV(function (x) { return x + 1; }); };
+        mcSwap(inRef.current, apply);
+      }, [line]);
+      function toggle() {
+        if (!expandable) return;
+        var card = cardRef.current;
+        mcFold(card, function () { st.current.open = !st.current.open; setV(function (x) { return x + 1; }); });
+      }
+      return h('div', { className: 'mc-comp' + (st.current.open ? ' open' : ''), ref: cardRef },
+        h('button', { className: 'mc-comp-head', type: 'button', onClick: toggle, disabled: !expandable, 'aria-expanded': expandable ? (st.current.open ? 'true' : 'false') : undefined },
+          h('span', { className: 'mc-comp-tt' }, props.title || '上下文已压缩'),
+          h('span', { className: 'mc-comp-sum' }, h('span', { className: 's-in', ref: inRef }, st.current.line)),
+          expandable ? h('svg', { className: 'mc-tri' + (st.current.open ? ' open' : ''), 'aria-hidden': true }, h('use', { href: '#i-tri' })) : null),
+        h('div', { className: 'mc-comp-body' },
+          h('div', { className: 'mc-comp-body-in' }, expandable ? h(MarkdownText, { text: summary }) : null)));
+    }
+
+    function McCompactionNodeView(props) {
+      var node = props.node;
+      return h(McCompactionBar, { node: (node && node.data) || {}, title: '上下文已压缩' });
+    }
+
+    /* 手动 /compact：压缩事务落定前 = compact · 正在压缩…；落定后与自动卡同款（fallback=命令文案） */
+    function McManualCompactionNodeView(props) {
+      var data = (props.node && props.node.data) || {};
+      var command = data.command || {};
+      var fallback = '';
+      try { if (command.outcome && typeof command.outcome.text === 'string') fallback = command.outcome.text; } catch (e) {}
+      return h(McCompactionBar, {
+        node: data.compaction || { summary: null, shadowedItemCount: null, shadowedTokenCount: null },
+        title: 'compact', fallback: fallback || '',
+      });
+    }
+
+    /* —— McRetryNodeView：模型重试条（keyed 'model-retry'）——
+       八角点 scheduled 脉冲（相位 CLOCK.syncAnim 注入）；状态文字 A→B（scheduled→started/
+       cancelled）走 .s-in accToggle；倒计时 CLOCK 1s 栅格递减；详情折叠 = 延迟 + 失败原因。 */
+    function McRetryNodeView(props) {
+      var data = (props.node && props.node.data) || {};
+      var cur = data.current || {};
+      var parts = mcRetryParts(cur);
+      var active = parts.active;
+      var maximum = parts.maximum;
+      var st = React.useRef({ open: false, label: parts.label, retry: cur.retry, mounted: true });
+      var cardRef = React.useRef(null);
+      var txtRef = React.useRef(null);
+      var dotRef = React.useRef(null);
+      var v = React.useState(0), setV = v[1];
+      var secState = React.useState(Math.max(1, Math.ceil((cur.delayMs || 0) / 1000)));
+      var sec = secState[0], setSec = secState[1];
+      React.useEffect(function () { st.current.mounted = true; return function () { st.current.mounted = false; }; }, []);
+      React.useEffect(function () { // 八角点相位（与主流程脉冲同栅格不交错）
+        try { if (dotRef.current && CLOCK && typeof CLOCK.syncAnim === 'function') CLOCK.syncAnim(dotRef.current, CLOCK.PULSE, '--pulse-delay'); } catch (e) {}
+      }, []);
+      var stateKey = parts.label + '/' + cur.retry + '/' + maximum;
+      React.useEffect(function () { // 状态切换：等待中→重试中/已重试/已取消 文字换形走五拍
+        var prev = st.current.stateKey;
+        st.current.stateKey = stateKey;
+        if (prev === undefined) return; // 首挂不闪（历史存量卡）
+        if (prev === stateKey) return;
+        var apply = function () { st.current.label = parts.label; st.current.retry = cur.retry; st.current.maximum = maximum; if (st.current.mounted) setV(function (x) { return x + 1; }); };
+        mcSwap(txtRef.current, apply);
+      }, [stateKey]);
+      React.useEffect(function () { // 倒计时：active 每秒递减到 1 停；非 active 静态展示
+        var total = Math.max(1, Math.ceil((cur.delayMs || 0) / 1000));
+        setSec(total);
+        if (!active) return;
+        var left = total, timer = null;
+        var step = function () {
+          left -= 1;
+          if (left < 1) { setSec(1); return; }
+          setSec(left);
+          timer = CLOCK.next(step, 1000);
+        };
+        timer = CLOCK.next(step, 1000);
+        return function () { if (timer) { try { CLOCK.clear(timer); } catch (e) {} } };
+      }, [active, cur.seq, cur.delayMs]);
+      function toggle() {
+        var card = cardRef.current;
+        mcFold(card, function () { st.current.open = !st.current.open; setV(function (x) { return x + 1; }); });
+      }
+      return h('div', { className: 'mc-retry' + (active ? ' run' : '') + (st.current.open ? ' open' : ''), ref: cardRef },
+        h('button', { className: 'mc-retry-head', type: 'button', onClick: toggle, 'aria-expanded': st.current.open ? 'true' : 'false' },
+          h('span', { className: 'mc-retry-dot', ref: dotRef }),
+          h('span', { className: 'mc-retry-txt' },
+            h('span', { className: 's-in', ref: txtRef }, st.current.label + '（' + st.current.retry + '/' + st.current.maximum + '） · ' + sec + 's')),
+          h('svg', { className: 'mc-tri' + (st.current.open ? ' open' : ''), 'aria-hidden': true }, h('use', { href: '#i-tri' }))),
+        h('div', { className: 'mc-retry-body' },
+          h('div', { className: 'mc-retry-body-in' },
+            h('div', null, h('b', null, '重试延迟：'), Math.round(cur.delayMs || 0) + 'ms'),
+            h('div', null, h('b', null, '失败原因：'), (cur.failure && cur.failure.message) || '—'))));
+    }
+
+    ctx.effect(() => S.inject('conversation.chat.node', () => S.register({
+      name: 'conversation.chat.node', key: 'context', priority: -1, registrant: 'macintosh',
+    }, McContextNodeView)));
+    ctx.effect(() => S.inject('conversation.chat.node', () => S.register({
+      name: 'conversation.chat.node', key: 'compaction', priority: -1, registrant: 'macintosh',
+    }, McCompactionNodeView)));
+    ctx.effect(() => S.inject('conversation.chat.node', () => S.register({
+      name: 'conversation.chat.node', key: 'manual-compaction', priority: -1, registrant: 'macintosh',
+    }, McManualCompactionNodeView)));
+    ctx.effect(() => S.inject('conversation.chat.node', () => S.register({
+      name: 'conversation.chat.node', key: 'model-retry', priority: -1, registrant: 'macintosh',
+    }, McRetryNodeView)));
   },
 };
 
@@ -2373,9 +2586,10 @@ const mods = {
   McFinder: McFinder,
   McFlow: McFlow,
   McThink: McThink,
+  McSysCard: McSysCard,
   McKit: McKit,
 };
-const order = ["McTokens","McClock","McMcfx","McSprite","MC_MAP","McChrome","McSidebar","McFinder","McFlow","McThink","McKit"];
+const order = ["McTokens","McClock","McMcfx","McSprite","MC_MAP","McChrome","McSidebar","McFinder","McFlow","McThink","McSysCard","McKit"];
 
 return {
   inject: ["slots", "theme", "sessions"],

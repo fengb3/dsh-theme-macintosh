@@ -100,14 +100,11 @@ const MC_MAP = {
   flowScroll: '[data-conversation-scroll]',                    // stable(L7276)
   flowColumn: '[data-chat-flow]',                             // stable(L5829)
   flowItem: '[data-chat-flow-kind]',                          // stable(L5506-5510)
-  kindUser: '[data-chat-flow-kind="user"]',
-  kindSteering: '[data-chat-flow-kind="steering"]',
-  kindContext: '[data-chat-flow-kind="context"]',
+  // 验收七轮:kindUser/kindSteering/kindContext/kindCompaction/kindManualCompaction/kindModelRetry
+  // 六键随 McSysCard 重绘退役(user/steering 六轮、context/compaction/manual-compaction/model-retry
+  // 七轮——四卡自有 .mc-* 类零宿主锚;行级出场 flashIn 走 flowItem 泛锚即可)
   kindAssistantStep: '[data-chat-flow-kind="assistant-step"]',
   kindCommand: '[data-chat-flow-kind="command"]',
-  kindCompaction: '[data-chat-flow-kind="compaction"]',
-  kindManualCompaction: '[data-chat-flow-kind="manual-compaction"]',
-  kindModelRetry: '[data-chat-flow-kind="model-retry"]',
   kindTurnError: '[data-chat-flow-kind="turn-error"]',
   kindTurnMaxTokens: '[data-chat-flow-kind="turn-max-tokens"]',
   kindTurnTail: '[data-chat-flow-kind="turn-tail"]',
@@ -118,18 +115,15 @@ const MC_MAP = {
   mdRoot: '[data-chat-flow-kind="assistant-step"] > div > div', /* DRIFT-RISK: structural;第一层 div 为 data-slot 包装层,原一层值命中包装层——当前无消费者,防未来误用(裁定10;Sxvs8a_*,L9461-9521) */
   // 验收四轮:thinkCard/thinkSummary/ariaExpanded 三键随宿主 ReasoningRow 覆写退役
   // (McThink 组件整体重写 assistant-step,自有 .mc-think 类零宿主锚)
-  ctxBody: '[data-context-injection-body]',                   // stable(L4863-4907)
+  // 验收七轮:ctxBody/disclosureRow/contextForm/retryActive/compactionDisclosure 五键随 McSysCard
+  // 重绘退役(宿主 context/retry/compaction DOM 整体被遮蔽,皮肤锚与 :has 图标细分、pulse 门控
+  // data-active 锚、折叠图标 span 锚全部无消费者;重绘卡自有 .mc-* 类零宿主锚)
   turnTailBar: '[data-turn-tail]',                            // stable(L9715-9752)
   // —— 终审 F2 收编（2026-08-31）：此前 flow 规则里直写的宿主选择器一律进管制表（spec §1 唯一管制点）——
   pendingSteering: '[data-pending-steering]',  // stable(steering 待定态虚线廓，spec §4 行3)
-  disclosureRow: '[data-disclosure-row]',      // stable(context 折叠行；宿主原图标隐藏链的行锚)
-  contextForm: '[data-context-form=',          // 属性前缀键（六 form 任意取值，:has 细分插值；同 kind 前缀先例）
   statusRow: '[role="status"]',                // stable(TurnStatus 宿主状态行；使用时限定 flowColumn 内，spec §4 行10)
   commandCard: '[data-variant="others"]',      // stable(command 卡壳锚，spec §4 行9「[data-variant="others"][data-state]」)
   dataState: '[data-state=',                   // 属性前缀键（任意取值形态；command 三态）
-  // —— 用户验收二轮收编（2026-08-31 live 探测 + 部署源复核，host 0.1.1-rc.2）——
-  retryActive: 'details[data-active]',         // stable(ModelRetryItem L5191 "data-active": active||void 0——scheduled 态才有;⑧ pulse 门控锚)
-  compactionDisclosure: '[data-compaction-disclosure]', // stable(CompactionItem 折叠图标 span L4320;⑥ 卡头结构注记——click target 为其外层 button,头锚取 kind 行内 button 元素)
   // —— 用户验收三轮④收编（2026-09 live 探测，host 0.1.1-rc.2）——
   deliverRoot: '.P4kPIW_root',   // DRIFT-RISK: build-hash class(dsh-client-ui-deliverables 产物行;无 data-* 稳定锚,宿主升级先复核)
   deliverFile: '.P4kPIW_file',   // DRIFT-RISK: 同上(文件名 chip 按钮;含 measure 探针 P4kPIW_probe 同类复用)
