@@ -1407,7 +1407,7 @@ var McFlow = {
       MC_MAP.turnTailBar + '>div:last-child button:active{background:var(--mc-fg);color:var(--mc-surface);border-color:var(--mc-fg)}',
       // 验收三轮④:产物文件 chip——自然宽度按文件名长度(宿主 measure 探针同类复用本皮肤,
       // 测宽即所见),20px 高小长方块;超长名 220px 封顶截断;溢出标签 "+N 个文件" 同语汇
-      MC_MAP.deliverRoot + ' ' + MC_MAP.deliverFile + '{display:inline-flex;align-items:center;height:20px;padding:0 7px;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;border:1px solid var(--mc-border);border-radius:var(--mc-r-btn);background:var(--mc-surface);color:var(--mc-fg);font:500 11px/1.6 var(--font-mono)}',
+      MC_MAP.deliverRoot + ' ' + MC_MAP.deliverFile + '{display:inline-flex;align-items:center;height:24px;padding:0 8px;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;border:1px solid var(--mc-border);border-radius:var(--mc-r-btn);background:var(--mc-surface);color:var(--mc-fg);font:500 13px/1.6 var(--font-mono)}',
       MC_MAP.deliverRoot + ' ' + MC_MAP.deliverFile + ':active{background:var(--mc-fg);color:var(--mc-surface);border-color:var(--mc-fg)}',
       MC_MAP.deliverRoot + ' ' + MC_MAP.deliverMore + '{display:inline-flex;align-items:center;height:20px;padding:0 7px;white-space:nowrap;border:1px solid var(--mc-border-soft);border-radius:var(--mc-r-btn);background:var(--mc-surface-2);color:var(--mc-faint);font:500 11px/1.6 var(--font-mono)}',
       // 验收⑤(2026-08-31 live 探明):钮组靠左、统计常驻靠右——root[data-time-hover-root] 下
