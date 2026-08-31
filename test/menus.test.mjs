@@ -19,6 +19,7 @@ test('mcMenuItems: 无接线的项被滤除,sep 恒保留', () => {
 test('mcMenuAlign: 右缘溢出翻转', () => {
   assert.equal(mcMenuAlign({ left: 100, right: 200 }, 1440, 210), 'left');   // 常规左对齐
   assert.equal(mcMenuAlign({ left: 1300, right: 1420 }, 1440, 210), 'right'); // 溢出 → 右对齐
+  assert.equal(mcMenuAlign(null, 1440, 210), 'left'); // 无锚（宿主钮失配等）→ 安全回退左对齐
 });
 
 test('mcMenuState: 单例互斥 + esc/外点/pick 关闭', () => {

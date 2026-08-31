@@ -71,6 +71,14 @@ const distNoClock = scanText(distRaw, [segmentRaw(distRaw, '// src/core/clock.js
 const distNoMap = scanText(distRaw, [segmentRaw(distRaw, '// src/chrome/map.js', '// src/chrome/chrome.js'), segmentRaw(distRaw, '// src/conv/overlays.js', '// src/kit.js')]); // check 5
 const clientText = scanText(clientRaw, []); // client.js 全量（check 1/2/3；clock 段无裸定时器，无需豁免）
 const clientNoMap = scanText(clientRaw, [segmentRaw(clientRaw, '// src/chrome/map.js', '// src/chrome/chrome.js'), segmentRaw(clientRaw, '// src/conv/overlays.js', '// src/kit.js')]); // check 5
+// M5（终审修复批）：overlays 段不再整段豁免为盲区 —— 段内白名单反查。
+// 段内仅允许 menuPortal/menuHostItem 两 token 出现（Task 4 mount 兜底隐藏引用 MC_MAP.menuPortal）；
+// 其余任何 MC_MAP 特征片段（[data-…/[role=…/[aria-… 等）在段内出现即 FAIL。
+const distOverlays = distRaw != null ? stripComments(segmentRaw(distRaw, '// src/conv/overlays.js', '// src/kit.js') || '') : null;
+const clientOverlays = clientRaw != null ? stripComments(segmentRaw(clientRaw, '// src/conv/overlays.js', '// src/kit.js') || '') : null;
+const srcOverlaysFile = join(ROOT, 'src', 'conv', 'overlays.js');
+const srcOverlaysText = srcText.get(srcOverlaysFile) || null;
+const OVERLAYS_WHITELIST = new Set(['menuPortal', 'menuHostItem']);
 
 const failures = [];
 const fail = (msg) => { failures.push(msg); console.log(`FAIL ${msg}`); };
@@ -162,8 +170,16 @@ const rel = (f) => relative(ROOT, f).replace(/\\/g, '/');
     for (const tok of tokens)
       if (t.includes(tok)) bad.push(`${rel(f)} 含宿主选择器片段 ${tok}`);
   }
+  // M5：overlays 段白名单反查（src/conv/overlays.js + dist/client 对应段）——只许 menuPortal/menuHostItem
+  for (const [name, seg] of [['src/conv/overlays.js', srcOverlaysText], ['dist/client-body.js', distOverlays], ['client.js', clientOverlays]]) {
+    if (!seg) continue;
+    for (const tok of tokens) {
+      if (OVERLAYS_WHITELIST.has(tok)) continue;
+      if (seg.includes(tok)) bad.push(`${name} overlays 段含未白名单宿主选择器片段 ${tok}`);
+    }
+  }
   bad.length ? fail(`MC_MAP 选择器泄漏到管制文件之外:\n  ` + [...new Set(bad)].join('\n  '))
-              : pass(`宿主选择器仅存在于 map 段（src/chrome/map.js + dist/client.js 对应快照段豁免；${tokens.size} 个特征片段核验）`);
+              : pass(`宿主选择器仅存在于 map 段（src/chrome/map.js + dist/client.js 对应快照段豁免；overlays 段白名单反查 menuPortal/menuHostItem；${tokens.size} 个特征片段核验）`);
 }
 
 const joined = [distText ? 'dist/client-body.js' : null, clientText ? 'client.js' : null].filter(Boolean);

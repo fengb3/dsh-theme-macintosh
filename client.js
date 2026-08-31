@@ -2239,8 +2239,12 @@ var McMenus = {
     var state = { open: null };
     var wrap = null;           // 当前活动菜单 DOM
     var wiringCtx = { ctx: ctx, ctxData: null }; // 接线函数收到的统一上下文（ctxData 随 openMenu 刷新）
+    var openHost = null;   // 最近一次 openMenu 的触发钮（closeMenu 记录 lastClose 用）
+    var lastClose = null;  // {id,host,ts} —— 捕获段刚关掉的菜单（同钮同 id 50ms 内重开忽略；M1）
     MC_MENU_OPEN = openMenu;
     function closeMenu() {
+      // M1 toggle 守卫记录：id/host 取「被关菜单」的（openHost 尚未刷新），ts 纯 Date.now 比较——无定时器
+      lastClose = { id: state.open && state.open.id, host: openHost, ts: Date.now() };
       if (!wrap) { state = mcMenuState(state, { t: 'close' }); return; }
       var w = wrap; wrap = null;
       state = mcMenuState(state, { t: 'close' });
@@ -2248,8 +2252,13 @@ var McMenus = {
     }
     function openMenu(id, host, ctxData) { // host=触发钮(button);菜单挂其 offsetParent;ctxData={sess,ws} 触发上下文
       var def = MC_MENU_DEFS[id]; if (!def) return;
+      // M1 toggle 守卫：外点捕获段 closeMenu 刚关掉本钮的同 id 菜单 → React 冒泡段 onClick 迟到的
+      // 重开忽略（同钮同 id 且 <50ms——半个 CLOCK 栅格内；纯 Date.now 比较，无定时器）
+      if (lastClose && lastClose.id === id && lastClose.host === host
+        && Date.now() - lastClose.ts < 50) { lastClose = null; return; }
       var anchor = host.offsetParent || host.parentElement; if (!anchor) return;
       closeMenu();
+      openHost = host; // closeMenu 之后才刷新（lastClose 须记被关菜单的 host）
       wiringCtx.ctxData = ctxData || null; // 供 WIRING 内读取会话/工作区 id
       var items = mcMenuItems(def, MC_MENU_WIRING);
       if (!items.length) return; // 控制器裁定:无可见项静默 no-op,不渲染空壳
@@ -2285,7 +2294,8 @@ var McMenus = {
       wrap.style.right = side === 'right' ? '0' : 'auto';
       wrap.style.top = 'calc(100% + 6px)';
       anchor.appendChild(wrap);
-      state = mcMenuState(state, { t: 'open', id: id, anchor: null });
+      state = mcMenuState(state, { t: 'open', id: id, anchor: anchor }); // M2:anchor 传真实锚（原恒 null）
+      lastClose = null; // 成功开单后清守卫（后续同钮同 id 重开走正常 toggle 路径）
       flashIn(wrap, function () {});
     }
     function onDocClick(e) { // 外点关 + 菜单项派发(捕获段早于按钮自身 React 处理)
@@ -2293,11 +2303,9 @@ var McMenus = {
         if (wrap && !wrap.contains(e.target)) { closeMenu(); return; }
         var mi = e.target instanceof Element && e.target.closest('.m-opt');
         if (mi && wrap && wrap.contains(mi)) {
-          var id = state.open && state.open.id;
           var fn = MC_MENU_WIRING[mi.getAttribute('data-mc-mi')];
           closeMenu();
-          try { if (fn) fn(wiringCtx); } catch (er) { /* 动作失败静默;官方状态为准 */ }
-          void id;
+          try { if (fn) fn(wiringCtx); } catch (er) { /* 动作失败静默;官方状态为准 —— 不 console 打点（M4:一期已清 diagnostics,src/client.js 零 console 纪律保持,选择留注释） */ }
         }
       } catch (er) {}
     }
@@ -2313,7 +2321,8 @@ var McMenus = {
       document.head.appendChild(styleEl);
     }
     return function teardown() {
-      MC_MENU_OPEN = null; // 撤桥：卸载后触发钮回调安全空转
+      // M3 撤桥守卫：仅当桥仍指向本 mount 的 openMenu 才撤——防止先卸的旧 mount 误撤后 mount 的桥
+      if (MC_MENU_OPEN === openMenu) MC_MENU_OPEN = null;
       try { document.removeEventListener('click', onDocClick, true); } catch (e) {}
       try { document.removeEventListener('keydown', onKey, true); } catch (e) {}
       try { if (styleEl) styleEl.remove(); } catch (e) {}
