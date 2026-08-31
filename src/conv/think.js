@@ -81,16 +81,18 @@ const McThink = {
         if (!s.mounted || !s.running) return;
         var r = mcThinkTick(s.committed, s.text, MC_THINK_CAP);
         if (r.delta) {
+          // 原型帧 B/A 协议 + 六轮统一节拍:正文与摘要同一条时间轴——
+          // t0 白块(pending 尾段)与摘要 ghost 同拍出现,t300 与摘要同拍揭开(零高度抽搐,刷新规律一致)
           s.committed = r.shown;
           s.pending = r.delta;
+          paint();
           var spanEl = sumRef.current;
           var swap = function () { s.sum = r.delta.replace(/\n/g, ' '); paint(); };
           if (spanEl) accToggle(spanEl, swap); else swap();
-          // 旧 E 拍残留语义:积攒尾遮罩(mc-app-cover)在五拍走完后撤
-          CLOCK.next(function () {
+          CLOCK.next(function () { // t300 揭盖:与摘要 accToggle 拍3(同撤 flash+ghost)同步
             var s6 = st.current; if (!s6.mounted) return;
             s6.pending = ''; paint();
-          }, 500);
+          }, 300);
         }
         s.timer = CLOCK.next(tick, 700); // accToggle 五拍 500ms + 滞空 200ms(文本驻留可读)
       }
@@ -129,7 +131,8 @@ const McThink = {
             h('span', { className: 's-in', ref: sumRef }, running ? (s.sum || '正在思考…') : s.sum)),
           h('span', { className: 'mc-think-dur' }, running ? 'streaming' : '')),
         h('div', { className: 'mc-think-body' },
-          h('div', { className: 'mc-think-txt' }, s.committed,
+          h('div', { className: 'mc-think-txt' },
+            (s.pending && s.committed.slice(-s.pending.length) === s.pending) ? s.committed.slice(0, s.committed.length - s.pending.length) : s.committed,
             s.pending ? h('span', { className: 'mc-app-cover' }, s.pending) : null)));
     }
 
