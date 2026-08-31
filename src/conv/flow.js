@@ -63,13 +63,9 @@ var McFlow = {
       MC_MAP.bubbleUser + ':active{border-color:var(--mc-fg)}',
       MC_MAP.userGallery + '{border:1px solid var(--mc-border);border-radius:var(--mc-r-card)}',
       // 验收六轮:refChip 宿主 chip 覆写随用户行重写退役(McUserNodeView 自有 .mc-user-chip)
-      MC_MAP.pendingSteering + '{display:flex;flex-direction:column;align-items:flex-end;outline:1px dashed var(--mc-faint);outline-offset:2px;border-radius:8px}',
-      // 六轮:pending steering 与正式气泡同皮(宿主收件箱直渲染,不经 keyed steering 槽——bubbleUser
-      // flowItem 域选择器够不着)。行>栈>气泡 三级结构位(DRIFT-RISK:哈希 class 不可用,同 bubbleUser 先例);
-      // :not([data-align]) 跳过图集廊;内层 _text_* 自带框距一律剥净(同 .mc-user-bubble>* 双边框修)
-      MC_MAP.pendingSteering + '>div{display:flex;flex-direction:column;align-items:flex-end;gap:6px;max-width:100%}',
-      MC_MAP.pendingSteering + '>div>div:not([data-align]){max-width:520px;padding:7px 12px;background:var(--mc-accent);color:var(--mc-accent-ink);border:1px solid var(--mc-border);border-radius:8px;font:400 14px/1.7 var(--font-ui);white-space:pre-wrap;word-break:break-word;text-align:left}',
-      MC_MAP.pendingSteering + '>div>div:not([data-align])>*{border:none!important;padding:0!important;margin:0!important;background:none!important}',
+      // 六轮续:pending steering 重绘改观察器嫁接(见 skinPending)——结构位皮肤规则退役,
+      // 只留 .mc-pending 虚线待定廓(嫁接标记)
+      '.mc-pending{outline:1px dashed var(--mc-faint);outline-offset:2px;border-radius:8px}',
       // §7:注入条(context + 双 compaction 同款;kind 行即条壳)
       // 验收③:行改 align-items:center、图标位去 margin-top(宿主行高下 flex-start+1px 不居中);
       // ctxBody 展开体在行外,不受影响
@@ -177,12 +173,41 @@ var McFlow = {
     }
     // 验收六轮:enterFlash 收编为 lib flashIn 空回调(show 在 ghost 遮罩下空转,拍3 撤净含 mcfx)
     function enterFlash(el) { flashIn(el, function () {}); }
+    // 六轮续:pending steering 重绘(嫁接)——宿主收件箱直渲染 PendingSteeringBubble(L5877),
+    // 无 keyed 槽可遮蔽 → 观察器把自有类直接嫁到宿主结构上,吃到与 McUserNodeView 同一套 CSS:
+    // 行→.mc-user-row 栈→flex 右对齐 气泡→.mc-user-bubble 图集→.mc-user-attach 引用→.mc-user-ref,
+    // 标记 .mc-pending(虚线待定廓,host data-pending-steering 保留作锚)。幂等:已嫁接即跳过
+    function skinPending(el) {
+      try {
+        if (el.classList.contains('mc-user-row')) return;
+        el.classList.add('mc-user-row', 'mc-pending');
+        var stack = el.firstElementChild; // 宿主 userStack
+        if (!stack) return;
+        stack.style.display = 'flex';
+        stack.style.flexDirection = 'column';
+        stack.style.alignItems = 'flex-end';
+        stack.style.gap = '6px';
+        var bub = null;
+        for (var c = stack.firstElementChild; c; c = c.nextElementSibling) {
+          if (c.hasAttribute('data-align')) { c.classList.add('mc-user-attach'); continue; }
+          if (!bub) { bub = c; c.classList.add('mc-user-bubble'); }
+          else c.classList.add('mc-user-ref');
+        }
+        if (bub && !REDUCED) flashIn(bub, function () {});
+      } catch (e) { /* 宿主结构漂移即回退官方样式,不破版 */ }
+    }
     // 验收四轮:think 摘要/正文观察器(thinkStream/thinkBodyStream)随宿主 ReasoningRow 覆写
     // 一并退役——think 卡由 McThink 组件整体重写(缓冲积攒+周期吐出),不再需要 DOM 干预
     function enter(node) {
       if (!(node instanceof Element)) return;
       syncEl(node); // 相位同步不限 flowItem 本行：[role=status] 常为 flowColumn 直接子节点，
       // 新入节点全量试 SYNC 两选择器（syncAnim 幂等，重复触发只是相位刷新）
+      // pending steering:直渲染节点(flowColumn 直接子节点,非 flowItem),命中即嫁接重绘
+      try {
+        if (node.matches(MC_MAP.pendingSteering)) skinPending(node);
+        var pq = node.querySelectorAll(MC_MAP.pendingSteering);
+        for (var pi = 0; pi < pq.length; pi++) skinPending(pq[pi]);
+      } catch (e) {}
       var items = node.matches(MC_MAP.flowItem) ? [node] : [];
       try { var q = node.querySelectorAll(MC_MAP.flowItem); for (var i = 0; i < q.length; i++) items.push(q[i]); } catch (e) {}
       for (var i = 0; i < items.length; i++) {
