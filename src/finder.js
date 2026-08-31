@@ -247,7 +247,7 @@ const McFinder = {
         if (props && props.wide === false) return React.createElement(McFinderMini, props);
         const p = Object.assign({}, props);
         p.openSession = sessionsSvc && typeof sessionsSvc.open === 'function'
-          ? function (id) { try { sessionsSvc.open(id); } catch (e) { try { console.error('[mcx] open session failed:', e && e.message); } catch (e2) {} } }
+          ? function (id) { try { sessionsSvc.open(id); } catch (e) { /* 静默降级：保持假数据选中 */ } }
           : null; // TODO(二期)：服务缺席时行内提示；当前静默降级假数据选中
         return React.createElement(McFinderTree, p);
       }

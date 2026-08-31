@@ -275,7 +275,7 @@ test('esc 转义四种字符', () => {
 
 > 模块清单见 spec §3；以下为含一期遗留的执行清单。工作目标：`client.js`（常驻半）为主战场，`src/` 为设计参照。
 
-1. **清 diagnostics**：移除 client.js 内全部 `[mcx]` console 日志（apply/dispose 打点等）。
+1. **清 diagnostics**：移除 client.js 内全部 `[mcx]` console 日志（apply/dispose 打点等）。✅ 2026-08-31 已完成（宿主半 index.js 尚留一条启动日志，影响无害）。
 2. **flow 会话流模块**（spec §5/§8）：`.md` 渲染（以原型 `s-md` 全要素会话为自测基准）、用户气泡、inject 四型、reasoning 样式覆写（琥珀染色；完整五帧流式状态机保留 kit 演示）、turn-tail。锚点：`conversation.chat.node` keyed 槽（15 种 ChatNodeKind）——先探针后映射。
 3. **dock 输入坞模块**（spec §9）：composer 卡壳覆写、todo/goal/queue 家具（`conversation.input.dock` / `composer.dock` 槽）、ctx 圆环、ask 向导（接管 `conversation.composer` 链或样式覆写，先探针）。
 4. **toolcard 工具卡模块**（spec §7）：三态（running 琥珀扫掠/失败红边）、图标语义映射（sprite i-* ↔ 工具名）、subcalls/diff。锚点：`tool.call.toolview` keyed 槽。
