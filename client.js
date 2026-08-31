@@ -1575,6 +1575,8 @@ const McThink = {
     '.mc-think-head .mc-think-tag{font:400 13px/1.3 \'FindersKeepers\',\'Fusion Pixel 12px monospaced zh\',\'Noto Sans SC\',monospace;letter-spacing:.03em;color:var(--mc-fg)}',
     '.mc-think.run .mc-think-head .mc-think-tag{color:var(--mc-spark)}',
     '.mc-think-head .mc-think-sum{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:400 12px/1.5 var(--font-ui);color:var(--mc-faint)}',
+    /* 六轮:展开态正文已可见,顶栏摘要(及其闪烁刷新)隐藏;折叠回来再现(visibility 保占位,高度零抖动) */
+    '.mc-think.open .mc-think-sum{visibility:hidden}',
     '.mc-think-head .mc-think-dur{font:500 10px/1.5 var(--font-mono);color:var(--mc-faint);flex:none}',
     '.mc-think-body{overflow:hidden;height:auto}',
     '.mc-think:not(.open) .mc-think-body{height:0}',
