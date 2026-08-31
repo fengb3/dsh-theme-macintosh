@@ -1,5 +1,6 @@
 // src/conv/flow.js —— 会话流覆写(spec 2026-08-31)
 // 协议 { css, mount(ctx) }。选择器一律插值 MC_MAP;无 :hover 无 transition。
+// apply 段 overrideTokens 追加 --dsw-specific-bubble(见 client.js apply)
 var McFlow = {
   // IIFE 安放 var F:顶层作用域与 tokens/clock/mcfx/sprite 共享,F 不外泄
   css: (function () {
@@ -32,6 +33,12 @@ var McFlow = {
       F + ' .md-code-block>div:first-child button{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border:1px solid var(--mc-border);border-radius:var(--mc-r-btn);background:var(--mc-surface);color:var(--mc-fg)}',
       F + ' .md-code-block>div:first-child button:active{background:var(--mc-fg);color:var(--mc-surface);border-color:var(--mc-fg)}',
       F + ' .md-table-wide{overflow-x:auto}',
+      // §6:用户气泡(user/steering)+ 变量通道(原型 L483-497;气泡底色走 overrideTokens --dsw-specific-bubble)
+      MC_MAP.bubbleUser + '{color:var(--mc-accent-ink);border:1px solid var(--mc-border);border-radius:8px;font:400 14px/1.7 var(--font-ui)}',
+      MC_MAP.bubbleUser + ':active{border-color:var(--mc-fg)}',
+      MC_MAP.userGallery + '{border:1px solid var(--mc-border);border-radius:var(--mc-r-card)}',
+      MC_MAP.refChip + '{background:var(--mc-sel-bg);border-radius:var(--mc-r-tag);padding:0 4px;font:500 12px var(--font-mono)}',
+      '[data-pending-steering]{outline:1px dashed var(--mc-faint);outline-offset:2px;border-radius:8px}',
     ].join('\n');
   })(),
   mount: function (ctx) {

@@ -1282,6 +1282,12 @@ var McFlow = {
       F + ' .md-code-block>div:first-child button{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border:1px solid var(--mc-border);border-radius:var(--mc-r-btn);background:var(--mc-surface);color:var(--mc-fg)}',
       F + ' .md-code-block>div:first-child button:active{background:var(--mc-fg);color:var(--mc-surface);border-color:var(--mc-fg)}',
       F + ' .md-table-wide{overflow-x:auto}',
+      // §6:用户气泡(user/steering)+ 变量通道(原型 L483-497;气泡底色走 overrideTokens --dsw-specific-bubble)
+      MC_MAP.bubbleUser + '{color:var(--mc-accent-ink);border:1px solid var(--mc-border);border-radius:8px;font:400 14px/1.7 var(--font-ui)}',
+      MC_MAP.bubbleUser + ':active{border-color:var(--mc-fg)}',
+      MC_MAP.userGallery + '{border:1px solid var(--mc-border);border-radius:var(--mc-r-card)}',
+      MC_MAP.refChip + '{background:var(--mc-sel-bg);border-radius:var(--mc-r-tag);padding:0 4px;font:500 12px var(--font-mono)}',
+      '[data-pending-steering]{outline:1px dashed var(--mc-faint);outline-offset:2px;border-radius:8px}',
     ].join('\n');
   })(),
   mount: function (ctx) {
@@ -1521,6 +1527,7 @@ return {
           '--dsw-alias-state-warn-primary': pair('var(--mc-warn)'),
           '--dsw-specific-sidebar-fill': pair('var(--mc-rail-1)'),
           '--dsw-font-family': pair('var(--font-ui)'),
+          '--dsw-specific-bubble': pair('var(--mc-accent)'),
         });
         ctx.effect(() => () => { try { off(); } catch (e) {} });
       } else {
