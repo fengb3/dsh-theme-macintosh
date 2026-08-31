@@ -29,8 +29,10 @@ const McSidebar = {
     '.mc-sb-name{display:inline-flex;align-items:center;min-width:0}',
     '.mc-sb-brand{font:700 17px/1.2 var(--font-sb);letter-spacing:.02em;color:var(--mc-fg)}',
     '.mc-sb-tag{font:600 14px/1.2 var(--font-sb);background:var(--mc-fg);color:var(--mc-rail-1);padding:1px 5px;margin-left:5px;flex:none}',
-    // 会话树图标统一 15px（原型 group-head svg 15px；行内小钮 12px 走 18px 容器）
-    `${MC_MAP.sessionRow} svg{width:15px;height:15px;flex:none}`,
+    // 会话树图标统一 15px（原型 group-head svg 15px；行内小钮 12px 走 18px 容器）。
+    // sessionStatusIcon 一并入选：rc.2 StateDot 非 ongoing 态渲染为 span[data-state]（非 svg），
+    // 不入本规则会以官方 10px 原尺寸出像素 doc —— T10 换锚配套。
+    `${MC_MAP.sessionRow} svg,${MC_MAP.sessionStatusIcon}{width:15px;height:15px;flex:none}`,
     // —— 会话树像素图标（15px 起步：24 栅格像素画在 12px 下退化为细线，15px 才读得出像素块）——
     `${MC_MAP.sessionRowWorkspace} svg *{visibility:hidden}`,
     `${MC_MAP.sessionStatusIcon} *{visibility:hidden}`,

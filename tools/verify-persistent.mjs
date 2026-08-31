@@ -64,8 +64,12 @@ async function flowProbe() {
   });
 }
 function flowComplete(p) { return !!(p && p.gap && p.bubble && p.inject); }
-// 会话行 = 侧栏 DIV[title=会话名](live 实测 2026-08-31:host 0.1.1-rc.2 无 div[role=treeitem],
-// 侧栏 [title] 里 DIV 恰为会话行;BUTTON[title] 均为动作钮,点会误开新会话,故只取 DIV)
+// 会话行 = 侧栏 DIV[title=会话名]。T10 漂移调查修正认知(2026-08-31):主题在装时官方树被 McFinder
+// 遮蔽(sidebar.workspaces 席位 lowest-render),live 会话行即我方 div.mc-sess[role=button][aria-selected][title]
+// ——自有一套 .mc-* 样式,与 MC_MAP.sessionRow 兜底通道无关;live 无 div[role=treeitem] 属设计内行为
+// (官方树 rc.2 源码仍 role=treeitem+aria-selected,锚未漂;图标三锚漂移已在 T10 修复,见 map.js 注记)。
+// BUTTON[title] 均为动作钮,点会误开菜单/新会话,故只取 DIV。不回归统一到 treeitem:遮蔽失败降级官方树时
+// DIV[title] 迭代会落空(seek 记 exhausted),但门禁主断言(持久五件套)不依赖会话点击,不受影响。
 async function seekFlowParts() {
   let p = await flowProbe();
   if (flowComplete(p)) return { probe: p, via: 'active-session' };
