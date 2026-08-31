@@ -48,7 +48,7 @@ turnTailBar  '[data-turn-tail]'                                // stable(L9715-9
 ## 3 · 动画管道(核心:observer 三拍,不做 CSS one-shot)
 
 - `McFlow.mount(ctx)` 起**单个 MutationObserver** 观察 flowColumn 子树(childList),`ctx.effect` teardown 时 disconnect。
-- **出场三拍**:新增 `[data-chat-flow-kind]` 行 → mcfx `flashIn` 语言(mc-ghost → mc-flash → 撤,各 100ms 全走 `CLOCK.next`);每拍前 `isConnected` 校验 + try/catch(React 重渲染可能抹 class——抹掉即静默失效,不重试)。
+- **出场三拍**:新增 `[data-chat-flow-kind]` 行 → mcfx `flashIn` 语言(mc-ghost → mc-flash → 撤,各 100ms 全走 `CLOCK.next`);每拍前 `isConnected` 校验 + try/catch(React 重渲染可能抹 class——抹掉即静默失效,不重试)。**修订(2026-08-31 用户验收二轮裁定):折叠卡开合同步走四拍刷新遮罩**(think/context/model-retry/compaction 的 disclosure 头点击 → 卡壳 mcfx 四拍,React 自管高度瞬切;原型 §0.3「折叠体开合交给四拍遮罩」的宿主侧落地)。
 - **循环动画相位同步**:映射表声明「锚 → 属性」对——kindModelRetry 的 s-dot pulse、command running 的 mc-sweep → `CLOCK.syncAnim(el, PULSE|SWEEP, prop)` 注负延迟,多卡同相位(think 卡 run 态无卡面动画,见 §4 行 5)。**修订(2026-08-31 终审裁定):command 的 mc-sweep 延后至 toolcard 周期交付**(command 卡 live 节点为零、本周期无法实证动画;CLOCK.SWEEP 与 mc-sweep keyframes 暂无消费者,由 toolcard 周期首先消化)。
 - `prefers-reduced-motion: reduce`:JS 检测后跳过 ghost/flash 拍(直接 swap);CSS 侧全局 .01ms 压缩一期已备。
 - 浅色反转:mc-ghost/mc-flash 及浅色反白块复用一期 McTokens 定义,零新增。
