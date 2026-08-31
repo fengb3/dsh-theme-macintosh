@@ -1,7 +1,7 @@
 // test/menus.test.mjs
 import { test } from 'node:test'; import assert from 'node:assert/strict';
 import { loadSrc } from './load-src.mjs';
-const { mcMenuItems, mcMenuAlign, mcMenuState, mcMenuTop } = loadSrc('src/conv/overlays.js');
+const { mcMenuItems, mcMenuAlign, mcMenuState, mcMenuTop, mcMenuWsId } = loadSrc('src/conv/overlays.js');
 
 const DEF = { items: [
   { id: 'rename', label: '重命名' },
@@ -33,6 +33,14 @@ test('mcMenuTop: 下方放得下→bottom+6;放不下→上翻;8px 临界边距'
   assert.equal(mcMenuTop({ top: 100, bottom: 140 }, 147, 300), 100 - 6 - 147);
   // 无锚安全回退
   assert.equal(mcMenuTop(null, 200, 900), 0);
+});
+
+test('mcMenuWsId: 真工作区 id 放行;空值/__ungrouped__ 兜底假分组拒绝', () => {
+  assert.equal(mcMenuWsId('ws-abc'), 'ws-abc');
+  assert.equal(mcMenuWsId(''), null);
+  assert.equal(mcMenuWsId(null), null);
+  assert.equal(mcMenuWsId(undefined), null);
+  assert.equal(mcMenuWsId('__ungrouped__'), null); // McFinder 兜底假分组不可下传官方服务
 });
 
 test('mcMenuState: 单例互斥 + esc/外点/pick 关闭', () => {

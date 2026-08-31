@@ -1002,8 +1002,8 @@ function mcFinderGroups(list, wsState) {
 // 视图选项/添加：no-op（title 注明二期）。
 function McFinderListbar(props) {
   const h = React.createElement;
-  const btn = function (title, icon, onClick) {
-    const p = { className: 'mc-gh-btn', type: 'button', title: title, 'aria-label': title, 'data-mc-finder': '' };
+  const btn = function (title, icon, onClick, cls) {
+    const p = { className: cls ? 'mc-gh-btn ' + cls : 'mc-gh-btn', type: 'button', title: title, 'aria-label': title, 'data-mc-finder': '' };
     if (onClick) p.onClick = onClick;
     return h('button', p, h('svg', { viewBox: '0 0 24 24', 'aria-hidden': true }, h('use', { href: icon })));
   };
@@ -1018,9 +1018,10 @@ function McFinderListbar(props) {
     h('span', { className: 'mc-sb-lb' }, '工作区'),
     h('span', { className: 'mc-sb-la' },
       btn('搜索会话', '#i-px-search', onSearch),
-      btn('视图选项', '#i-px-sliders', function (e) { // view 菜单（勘定全项不通时 openMenu 静默 no-op）
+      // 二批 D：视图选项钮勘不通 no-op（spec §0 裁定4 延伸）——CSS 隐藏（钮保留 DOM，宿主实有视图选项后恢复）
+      btn('视图选项', '#i-px-sliders', function (e) {
         if (MC_MENU_OPEN) MC_MENU_OPEN('view', e.currentTarget, null);
-      }),
+      }, 'mc-lb-view'),
       btn('添加', '#i-px-plus', function (e) {
         if (MC_MENU_OPEN) MC_MENU_OPEN('add', e.currentTarget, null);
       })));
@@ -1031,6 +1032,37 @@ function McFinderListbar(props) {
 // 搜索词经模块级 MC_FINDER_QUERY + 自定义事件 mcx-finder-query 传给展开态 McFinderTree
 // （折叠/展开是组件形态切换=remount，state 不跨形态存活）。 ——
 let MC_FINDER_QUERY = '';
+
+// 二批 C：行内编辑桥——菜单「重命名」项（McMenus WIRING）不能直接设 React 状态，
+// 经模块级 MC_EDIT_HOOK 回调（McFinderTree 挂载时注册 editing setter、卸载置空）。
+// 声明在 src/conv/overlays.js（拼接同作用域；运行期注册，无加载序问题）。
+
+// 二批 C：行内重命名输入（自有类 .mc-edit）。Enter→提交；Escape/失焦→取消（保守：blur 不提交防误触）。
+// 无 :hover/无 transition/无定时器；autoFocus + 全选即取。
+function McEditInput(props) {
+  const h = React.createElement;
+  const vState = React.useState(props.initial || '');
+  const ref = React.useRef(null);
+  React.useEffect(function () { // 挂载即聚焦全选（一次性，无定时器）
+    const el = ref.current;
+    if (el && typeof el.focus === 'function') { el.focus(); try { el.select(); } catch (e) {} }
+  }, []);
+  const done = function (submit) {
+    const v = String(vState[0] || '').trim();
+    if (submit && v !== '') props.onSubmit(v);
+    else props.onCancel();
+  };
+  return h('input', {
+    className: 'mc-edit', ref: ref, type: 'text', value: vState[0], 'data-mc-finder': '',
+    onChange: function (e) { vState[1](e.target.value); },
+    onKeyDown: function (e) {
+      if (e.key === 'Enter') { e.preventDefault(); done(true); }
+      else if (e.key === 'Escape') { e.preventDefault(); done(false); }
+    },
+    onBlur: function () { done(false); },
+    onClick: function (e) { e.stopPropagation(); },
+  });
+}
 
 function McFinderMini(props) {
   const h = React.createElement;
@@ -1073,8 +1105,20 @@ function McFinderSess(props) {
   let slot = null;
   if (s.status === 'run') slot = h('i', { className: 'mc-s-dot' });
   else if (s.status === 'done') slot = h('svg', { className: 'mc-s-ok', 'aria-hidden': true }, h('use', { href: '#i-check' }));
+  // 二批 C：行内重命名（菜单「重命名」项 → editing {kind:'sess',id} → 标题位换输入框）
+  const ed = props.editing && props.editing.kind === 'sess' && props.editing.id === s.id;
+  const titleEl = ed
+    ? h(McEditInput, {
+        initial: s.title,
+        onSubmit: function (v) {
+          props.onEdit(null);
+          if (MC_MENU_FIRE) MC_MENU_FIRE('renameSubmit', { sess: s.id, title: v });
+        },
+        onCancel: function () { props.onEdit(null); },
+      })
+    : h('span', { className: 'mc-s-tt' }, esc(s.title));
   return h('div', { className: cls, role: 'button', tabIndex: 0, onClick: pick, title: s.title, 'aria-selected': on ? 'true' : 'false' },
-    h('span', { className: 'mc-s-tt' }, esc(s.title)),
+    titleEl,
     h('span', { className: 'mc-s-slot' }, slot),
     h('button', {
       className: 'mc-s-menu', type: 'button', title: '会话菜单', 'aria-label': '会话菜单', 'data-mc-finder': '',
@@ -1103,23 +1147,42 @@ function McFinderGroup(props) {
     if (onClick) p.onClick = onClick;
     return h('button', p, h('svg', { viewBox: '0 0 24 24', 'aria-hidden': true }, h('use', { href: icon })));
   };
+  // 二批 C：工作区名行内编辑（editing {kind:'ws',id} → 名称位换输入框）。
+  // input 不能嵌 <button>（非法 HTML 且点击被钮吞）→ 编辑态整块降为无钮容器（图标/计数保留，折叠开合暂不可点）。
+  const ed = props.editing && props.editing.kind === 'ws' && props.editing.id === g.id;
+  const nameEl = ed
+    ? h(McEditInput, {
+        initial: g.name,
+        onSubmit: function (v) {
+          props.onEdit(null);
+          if (MC_MENU_FIRE) MC_MENU_FIRE('groupRenameSubmit', { ws: g.id, title: v });
+        },
+        onCancel: function () { props.onEdit(null); },
+      })
+    : h('span', { className: 'mc-g-name' }, esc(g.name));
+  const headInner = [
+    h('svg', { className: open ? 'mc-tri open' : 'mc-tri', 'aria-hidden': true }, h('use', { href: '#i-tri' })),
+    h('svg', { 'aria-hidden': true }, h('use', { href: '#i-folder' })),
+    nameEl,
+    h('span', { className: 'mc-g-count' }, esc(String(g.sessions.length))),
+  ];
+  const headMain = ed
+    ? h('div', { className: 'mc-gh-main', 'data-mc-finder': '' }, headInner)
+    : h('button', { className: 'mc-gh-main', type: 'button', onClick: toggle, 'aria-expanded': open, 'data-mc-finder': '' }, headInner);
   return h('div', { className: 'mc-group' + (expanded ? ' expanded' : '') },
     h('div', { className: 'mc-group-head' },
-      h('button', { className: 'mc-gh-main', type: 'button', onClick: toggle, 'aria-expanded': open, 'data-mc-finder': '' },
-        h('svg', { className: open ? 'mc-tri open' : 'mc-tri', 'aria-hidden': true }, h('use', { href: '#i-tri' })),
-        h('svg', { 'aria-hidden': true }, h('use', { href: '#i-folder' })),
-        h('span', { className: 'mc-g-name' }, esc(g.name)),
-        h('span', { className: 'mc-g-count' }, esc(String(g.sessions.length)))),
+      headMain,
       h('span', { className: 'mc-gh-act' },
         ghBtn('工作区菜单', '#i-px-dots', function (e) { // group 菜单（上下文=工作区 id）
           if (MC_MENU_OPEN) MC_MENU_OPEN('group', e.currentTarget, { ws: g.id });
         }),
-        ghBtn('新建', '#i-px-plus', function (e) { // groupNew 菜单（上下文=工作区 id）
-          if (MC_MENU_OPEN) MC_MENU_OPEN('groupNew', e.currentTarget, { ws: g.id });
+        ghBtn('新建会话', '#i-px-plus', function () { // 二批 B：直建会话（不弹菜单）；定向到本工作区
+          if (MC_MENU_FIRE) MC_MENU_FIRE('groupNewSess', { ws: g.id });
         }))),
     h('div', { className: 'mc-group-body' + (open ? ' open' : '') },
       g.sessions.map(function (s) {
-        return h(McFinderSess, { key: s.id, sess: s, selected: props.selected === s.id, onPick: props.onPick });
+        return h(McFinderSess, { key: s.id, sess: s, selected: props.selected === s.id, onPick: props.onPick,
+          editing: props.editing, onEdit: props.onEdit });
       }),
       xtraCount > 0 && !expanded ? h('button', {
         className: 'mc-sb-more', type: 'button', 'data-mc-finder': '',
@@ -1159,6 +1222,13 @@ function McFinderTree(props) {
   const expState = React.useState({});
   const qState = React.useState(MC_FINDER_QUERY); // 迷你态搜索词跨形态接力（惰性初值）
   const q = qState[0].trim().toLowerCase();
+  // 二批 C：行内重命名编辑态 {kind:'ws'|'sess', id} | null；setter 注册到模块级 MC_EDIT_HOOK
+  // （菜单重命名项经桥进入编辑态；卸载守卫置空——M3 同款）。
+  const editState = React.useState(null);
+  React.useEffect(function () {
+    MC_EDIT_HOOK = editState[1];
+    return function () { if (MC_EDIT_HOOK === editState[1]) MC_EDIT_HOOK = null; };
+  }, []);
   const root = React.useRef(null);
   React.useEffect(function () {
     // 负延迟注入：多 run 点同屏不交错（CLOCK 惰性单例在 McClock.mount 后必在）
@@ -1219,6 +1289,7 @@ function McFinderTree(props) {
           open: q !== '' ? true : (openState[0] === null ? true : openState[0][g.id] !== false),
           expanded: !!expState[0][g.id] || q !== '',
           selected: sel, onToggle: onToggle, onExpand: onExpand, onPick: onPick,
+          editing: editState[0], onEdit: editState[1],
         });
       })));
 }
@@ -1276,6 +1347,14 @@ const McFinder = {
   color:var(--mc-accent);font:400 12px/1.6 var(--font-sb);border-radius:var(--mc-r-tag)}
 .mc-sb-more:active{color:var(--mc-fg)}
 .mc-sb-find .mc-sb-more svg{width:11px;height:11px;flex:none}
+/* 二批 D：视图选项钮勘不通 no-op（spec §0 裁定4 延伸）——隐藏（DOM 保留；宿主实有视图选项后恢复） */
+.mc-sb-find .mc-lb-view{display:none}
+/* 二批 C：行内重命名输入（方角 1px 边框、font 同位、宽随容器；无 hover/transition） */
+.mc-sb-find .mc-edit{flex:1;min-width:0;box-sizing:border-box;width:100%;
+  padding:2px 4px;background:var(--mc-surface);
+  border:1px solid var(--mc-border);border-radius:0;outline:none;
+  font:400 13px/1.4 var(--font-sb);color:var(--mc-fg)}
+.mc-sb-find .mc-gh-main .mc-edit{font:400 15px/1.25 var(--font-sb);letter-spacing:.02em} /* 与 .mc-g-name 同位 */
 /* Task 5 菜单锚定(v2 裁剪 bug 修复后仅存样式作用)：按钮组/会话行容器预置 position:relative——
    菜单已改 body 挂载 fixed 定位不再依赖 offsetParent,.mc-anchor 锚类退役删除 */
 .mc-sb-find .mc-sb-la,.mc-sb-find .mc-gh-act,.mc-sb-find .mc-sess{position:relative}
@@ -2139,7 +2218,7 @@ function mcMenuState(state, ev) {
   return { open: null }; // close/esc/pick 一律关
 }
 // Task 5 定义表：项集按附录 A 勘定对齐宿主实有菜单（会话=rename/fork/archive workspace L700-716；
-// 工作区=rename/delete L459-468；新建类=sessions.create/workspaces.create）。
+// 工作区=rename/delete L459-468；新建类=workspaces.startSession/workspaces.create（二批 A 官方语义）。
 // view 两项宿主无对应服务/勘不通 → 不写 WIRING 键（mcMenuItems 自动滤除，菜单整体 no-op）。
 // 图标勘定：#i-px-box/#i-px-list 不在 sprite → 归档用 #i-suitcase、排序用 #i-px-clock。
 var MC_MENU_DEFS = {
@@ -2154,10 +2233,7 @@ var MC_MENU_DEFS = {
     { sep: true },
     { id: 'groupDelete', label: '删除工作区', icon: '#i-px-trash', danger: true },
   ] },
-  groupNew: { items: [
-    { id: 'groupNewSess', label: '新建会话', icon: '#i-px-plus' },
-    { id: 'groupNewWs', label: '新建工作区', icon: '#i-folder' },
-  ] },
+  // groupNew 菜单退役（二批 B）：分组头 plus 钮改直建会话（MC_MENU_FIRE），不再弹菜单。
   view: { items: [
     { id: 'viewGroup', label: '按工作区分组', icon: '#i-folder', on: true },
     { id: 'viewSortTime', label: '按时间排序', icon: '#i-px-clock' },
@@ -2183,29 +2259,52 @@ function mcMenuWsSvc(w) {
   } catch (e) {}
   return null;
 }
-function mcMenuNewSess(w) { // sessions.create(opts)→id（附录 A sessions 方法面）
-  var c = w && w.ctx;
-  if (c && c.sessions && typeof c.sessions.create === 'function') c.sessions.create({});
+// 二批 A：工作区 id 纯函数守卫——'__ungrouped__' 是 McFinder 的兜底假分组（非官方 id），
+// 重命名/新建定向均不可下传 → 返回 null。
+function mcMenuWsId(id) {
+  return id && id !== '__ungrouped__' ? id : null;
 }
-function mcMenuNewWs(w) { // workspaces.create(input)（附录 A L9541-9570/L10036）
+// 二批 A1：新建会话 = 官方 workspaces.startSession（建+连+打开；无 wsId 自动落当前/最近工作区）。
+// 旧 sessions.create({}) 语义不符（只建不开）——退役。
+function mcMenuNewSess(w, wsId) {
+  var c = w && w.ctx;
+  var id = mcMenuWsId(wsId);
+  if (c && c.workspaces && typeof c.workspaces.startSession === 'function') {
+    try { c.workspaces.startSession(id || undefined); } catch (e) {} // 吞错纪律：官方状态为准
+  }
+}
+function mcMenuNewWs(w) { // 二批 A3：官方 create(input) 需目录路径（local Workspace 须 materializable）
   var ws = mcMenuWsSvc(w);
-  if (ws && typeof ws.create === 'function') ws.create({});
+  if (!ws || typeof ws.create !== 'function') return;
+  if (typeof window === 'undefined' || typeof window.prompt !== 'function') return;
+  var p = window.prompt('新建工作区 — 输入目录绝对路径', '');
+  if (!p || !p.trim()) return;
+  try { ws.create({ path: p.trim() }); } catch (e) {} // 路径无效时官方返回 error——静默（吞错纪律）
 }
 var MC_MENU_WIRING = {
   // —— sess（会话行 dots）——
-  rename: function (w) { // sessions.binding(id).session.rename(title)（附录 A L7346）
+  rename: function (w) { // 二批 C：菜单项点击只进入行内编辑态（prompt 退役）；提交走 renameSubmit
     var id = w.ctxData && w.ctxData.sess;
-    if (!id || !w.ctx.sessions || typeof w.ctx.sessions.binding !== 'function') return;
-    var b = w.ctx.sessions.binding(id);
-    if (!b || !b.session || typeof b.session.rename !== 'function') return;
-    var t = window.prompt('重命名会话', '');
-    if (t === null || t.trim() === '') return;
-    b.session.rename(t.trim());
+    if (id && MC_EDIT_HOOK) { try { MC_EDIT_HOOK({ kind: 'sess', id: id }); } catch (e) {} }
   },
-  fork: function (w) { // sessions.fork({sessionId})→childId（附录 A sessions 方法面）
+  renameSubmit: function (w) { // 行内输入回车提交：sessions.binding(id).session.rename(title)
+    var d = w.ctxData || {};
+    var t = typeof d.title === 'string' ? d.title.trim() : '';
+    if (!d.sess || !t || !w.ctx.sessions || typeof w.ctx.sessions.binding !== 'function') return;
+    var b = w.ctx.sessions.binding(d.sess);
+    if (b && b.session && typeof b.session.rename === 'function') {
+      try { b.session.rename(t); } catch (e) {}
+    }
+  },
+  fork: function (w) { // 二批 A4：官方语义补全——fork(increaseTitle)→childId→open
     var id = w.ctxData && w.ctxData.sess;
-    if (!id || !w.ctx.sessions || typeof w.ctx.sessions.fork !== 'function') return;
-    w.ctx.sessions.fork({ sessionId: id });
+    var s = w.ctx && w.ctx.sessions;
+    if (!id || !s || typeof s.fork !== 'function') return;
+    try {
+      s.fork({ sessionId: id, increaseTitle: true }).then(function (childId) {
+        if (childId && typeof s.open === 'function') s.open(childId);
+      }).catch(function () {});
+    } catch (e) {}
   },
   archive: function (w) { // 无 sessions.archive（附录 A）：归档在 workspaces.archiveSession
     var id = w.ctxData && w.ctxData.sess;
@@ -2214,30 +2313,37 @@ var MC_MENU_WIRING = {
     if (ws) ws.archiveSession(id);
   },
   // —— group（分组头 dots）——
-  groupRename: function (w) {
-    var id = w.ctxData && w.ctxData.ws;
-    if (!id) return;
+  groupRename: function (w) { // 二批 C：进入行内编辑态（提交走 groupRenameSubmit）
+    var id = mcMenuWsId(w.ctxData && w.ctxData.ws);
+    if (id && MC_EDIT_HOOK) { try { MC_EDIT_HOOK({ kind: 'ws', id: id }); } catch (e) {} }
+  },
+  groupRenameSubmit: function (w) { // 行内输入回车提交：ws.rename(id, title)
+    var d = w.ctxData || {};
+    var id = mcMenuWsId(d.ws);
+    var t = typeof d.title === 'string' ? d.title.trim() : '';
+    if (!id || !t) return;
     var ws = mcMenuWsSvc(w);
-    if (!ws) return;
-    var t = window.prompt('重命名工作区', '');
-    if (t === null || t.trim() === '') return;
-    ws.rename(id, t.trim());
+    if (ws && typeof ws.rename === 'function') { try { ws.rename(id, t); } catch (e) {} }
   },
   groupDelete: function (w) {
-    var id = w.ctxData && w.ctxData.ws;
+    var id = mcMenuWsId(w.ctxData && w.ctxData.ws);
     if (!id) return;
     var ws = mcMenuWsSvc(w);
     if (ws) ws.delete(id);
   },
-  // —— 新建类 ——
-  groupNew: mcMenuNewSess,
-  groupNewSess: mcMenuNewSess,
+  // —— 新建类（二批 A1/A2：startSession 官方语义；「在此」=定向到触发分组的工作区）——
+  groupNew: function (w) { mcMenuNewSess(w, w.ctxData && w.ctxData.ws); },
+  groupNewSess: function (w) { mcMenuNewSess(w, w.ctxData && w.ctxData.ws); },
   groupNewWs: mcMenuNewWs,
-  addSess: mcMenuNewSess,
+  addSess: function (w) { mcMenuNewSess(w, null); }, // listbar 添加：无定向 → 官方自动落当前/最近
   addWs: mcMenuNewWs,
   // viewGroup/viewSortTime：勘不通 → 不写键（菜单项自动不出现）
 };
 var MC_MENU_OPEN = null; // Task 5 桥：McFinder 触发钮经此调 openMenu（mount 时赋值、teardown 置空）
+// 二批 B 桥：不经菜单直发接线（分组头 plus 直建会话等）。
+// mount 时赋值执行 WIRING[act](wiringCtx)；teardown 按 M3 同款守卫置空。
+var MC_MENU_FIRE = null;
+var MC_EDIT_HOOK = null; // 二批 C 桥：菜单「重命名」项 → McFinder 行内编辑态 setter（McFinder 树注册）
 var McMenus = {
   css: MC_MENUS_CSS,
   mount: function (ctx) {
@@ -2247,6 +2353,12 @@ var McMenus = {
     var openHost = null;   // 最近一次 openMenu 的触发钮（closeMenu 记录 lastClose 用）
     var lastClose = null;  // {id,host,ts} —— 捕获段刚关掉的菜单（同钮同 id 50ms 内重开忽略；M1）
     MC_MENU_OPEN = openMenu;
+    // 二批 B 桥：直发接线（不弹菜单）。ctxData 由调用方随 act 传入。
+    var fire = function (act, data) {
+      wiringCtx.ctxData = data || null;
+      try { if (MC_MENU_WIRING[act]) MC_MENU_WIRING[act](wiringCtx); } catch (e) {}
+    };
+    MC_MENU_FIRE = fire;
     function closeMenu() {
       // M1 toggle 守卫记录：id/host 取「被关菜单」的（openHost 尚未刷新），ts 纯 Date.now 比较——无定时器
       lastClose = { id: state.open && state.open.id, host: openHost, ts: Date.now() };
@@ -2322,8 +2434,9 @@ var McMenus = {
       document.head.appendChild(styleEl);
     }
     return function teardown() {
-      // M3 撤桥守卫：仅当桥仍指向本 mount 的 openMenu 才撤——防止先卸的旧 mount 误撤后 mount 的桥
+      // M3 撤桥守卫：仅当桥仍指向本 mount 的 openMenu/fire 才撤——防止先卸的旧 mount 误撤后 mount 的桥
       if (MC_MENU_OPEN === openMenu) MC_MENU_OPEN = null;
+      if (MC_MENU_FIRE === fire) MC_MENU_FIRE = null;
       try { document.removeEventListener('click', onDocClick, true); } catch (e) {}
       try { document.removeEventListener('keydown', onKey, true); } catch (e) {}
       try { document.removeEventListener('scroll', onScroll, { capture: true }); } catch (e) {}
@@ -2332,7 +2445,7 @@ var McMenus = {
     };
   },
 };
-if (typeof module !== 'undefined') module.exports = { McMenus: McMenus, mcMenuItems: mcMenuItems, mcMenuAlign: mcMenuAlign, mcMenuTop: mcMenuTop, mcMenuState: mcMenuState };
+if (typeof module !== 'undefined') module.exports = { McMenus: McMenus, mcMenuItems: mcMenuItems, mcMenuAlign: mcMenuAlign, mcMenuTop: mcMenuTop, mcMenuState: mcMenuState, mcMenuWsId: mcMenuWsId };
 
 // src/kit.js —— 检视页骨架（默认关闭零足迹；控制台 window.__MC_KIT_OPEN__ = true 打开）
 // 布局类全部 kit- 前缀，样式不外泄 kit 根之外；组件类直接复用 mc- 原语
