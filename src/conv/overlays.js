@@ -167,7 +167,21 @@ var McMenus = {
             '<span>' + esc(it.label) + '</span></button>';
       }
       wrap.innerHTML = html; // 全动态段经 esc
-      var side = mcMenuAlign(host.getBoundingClientRect(), window.innerWidth, 220);
+      // Task 7 浅色 QA 修复：对齐参照从视口收紧到最近裁剪容器右缘 —— .mc-sb-tree 等
+      // overflow 容器会把向左溢出的菜单右缘裁掉（首跑实证：group 菜单 r=467 > tree r=293
+      // 被拦腰截断）→ 靠右触发钮（分组头 dots/新建/listbar 钮）翻转为 right 对齐收进容器。
+      // mcMenuAlign 纯函数签名不变，只是传入更严的 limit（tests/menus.test.mjs 不动）。
+      var limit = window.innerWidth;
+      try {
+        for (var pel = host.parentElement; pel && pel !== document.body; pel = pel.parentElement) {
+          var pc = getComputedStyle(pel);
+          if (pc.overflowX !== 'visible' || pc.overflowY !== 'visible') {
+            var pr = pel.getBoundingClientRect();
+            if (pr.right < limit) limit = pr.right;
+          }
+        }
+      } catch (e) { /* 计算失败退回视口宽（原行为） */ }
+      var side = mcMenuAlign(host.getBoundingClientRect(), limit, 220);
       wrap.style.left = side === 'right' ? 'auto' : '0';
       wrap.style.right = side === 'right' ? '0' : 'auto';
       wrap.style.top = 'calc(100% + 6px)';

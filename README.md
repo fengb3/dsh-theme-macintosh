@@ -58,6 +58,7 @@ DSH（DeepSeek Harness Web GUI）的 Classic Macintosh 像素风主题插件。�
   ```
   node tools/verify-persistent.mjs   # 常驻持久性 + flow 三断言（只读，不发消息）
   node tools/verify-flow.mjs         # flow 门禁：真实回合驱动，深浅两轮 32 断言
+  node tools/verify-menus.mjs        # 菜单门禁：五菜单开合/样式/归档接线深浅两轮（--dry-run 只验注入）
   ```
 
   **注意：`verify-flow` 每次运行都会发送一条真实模型消息**（经 composer 驱动真实回合，

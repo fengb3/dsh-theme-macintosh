@@ -306,6 +306,29 @@ state = { view, mode, current, sessions, busy:{}, fallback:{}, queue:{}, stats:{
   （span 宽即块宽，白块随新字变宽；被盖元素=文本容器，零测宽） → D 撤两类新字显现 → E 滞空一拍。
   live 采样序列 `-, mcut, mcut+flash(旧), mcut+flash(新/w变), -` 与之逐拍对应
 
+### 8.7 菜单落地差异（2026-09-01 菜单批实录，host 0.1.1-rc.2）
+- **自绘兜底 vs 槽路径实采**：宿主菜单无 keyed 槽可遮蔽（MenuPortal 走 React 受控渲染）→ 弃槽路径，
+  全部自绘 `.mc-menu`（原型 §9 直抄换 mc- 前缀）挂触发钮 offsetParent（`.mc-anchor{position:relative}`）；
+  官方原生菜单走 MC_MAP.menuPortal 藏匿样式 `display:none!important`——**藏未删**（节点仍在 DOM，
+  兼容层证据 `style[data-mc-menuhide]`）
+- **onSelect 不可伪造**：宿主菜单项是受控 React 组件，外部 `click()`/合成事件皆无法触发其 onSelect →
+  接线全部改走**官方服务面**（sessions.binding().session.rename / sessions.fork / workspaces.archiveSession
+  / workspaces.rename/delete / sessions.create / workspaces.create），动作外层 try/catch 失败静默、
+  官方状态为准
+- **inject 补 workspaces 教训**：workspaces 服务不在 inject 直达面时 `ctx.workspaces` 为 undefined，
+  须经 `ctx.get('workspaces')` 可选读取兜底；但常驻 client.js 的 inject 数组漏写 `"workspaces"`
+  会连 get 都拿不到——package.json `dsh.client` 声明与常驻导出 inject 两处都要补（Task 5 fix round 1）
+- **勘不通被滤除的菜单项清单（mcMenuItems 自动过滤）**：view 菜单 viewGroup（按工作区分组）/
+  viewSortTime（按时间排序）——宿主无对应读写服务且 onSelect 不可伪造 → 不写 WIRING 键 → 项不出现 →
+  整菜单静默 no-op（控制器裁定：不渲染空壳）。图标勘定：#i-px-box/#i-px-list 不在 sprite →
+  归档用 #i-suitcase、排序用 #i-px-clock
+- **对齐参照=最近裁剪容器（Task 7 浅色 QA 发现）**：`.mc-sb-tree`（overflow:auto）会把向左溢出的
+  菜单右缘拦腰截断（首跑实证 group 菜单 r=467 > tree r=293）——openMenu 对齐参照从
+  `window.innerWidth` 收紧为「最近 overflow 祖先右缘」（向上遍历取最小 right，无则退回视口宽），
+  靠右触发钮（分组头 dots/新建）自动翻转 right 对齐；`mcMenuAlign` 纯函数签名不变，只传更严的 limit
+- **浅色形态**：菜单仅依赖 --mc-surface/--mc-border/--mc-shadow-pop/--mc-danger/--mc-accent，
+  深浅两套 token 直通，无需专门浅色规则（QA 实拍：白底黑边硬阴影 ✓、danger 红 ✓、on 选中 accent ✓）
+
 ---
 
 ## 9 · §6 输入坞

@@ -157,7 +157,9 @@ html[data-theme="light"] .kit-panel .reasoning.run .r-txt .cover{background:#000
 .kit-panel .icon-btn:disabled{opacity:.4;cursor:not-allowed}
 .kit-panel .icon-btn svg{width:13px;height:13px}
 .kit-panel .icon-btn.sm{width:20px;height:20px}
-.kit-panel .icon-btn.sm svg{width:11px;height:11px}`,
+.kit-panel .icon-btn.sm svg{width:11px;height:11px}
+/* 菜单分区(Task 7):静态陈列的 .mc-menu 归位到文档流(原语 absolute 供弹出锚定) */
+.kit-panel .kit-menustatic .mc-menu{position:relative;top:auto;left:auto;right:auto;max-width:280px}`,
 
   slots(ctx) {
     // 席位：shell.overlay（additive 列表槽，order 靠后）；默认渲染 null。
@@ -243,6 +245,13 @@ function McKitPage() {
   const doAccToggle = () => {
     const el = tgtAcc.current;
     if (el) accToggle(el, function () { el.classList.toggle('kit-folded'); });
+  };
+
+  // 菜单分区（Task 7）：真 openMenu 管道演示 —— MC_MENU_OPEN 桥由 McMenus.mount 赋值
+  // （模块卸载时置 null 安全空转）。载荷取 sess 菜单；ctxData 传 null → 接线守卫
+  // （w.ctxData.sess 缺席即 return）全部静默 no-op，纯演示开合/出场形态。
+  const popMenu = (e) => {
+    if (typeof MC_MENU_OPEN === 'function') MC_MENU_OPEN('sess', e.currentTarget, null);
   };
 
   const swatches = [
@@ -385,7 +394,41 @@ function McKitPage() {
                     h('svg', { viewBox: '0 0 24 24', 'aria-hidden': true }, h('use', { href: '#i-px-copy' }))),
                   h('button', { className: 'icon-btn sm', type: 'button', title: '重发' },
                     h('svg', { viewBox: '0 0 24 24', 'aria-hidden': true }, h('use', { href: '#i-px-reload' }))),
-                  h('span', { className: 't-stats' }, '8.9s · token 1.9s · 83 tok/s')))))))));
+                  h('span', { className: 't-stats' }, '8.9s · token 1.9s · 83 tok/s')))))),
+        // (f) 弹出菜单分区（Task 7）：静态陈列 .mc-menu 全形态 + 真 openMenu 管道演示。
+        //     DOM 照 prototype/macintosh-workspace.html L2485-2507 直抄换 mc- 前缀
+        //     （span 陈列态；#i-px-list 不在 sprite → 按时间排序按 T5 勘定用 #i-px-clock）
+        h('section', null,
+          h('h3', { className: 'kit-h' }, '弹出菜单'),
+          h('div', { className: 'kit-frames' },
+            h('div', { className: 'kit-frame' },
+              h('div', { className: 'kit-frame-tag' },
+                h('span', null, '通用菜单 · m-group / 常规项 / danger 项 / m-sep / on 选中态'),
+                h('em', null, 'menu')),
+              h('div', { className: 'kit-frame-body kit-menustatic' },
+                h('div', { className: 'mc-menu' },
+                  h('span', { className: 'm-group' }, '会话'),
+                  h('span', { className: 'm-opt' },
+                    h('svg', { className: 'mo-ic', viewBox: '0 0 24 24', 'aria-hidden': true }, h('use', { href: '#i-px-plus' })), '新建会话'),
+                  h('span', { className: 'm-opt' },
+                    h('svg', { className: 'mo-ic', viewBox: '0 0 24 24', 'aria-hidden': true }, h('use', { href: '#i-px-edit' })), '重命名'),
+                  h('span', { className: 'm-sep' }),
+                  h('span', { className: 'm-group' }, '视图'),
+                  h('span', { className: 'm-opt on' },
+                    h('svg', { className: 'mo-ic', viewBox: '0 0 11 9', 'aria-hidden': true }, h('use', { href: '#i-folder' })), '按工作区分组'),
+                  h('span', { className: 'm-opt' },
+                    h('svg', { className: 'mo-ic', viewBox: '0 0 24 24', 'aria-hidden': true }, h('use', { href: '#i-px-clock' })), '按时间排序'),
+                  h('span', { className: 'm-sep' }),
+                  h('span', { className: 'm-opt danger' },
+                    h('svg', { className: 'mo-ic', viewBox: '0 0 24 24', 'aria-hidden': true }, h('use', { href: '#i-px-trash' })), '删除会话')))),
+            h('div', { className: 'kit-frame' },
+              h('div', { className: 'kit-frame-tag' },
+                h('span', null, '弹出演示 · flashIn 出场 / 外点关 / Esc / :active 反色'),
+                h('em', null, 'openMenu')),
+              h('div', { className: 'kit-frame-body' },
+                h('div', { className: 'kit-demo' },
+                  h('button', { className: 'mc-btn', type: 'button', onClick: popMenu }, '▶ 弹出菜单(闪烁出场)'),
+                  h('span', { className: 'kit-note' }, '演示载荷 = sess 菜单；ctxData 为空 → 接线守卫静默 no-op')))))))));
 
 // —— ReasoningDemo：推理卡五帧流式演示（§8.2 状态机 kit 化）——
 // 五帧一周期 500ms：帧 B（t+0）追加 span.cover + 标题换字挂 flash → 帧 A（t+100）合并进
