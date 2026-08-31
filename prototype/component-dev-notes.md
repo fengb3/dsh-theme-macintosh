@@ -301,6 +301,10 @@ state = { view, mode, current, sessions, busy:{}, fallback:{}, queue:{}, stats:{
   package.json dsh.client 字段的宿主重启成本
 - **槽位 props 全量**：chat.node 槽把 useSessions/useTurnData/fileMentions/renderMessageImages/
   node(data.blocks/status) 全数传入遮蔽组件——mentions 的 owner 判定可复刻，仅 t/locale 需自带
+- **摘要行五阶段节拍（验收五轮，用户逐拍定义）**：每拍 100ms、500ms 一循环——
+  A 旧字全透明(.s-in.mcut{color:transparent}) → B 白块盖住(.flash) → C 文本瞬换新字
+  （span 宽即块宽，白块随新字变宽；被盖元素=文本容器，零测宽） → D 撤两类新字显现 → E 滞空一拍。
+  live 采样序列 `-, mcut, mcut+flash(旧), mcut+flash(新/w变), -` 与之逐拍对应
 
 ---
 

@@ -1,6 +1,6 @@
 # Macintosh 主题 · 二期 flow(会话流)模块 Implementation Plan
 
-> **续作状态(2026-09 四轮后)**:Task 1-10 完成+终审;验收一/二/三轮均已修验;**验收四轮 = think 卡整体重写**(用户裁定组件化:遮蔽 `conversation.chat.node` keyed 槽 assistant-step,McAssistantNodeView+McThinkCard 缓冲区+定期吐出,ghost 整卡透明,五拍真延迟 flip,primitives 直取零重启)——旧 ReasoningRow 全部 CSS/观察器干预退役,`npm test` 31/31+audit 绿,acc4 活体+视觉双验证,详见文末「验收四轮」。剩余:用户四轮复验 → finishing 菜单三选一。
+> **续作状态(2026-09 五轮后)**:Task 1-10 完成+终审;验收一~四轮均已修验;**五轮 = 摘要行五阶段节拍**(A 透明→B 白块→C 块随新字宽→D 显现→E 滞空,每拍 100ms/500ms 循环)——`npm test` 31/31+audit 绿,acc5 状态序列逐拍命中。剩余:用户五轮复验 → finishing 菜单三选一。
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -412,6 +412,10 @@ if (typeof module !== 'undefined') module.exports = { MC_FLOW_ICONS: MC_FLOW_ICO
 4. **ghost 整卡透明**:`.mc-ghost` 增 background/border-image/box-shadow/outline !important 清除。
 5. **退役清单**:宿主 ReasoningRow 全部覆写(thinkCard 段 CSS、MC_FLOW_ICON_TRI、thinkStream/thinkBodyStream 观察器、thinkCard/thinkSummary/ariaExpanded 三 MC_MAP 键、TOGGLE think 表项);MO 撤 characterData。
 6. 测试 31/31(think.test.mjs×5 新增)+audit 绿;证据 shots/acc4-*(01 存量渲染/02 展开/03 flash 帧)+ tools/acc4-check.mjs;教训入笔记 §8.6。
+
+## 验收五轮(2026-09)—— ✅ 摘要行五阶段节拍
+
+用户逐拍定义摘要切换:A 旧字全透明 → B 白块盖住 → C 文本瞬换新字(白块随新字变宽) → D 撤块新字显现 → E 滞空一拍;每拍 100ms、500ms 循环,直至流式结束全文吐尽。已落地于 McThinkCard tick(s.ghost/s.block 双状态 + CLOCK 五连拍,CSS 增 .s-in.mcut{color:transparent});live 采样序列 `-, mcut, mcut+flash(旧字), mcut+flash(新字/块宽 610→629 变化), -` 逐拍对应;测试 31/31+audit 绿;证据 tools/acc5-check.mjs 状态序列。
 
 1. **注入条图标**:instructions/notice/relay 换 sprite `#i-doc` 经典款(从 client.js McSprite 段提取 symbol 做 data-URI mask;现用 pixelarticons doc 与原型不符);catalog/snapshot/recall/compaction 保持。
 2. **think 摘要行 flash 白块未渲染**:`.mc-line-flash` 类出现但视觉无白块——live debug(疑 inline 定位/React 节点替换),修到截图可见(深白浅黑)。

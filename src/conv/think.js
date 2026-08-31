@@ -42,8 +42,10 @@ const McThink = {
     '.mc-think:not(.open) .mc-think-body{height:0}',
     '.mc-think-body .mc-think-txt{padding:2px 9px 9px 26px;font:400 12px/1.8 var(--font-ui);color:var(--mc-muted);white-space:pre-wrap}',
     '.mc-think.run .mc-think-txt .mc-app-cover{color:transparent}',
-    /* 摘要行切换 = 白块盖住 → 换字 → 块瞬间消失(s-in 只装本次新字,块宽=字宽) */
+    /* 摘要行五阶段节拍(验收五轮):A .mcut 旧字全透明 → B .flash 白块盖 → C 文本瞬换新字
+       (span 宽即块宽,白块随新字变宽) → D 撤两类新字显现 → E 滞空一拍 */
     '.mc-think-head .mc-think-sum .s-in{position:relative}',
+    '.mc-think-head .mc-think-sum .s-in.mcut{color:transparent}',
     '.mc-think-head .mc-think-sum .s-in::after{content:\'\';position:absolute;inset:-1px -2px;opacity:0;pointer-events:none;background:#fff;background-image:repeating-linear-gradient(0deg,transparent 0 2px,rgba(0,0,0,.06) 2px 3px)}',
     '.mc-think-head .mc-think-sum .s-in.flash::after{opacity:1}',
     'html[data-theme="light"] .mc-think-head .mc-think-sum .s-in::after{background:#000;background-image:repeating-linear-gradient(0deg,transparent 0 2px,rgba(255,255,255,.07) 2px 3px)}',
@@ -56,10 +58,13 @@ const McThink = {
     const MarkdownText = MC_PRIM.MarkdownText;
     const JsonBlock = MC_PRIM.JsonBlock;
 
-    /* —— McThinkCard:缓冲积攒 + 周期吐出(原型 showThinking 五帧状态机) —— */
+    /* —— McThinkCard:缓冲积攒 + 周期吐出(原型 showThinking 状态机) ——
+       摘要行五阶段节拍(验收五轮,用户逐拍定义;每拍 100ms,500ms 一循环):
+       A 旧字全透明(color:transparent,.mcut) → B 白块盖住(.flash) → C 文本瞬换新字
+       (span 宽即块宽,白块随新字变宽) → D 撤透明撤块(新字显现) → E 滞空一拍 */
     function McThinkCard(props) {
       var text = props.text || '', running = !!props.running;
-      var st = React.useRef({ committed: '', pending: '', sum: '', flash: false, open: false, timer: null, mounted: true });
+      var st = React.useRef({ committed: '', pending: '', sum: '', ghost: false, block: false, open: false, timer: null, mounted: true });
       st.current.text = text;
       var cardRef = React.useRef(null);
       var version = React.useState(0), setV = version[1];
@@ -71,16 +76,26 @@ const McThink = {
         if (r.delta) {
           s.committed = r.shown;
           s.pending = r.delta;
-          s.sum = r.delta.replace(/\n/g, ' ');
-          s.flash = true;
+          s.ghost = true;                                   /* A:旧字全透明 */
           paint();
-          CLOCK.next(function () {
-            var s2 = st.current;
-            if (!s2.mounted) return;
-            s2.pending = ''; s2.flash = false; paint();
+          CLOCK.next(function () {                          /* B:白块盖住 */
+            var s2 = st.current; if (!s2.mounted) return;
+            s2.block = true; paint();
+            CLOCK.next(function () {                        /* C:换新字(块随新字宽) */
+              var s3 = st.current; if (!s3.mounted) return;
+              s3.sum = r.delta.replace(/\n/g, ' '); paint();
+              CLOCK.next(function () {                      /* D:撤透明撤块,新字显现 */
+                var s4 = st.current; if (!s4.mounted) return;
+                s4.ghost = false; s4.block = false; paint();
+                CLOCK.next(function () {                    /* E:滞空一拍 */
+                  var s5 = st.current; if (!s5.mounted) return;
+                  s5.pending = ''; paint();
+                }, 100);
+              }, 100);
+            }, 100);
           }, 100);
         }
-        s.timer = CLOCK.next(tick, 400); // 500ms 周期 = 400 顿 + 100 揭
+        s.timer = CLOCK.next(tick, 500); // A+B+C+D+E = 500ms 一循环
       }
       React.useEffect(function () {
         var s = st.current; s.mounted = true;
@@ -93,7 +108,7 @@ const McThink = {
           if (!s.timer) s.timer = CLOCK.next(tick, 200);
         } else {
           if (s.timer) { try { CLOCK.clear(s.timer); } catch (e) {} s.timer = null; }
-          s.committed = text; s.pending = ''; s.flash = false;
+          s.committed = text; s.pending = ''; s.ghost = false; s.block = false;
           s.sum = text ? (text.length > 26 ? text.slice(0, 26) + '…' : text) : '';
           paint();
         }
@@ -103,12 +118,13 @@ const McThink = {
         accToggle(card, function () { st.current.open = !st.current.open; paint(); });
       }
       var s = st.current;
+      var sInCls = 's-in' + (s.ghost ? ' mcut' : '') + (s.block ? ' flash' : '');
       return h('div', { className: 'mc-think' + (running ? ' run' : '') + (s.open ? ' open' : ''), ref: cardRef },
         h('button', { className: 'mc-think-head', type: 'button', onClick: toggleCard },
           h('svg', { className: 'mc-tri' + (s.open ? ' open' : ''), 'aria-hidden': true }, h('use', { href: '#i-tri' })),
           h('span', { className: 'mc-think-tag' }, 'Think'),
           h('span', { className: 'mc-think-sum' },
-            h('span', { className: 's-in' + (s.flash ? ' flash' : '') }, running ? (s.sum || '正在思考…') : s.sum)),
+            h('span', { className: sInCls }, running ? (s.sum || '正在思考…') : s.sum)),
           h('span', { className: 'mc-think-dur' }, running ? 'streaming' : '')),
         h('div', { className: 'mc-think-body' },
           h('div', { className: 'mc-think-txt' }, s.committed,
