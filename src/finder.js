@@ -177,7 +177,7 @@ function McFinderMini(props) {
 }
 
 // 会话行：状态槽（run=脉冲点 / done=✓ / wait=空占位）+ 标题 + 三点菜单钮。
-// 选中行 .on 整行反色方角；onClick 走 accToggle 四拍（七轮裁定：选中=状态切换统一走库；
+// 选中行 .on 整行反色方角；onClick 走 accToggle 五拍（七轮裁定：选中=状态切换统一走库；
 // t0 整行隐 → t100 白块+瞬切选中 → t200 揭开 → t300 滞空，走 CLOCK 100ms 栅格）。
 function McFinderSess(props) {
   const h = React.createElement;
@@ -216,7 +216,7 @@ function McFinderSess(props) {
 }
 
 // 工作区分组：group-head（折叠三角 i-tri + 文件夹 i-folder + 名称 + 计数 + dots/plus 小钮）+
-// group-body（会话行 + 超 5 条的「展开其余 N 个会话」钮）。折叠开合走 accToggle 四拍
+// group-body（会话行 + 超 5 条的「展开其余 N 个会话」钮）。折叠开合走 accToggle 五拍
 // （七轮裁定：状态切换统一走库；「展开其余」=元素出现，仍走 flashIn）。
 function McFinderGroup(props) {
   const h = React.createElement;

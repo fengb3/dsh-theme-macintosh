@@ -4,7 +4,7 @@
 // 'manual-compaction' / 'model-retry'（priority:-1 同 user/assistant-step 先例）——宿主卡整体
 // 替换为自有 DOM（真·重绘，非 CSS 套壳）；primitives 缺席时不注册（宿主原生渲染兜底）。
 // 动效纪律（验收六轮改版沿用）：出场 = flowItem 行级 flashIn（McFlow 观察器供给）；折叠开合与
-// 状态切换（压缩中→已压缩 / 重试 scheduled→started·cancelled）= lib accToggle 四拍，文字 A→B
+// 状态切换（压缩中→已压缩 / 重试 scheduled→started·cancelled）= lib accToggle 五拍，文字 A→B
 // 挂 .s-in span（ghost 拍 color:transparent，白块随 span 宽）；REDUCED 全跳过功能不受影响。
 // 纯函数经 CJS 兼容出口供测试 createRequire 使用。
 var MC_SYS_PRIM = null;
@@ -102,13 +102,13 @@ const McSysCard = {
     let REDUCED = false;
     try { REDUCED = window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) {}
 
-    // 持值切换：props 变化不在提交拍直出，而是包进 accToggle 四拍（t100 白块遮盖的同时瞬变）；
+    // 持值切换：props 变化不在提交拍直出，而是包进 accToggle 五拍（t100 白块遮盖的同时瞬变）；
     // busy 期间到的新值直接落地（accToggle 防重入会吞 fn —— 不丢更新优先）；REDUCED 直出
     function mcSwap(el, apply) {
       if (REDUCED || !el || !el.isConnected || (el.dataset && el.dataset.busy)) { apply(); return; }
       accToggle(el, apply);
     }
-    // 折叠开合（卡头点击）：REDUCED/busy 直翻，否则四拍（几何变化发生在白块遮盖下）
+    // 折叠开合（卡头点击）：REDUCED/busy 直翻，否则五拍（几何变化发生在白块遮盖下）
     function mcFold(card, flip) {
       if (!card) { flip(); return; }
       if (REDUCED || (card.dataset && card.dataset.busy)) { flip(); return; }
@@ -164,7 +164,7 @@ const McSysCard = {
       var inRef = React.useRef(null);
       var v = React.useState(0), setV = v[1];
       React.useEffect(function () { st.current.mounted = true; return function () { st.current.mounted = false; }; }, []);
-      React.useEffect(function () { // 状态切换（验收六轮裁定）：压缩中→完成 文字换形走四拍
+      React.useEffect(function () { // 状态切换（验收六轮裁定）：压缩中→完成 文字换形走五拍
         var s = st.current;
         if (s.line === line) return;
         var apply = function () { s.line = line; if (s.mounted) setV(function (x) { return x + 1; }); };
@@ -222,7 +222,7 @@ const McSysCard = {
         try { if (dotRef.current && CLOCK && typeof CLOCK.syncAnim === 'function') CLOCK.syncAnim(dotRef.current, CLOCK.PULSE, '--pulse-delay'); } catch (e) {}
       }, []);
       var stateKey = parts.label + '/' + cur.retry + '/' + maximum;
-      React.useEffect(function () { // 状态切换：等待中→重试中/已重试/已取消 文字换形走四拍
+      React.useEffect(function () { // 状态切换：等待中→重试中/已重试/已取消 文字换形走五拍
         var prev = st.current.stateKey;
         st.current.stateKey = stateKey;
         if (prev === undefined) return; // 首挂不闪（历史存量卡）

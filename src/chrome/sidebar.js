@@ -165,7 +165,7 @@ const McSidebar = {
 
     // —— 真 DOM 标题栏：.mc-titlebar 插为 sidebarRoot 首子（React 容器内外来节点，
     //    MutationObserver 监听 childList 自愈重插；sidebarRoot 晚于 apply 出现时经
-    //    CLOCK 100ms 栅格轮询定位，上限 ~10s）。tclose = 折叠/展开：accToggle 四拍包裹
+    //    CLOCK 100ms 栅格轮询定位，上限 ~10s）。tclose = 折叠/展开：accToggle 五拍包裹
     //    官方隐藏钮的程序化 click（七轮裁定：状态切换统一走库；保官方行为与状态持久化）。 ——
     let stopped = false;
     let bar = null;

@@ -524,7 +524,7 @@ function McKitReasoningRun() {
     return function () { st.running = false; stopTimer(); };
   }, []);
 
-  // 点标题行：accToggle 四拍开合（照原型 accToggle 通道；与宿主 think 卡同款）
+  // 点标题行：accToggle 五拍开合（照原型 accToggle 通道；与宿主 think 卡同款）
   function accCard(card) {
     if (!card) return;
     accToggle(card, function () {

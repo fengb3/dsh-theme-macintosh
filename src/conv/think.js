@@ -53,7 +53,7 @@ const McThink = {
     '.mc-think:not(.open) .mc-think-body{height:0}',
     '.mc-think-body .mc-think-txt{padding:2px 9px 9px 26px;font:400 12px/1.8 var(--font-ui);color:var(--mc-muted);white-space:pre-wrap}',
     '.mc-think.run .mc-think-txt .mc-app-cover{color:transparent}',
-    /* 摘要行文字 A→B(验收七轮并拍改版):统一走 lib accToggle 四拍——
+    /* 摘要行文字 A→B(验收七轮并拍改版):统一走 lib accToggle 五拍——
        t0 旧字透明(.mc-ghost+color:transparent) → t100 白块盖+文本瞬换新字
        (mcfx::after 随 span 宽) → t200 同撤两类新字显现 → t300 滞空(周期余量) */
     '.mc-think-head .mc-think-sum .s-in{position:relative}',
@@ -91,12 +91,12 @@ const McThink = {
           var spanEl = sumRef.current;
           var swap = function () { s.sum = r.delta.replace(/\n/g, ' '); paint(); };
           if (spanEl) accToggle(spanEl, swap); else swap();
-          CLOCK.next(function () { // t200 揭盖:与摘要 accToggle 拍2(同撤 flash+ghost)同步
+          CLOCK.next(function () { // t300 揭盖:与摘要 accToggle 拍3(同撤 flash+ghost)同步(八轮五拍)
             var s6 = st.current; if (!s6.mounted) return;
             s6.pending = ''; paint();
-          }, 200);
+          }, 300);
         }
-        s.timer = CLOCK.next(tick, 700); // accToggle 四拍 400ms + 滞空 300ms(文本驻留可读)
+        s.timer = CLOCK.next(tick, 700); // accToggle 五拍 500ms + 滞空 200ms(文本驻留可读)
       }
       React.useEffect(function () {
         var s = st.current; s.mounted = true;

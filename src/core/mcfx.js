@@ -50,10 +50,12 @@ function flashOut(el, hide) {
   }, 100);
 }
 
-// 状态切换四拍（验收七轮改版：一切同内容状态切换统一走此——卡片折叠/展开、文字 A→B；
-// 由五拍并拍而来——原拍1(盖白块)与拍2(瞬变内容)合成一拍，观感更紧凑）：
-// t0 ghost(整卡透明) → t100 flash+清残高+fn(盖白块的同时瞬变被遮内容) →
-// t200 同撤 flash+ghost+mcfx(揭开且显回,一步到位) → t300 什么都不动(滞空拍,只清 busy)。
+// 状态切换五拍（八轮回退七轮并拍：并拍把「+flash」与「fn」合成一拍后，fn 内 React setState
+// 重渲染会重写元素 className（如 mc-think→mc-think open），把同拍刚挂的 mcfx/mc-flash 在
+// 浏览器绘制前一并擦掉——白遮罩从未显现（think/inject 卡开合白闪丢失的根因）；
+// 拆回五拍让白块独占一拍先绘制）：
+// t0 ghost(整卡透明) → t100 flash+清残高(白块绘制拍) → t200 fn(白块遮盖下瞬变被遮内容;
+// React 擦类=揭盖) → t300 同撤 flash+ghost+mcfx(对被擦过的元素幂等无害) → t400 滞空(只清 busy)。
 // dataset.busy 防重入；断连/异常路径也要清 busy，避免卡片永久卡死
 function accToggle(card, fn) {
   try {
@@ -68,16 +70,20 @@ function accToggle(card, fn) {
       if (!card || !card.isConnected) { done(); return; }
       card.classList.add('mc-flash');
       card.style.height = ''; // 清展开动画残留的 inline 高度
-      fn(); // 白块已全遮，被遮内容在此拍瞬变（可大可小）
-    } catch (e) { /* fn 抛错仍走完撤拍 */ }
+    } catch (e) { /* 异常仍走完后续拍 */ }
     mcfxSchedule(() => {
-      // 拍2：flash 与 ghost 同时撤（含 mcfx 连撤，元素零残留、内容一步显回）
       try {
-        if (card && card.isConnected) card.classList.remove('mc-flash', 'mc-ghost', 'mcfx');
-      } catch (e) { /* 同上 */ }
+        if (card && card.isConnected) fn(); // 白块已全遮一拍，被遮内容在此拍瞬变（可大可小）
+      } catch (e) { /* fn 抛错仍走撤拍 */ }
       mcfxSchedule(() => {
-        // 拍3：什么都不动（滞空拍，维持四拍栅格；只清 busy）
-        done();
+        // 拍3：flash 与 ghost 同时撤（含 mcfx 连撤，元素零残留、内容一步显回；幂等）
+        try {
+          if (card && card.isConnected) card.classList.remove('mc-flash', 'mc-ghost', 'mcfx');
+        } catch (e) { /* 同上 */ }
+        mcfxSchedule(() => {
+          // 拍4：什么都不动（滞空拍，维持五拍栅格；只清 busy）
+          done();
+        }, 100);
       }, 100);
     }, 100);
   }, 100);
