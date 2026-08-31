@@ -49,7 +49,7 @@ turnTailBar  '[data-turn-tail]'                                // stable(L9715-9
 
 - `McFlow.mount(ctx)` 起**单个 MutationObserver** 观察 flowColumn 子树(childList),`ctx.effect` teardown 时 disconnect。
 - **出场三拍**:新增 `[data-chat-flow-kind]` 行 → mcfx `flashIn` 语言(mc-ghost → mc-flash → 撤,各 100ms 全走 `CLOCK.next`);每拍前 `isConnected` 校验 + try/catch(React 重渲染可能抹 class——抹掉即静默失效,不重试)。
-- **循环动画相位同步**:映射表声明「锚 → 属性」对——thinkCard running 的 mc-pulse(覆写宿主 shimmer)、kindModelRetry 的 s-dot pulse、command running 的 mc-sweep → `CLOCK.syncAnim(el, PULSE|SWEEP, prop)` 注负延迟,多卡同相位。
+- **循环动画相位同步**:映射表声明「锚 → 属性」对——kindModelRetry 的 s-dot pulse、command running 的 mc-sweep → `CLOCK.syncAnim(el, PULSE|SWEEP, prop)` 注负延迟,多卡同相位(think 卡 run 态无卡面动画,见 §4 行 5)。
 - `prefers-reduced-motion: reduce`:JS 检测后跳过 ghost/flash 拍(直接 swap);CSS 侧全局 .01ms 压缩一期已备。
 - 浅色反转:mc-ghost/mc-flash 及浅色反白块复用一期 McTokens 定义,零新增。
 - 纪律:新 CSS 零 hover 零 transition(audit 管制);宿主自带的 transition(如 think 折叠)以 `transition:none` 压平保持硬切。
@@ -64,7 +64,7 @@ turnTailBar  '[data-turn-tail]'                                // stable(L9715-9
 | 2 | .md 正文 | kindAssistantStep 下钻 | 14px/1.8 ui 族;h1-h3 统一 display 600 17/15/14;行内 code=sel-bg 底+r-tag 角;pre(.md-code-block)=bg-deep+1px border-soft+r-card,横滚;code 块 banner(语言条+复制钮)→ surface-2 细条 + icon-btn sm 钳形;table 全格线 border-soft、th display 体 surface-2 底;blockquote 左 2px accent-dim、muted;a 染 accent |
 | 3 | 用户气泡 | userBubble(结构位) | accent 实底 + accent-ink 反白 + 1px border + radius 8(压官方 22px)+ ui 14/1.7;`--dsw-specific-bubble` 走变量通道;userGallery 图廓 1px 边+r-card;refChip sel-bg 小片;steering 同款,[data-pending-steering] 加 faint 虚线廓 |
 | 4 | context 注入条 | kindContext+ctxBody | surface-2 底 + **1px dashed** border-soft + r-card;折叠态单行 ellipsis 12px muted;15px faint 图标(§2 映射);展开体 12px muted 左缩进 |
-| 5 | reasoning think 卡 | thinkCard 双锚 | surface-3 底+1px 边+r-card;[data-state=running]=spark 9% 琥珀染 + 标题 spark 色;宿主 shimmer 覆写为 mc-pulse 三色硬切+负延迟;摘要行 faint 12px ellipsis;时长 mono 10px;折叠行为宿主 DisclosureRow 自理 |
+| 5 | reasoning think 卡 | thinkCard 双锚 | surface-3 底+1px 边+r-card;[data-state=running]=spark 9% 琥珀染 + 标题 spark 色(原型 run 态信号即此,**宿主 shimmer 移除、不加替代卡面动画**);摘要行 faint 12px ellipsis;时长 mono 10px;折叠行为宿主 DisclosureRow 自理 |
 | 6 | turn-tail | turnTailBar | 统计文本 11px mono faint;复制/分支钮容器→ icon-btn sm 钳形(不换宿主图标内容,只造壳) |
 | 7 | 细长条组 | kindModelRetry/TurnError/TurnMaxTokens | retry=s-dot 八角点 mc-pulse+muted 12px 文案;error=danger 文字+左 2px danger 线;max-tokens=spark 同款 |
 | 8 | 压缩条 | kindCompaction/ManualCompaction | inject 同款虚线条(i-px-copy)+ 可展开摘要体 12px muted |
