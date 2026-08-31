@@ -1,6 +1,6 @@
 # Macintosh 主题 · 二期 flow(会话流)模块 Implementation Plan
 
-> **续作状态(2026-08-31 下班存档)**:Task 1-10 全部完成并通过终审;用户验收一轮 5 项已修(5692331);**验收二轮 9 项待修**(修复波派发前用户下班取消)——清单见文末「验收二轮待办」,从那里恢复。本地 ledger 在 `.superpowers/sdd/2026-08-31-macintosh-theme-flow/progress.md`(git-ignored,不随库走,恢复时以本节为准)。
+> **续作状态(2026-09 复验)**:Task 1-10 全部完成并通过终审;用户验收一轮 5 项已修(5692331);**验收二轮 9 项已全部实现于 683b765**(存档 commit 同波落码+截图,存档段此前误记「未做」)并于复验通过——`npm test` 29/29 + audit 全绿,`tools/acc2-recheck.mjs` 活体断言全过(⑤ lead none/间距 17px、① i-doc 8×10 mask、⑦ 11px 像素三角+展开 rotate 90°、⑥ think/context 卡头四拍 mcfx/mc-ghost 命中且拍后零残留、⑧⑨③④② CSS 门控全命中),关键截图(⑤⑥⑦)视觉复核通过。剩余:finishing 菜单三选一(用户未选)。
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -388,9 +388,9 @@ if (typeof module !== 'undefined') module.exports = { MC_FLOW_ICONS: MC_FLOW_ICO
 
 ---
 
-## 验收二轮待办(2026-08-31,恢复点)
+## 验收二轮待办(2026-08-31)—— ✅ 2026-09 已全部完成并复验
 
-**状态**:spec §3/§4 修订已提交(开合四拍 + 摘要行 flash 入本期);9 项修复未做。**恢复动作 = 派单个实施子代理一次处理全部 9 项,逐项截图证据(教训:computed 断言不能替代视觉),修完走范围化复审 → finishing 菜单。**
+**状态**:9 项修复已全部实现于 683b765(与存档同 commit 落码,含 acc2-01~09 全套截图证据与 tools/acc2-check1~3.mjs 检查脚本);2026-09 复验:`npm test` 全绿 + `tools/acc2-recheck.mjs` 活体断言全过 + 关键截图视觉复核(复验截图已刷新入库)。原恢复动作(派单实施/复审)不再需要,直接进 finishing。
 
 1. **注入条图标**:instructions/notice/relay 换 sprite `#i-doc` 经典款(从 client.js McSprite 段提取 symbol 做 data-URI mask;现用 pixelarticons doc 与原型不符);catalog/snapshot/recall/compaction 保持。
 2. **think 摘要行 flash 白块未渲染**:`.mc-line-flash` 类出现但视觉无白块——live debug(疑 inline 定位/React 节点替换),修到截图可见(深白浅黑)。
