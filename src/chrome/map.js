@@ -107,10 +107,10 @@ const MC_MAP = {
   kindTurnMaxTokens: '[data-chat-flow-kind="turn-max-tokens"]',
   kindTurnTail: '[data-chat-flow-kind="turn-tail"]',
   kindUnknown: '[data-chat-flow-kind="unknown"]',
-  bubbleUser: ':is([data-chat-flow-kind="user"],[data-chat-flow-kind="steering"])>div>div', /* DRIFT-RISK: structural(哈希三件套 gdEzaW_*,L5332-5361) */
+  bubbleUser: ':is([data-chat-flow-kind="user"],[data-chat-flow-kind="steering"])>div>div>div>div', /* DRIFT-RISK: structural 四子级 flowItem>data-slot 包装>userRow>userStack>bubble;keyed slot 出口有 div[data-slot=…] 包装层(display:contents 不减选择器深度),结构位选择器须计入(裁定10;哈希三件套 gdEzaW_*,L5332-5361) */
   userGallery: '[data-align="end"] [data-variant]',            // stable(ATT L705-746)
   refChip: '[data-ref-chip]',                                 // stable(L5315-5324)
-  mdRoot: '[data-chat-flow-kind="assistant-step"] > div',      /* DRIFT-RISK: structural(Sxvs8a_*,L9461-9521) */
+  mdRoot: '[data-chat-flow-kind="assistant-step"] > div > div', /* DRIFT-RISK: structural;第一层 div 为 data-slot 包装层,原一层值命中包装层——当前无消费者,防未来误用(裁定10;Sxvs8a_*,L9461-9521) */
   thinkCard: '[data-variant="think"]',                        // stable;双锚 [data-state](L9389-9439)
   ctxBody: '[data-context-injection-body]',                   // stable(L4863-4907)
   turnTailBar: '[data-turn-tail]',                            // stable(L9715-9752)
