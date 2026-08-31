@@ -155,6 +155,7 @@ const rel = (f) => relative(ROOT, f).replace(/\\/g, '/');
   tokens.add('[data-context-form=');
   tokens.add('[data-state=');
   tokens.add('[aria-expanded='); // 验收④a:think 像素三角展开态前缀键(2026-08-31 收编,同 dataState 先例)
+  tokens.add('menuPortal'); // menu 段(2026-09-01):宿主菜单 portal 锚字面量,只允许出现在 map 段/McMenus 段注释
   let bad = [];
   for (const [f, t] of [...srcText, ...(distNoMap ? [[distFile, distNoMap]] : []), ...(clientNoMap ? [[clientFile, clientNoMap]] : [])]) {
     if (rel(f) === 'src/chrome/map.js') continue;

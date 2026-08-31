@@ -383,12 +383,14 @@ MC_MENU_WIRING.archive = function (w) { try { w.ctx.sessions.archive(currentSess
 
 ## 附录 A · 探针勘定记录（Task 1 回填）
 
+探针：`tools/probe-menus.mjs`（live DOM @127.0.0.1:3080）+ 部署源直读（map.js 探针先例）；host 版本 0.1.1-rc.1（@deepseek-ai/dsh package.json；GUI 页面 about 同源）。
+
 | 勘察项 | 结果 |
 |--------|------|
-| 宿主原生右键/dots 菜单 | （待填：有/无；portal 选择器；菜单项 label 列表） |
-| 菜单项动作触发方式 | （待填：data-*/click/服务名） |
-| ctx.sessions 方法面 | （待填：open/archive/rename/delete/… 实有清单） |
-| menu 相关 keyed 槽 | （待填：有(id)/无） |
+| 宿主原生右键/dots 菜单 | **有，仅 dots 左键**（无 contextmenu 右键——live 右键 .mc-sess 行 300ms 零新增节点）。原生菜单 = dsh-client-ui-primitives `Menu({portal:true})`：`createPortal(list, document.body)`，list 为 `div[role="menu"]` 定位浮层（fixed 内联 left/top + viewport clamp，primitives lib/index.js L1525-1704）→ portal 选择器勘定 `body > div[role="menu"]`。菜单项 = `button[role="menuitem"]`（selected 勾 IconCheck/danger 类，类名全哈希）。工作区行菜单 items：rename / delete(danger)（workspace lib L459-468）；会话行菜单 items：rename / fork / archive（L700-716）。live DOM 中官方树被 McFinder 遮蔽（priority:-1），无 treeitem——native 菜单仅遮蔽失败时出现 |
+| 菜单项动作触发方式 | **无 data-*/aria 动作编码**：Menu 项是受控 React 组件，`onClick → onSelect(entry.id)`（字符串 id：`rename`/`fork`/`archive`/`delete`），由 workspace 层回调分发：session → `onRename(id,title)/onFork(id)/onArchive(id)`（L764-769），workspace → `actions.rename()/actions.delete()`（L505-510）。dots 钮 = `button[aria-label$="的操作"]`（i18n，不可依赖）左键 toggle `menuOpen`。外部无法伪造 onSelect——接线只能走服务面（下行）或遮蔽自绘（Task 4/5 路线） |
+| ctx.sessions 方法面 | `sessions` 服务（dsh-client-runtime reflect.provide("sessions")，SessionRuntime）：`open(id)`、`openSubagent(addr)`、`create(opts)`→id、`fork({sessionId,atSeq?,increaseTitle?})`→childId、`scope(id)`、`binding(id)`（binding.session 有 `rename(title)` 异步方法，L7346）、`list`(snapshot store: ids/byId/current/phase)、`clear()`。**无 sessions.archive/delete**——归档在 `workspaces` 服务（WorkspaceRuntime）：`archiveSession(sessionId)`、`create(input)`、`rename(workspaceId,title)`、`delete(workspaceId)`（L9541-9570/L10036）。⚠ 两服务均需 inject 声明（现 inject 列表须加 `'@deepseek-ai/dsh-client-runtime'` 已有；workspaces 走 ctx.get 可选读取） |
+| menu 相关 keyed 槽 | **无**。dsh-client-ui-slots 注册表零 menu 槽位；workspace 侧仅 `sidebar.workspaces` / `sidebar.workspaces.directoryFlow` / `conversation.hero.workspace` 三键（lib L2434-2444）。Menu 原语完全内部受控（open/onSelect props），不可槽位注入 → 五菜单 Task 4 走自绘（McMenus 自有 .mc-menu 类零宿主锚），menuPortal/menuHostItem 仅作遮蔽失败时藏原生菜单的兜底样式通道 |
 
 ## Self-Review 结论
 

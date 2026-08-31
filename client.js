@@ -570,6 +570,14 @@ const MC_MAP = {
   deliverRoot: '.P4kPIW_root',   // DRIFT-RISK: build-hash class(dsh-client-ui-deliverables 产物行;无 data-* 稳定锚,宿主升级先复核)
   deliverFile: '.P4kPIW_file',   // DRIFT-RISK: 同上(文件名 chip 按钮;含 measure 探针 P4kPIW_probe 同类复用)
   deliverMore: '.P4kPIW_more',   // DRIFT-RISK: 同上("+N 个文件"溢出标签)
+  // —— menu 段(弹出菜单;探针 2026-09-01,host 0.1.1-rc.1——附录A)——
+  // 宿主原生菜单 = dsh-client-ui-primitives Menu(portal:true):createPortal(list,document.body),
+  // list 为 div[role="menu"] 定位浮层(position:fixed 内联 left/top,viewport 内 clamp;
+  // primitives lib/index.js L1525-1704)。项为 button[role="menuitem"],分隔线 div[role="separator"]。
+  // 触发 = 行内 dots 钮左键(workspace SessionNodeItem/ProjectRowItem 的 rowActions),无 contextmenu 右键。
+  // 主题在装时官方树被 McFinder 遮蔽,此组键是遮蔽失败时的兜底隐藏通道(Task 4 自绘兜底藏原生菜单)。
+  menuPortal: 'body > div[role="menu"]',            // 宿主菜单 portal 容器(createPortal 直挂 body;类名全哈希,role 语义锚 stable)
+  menuHostItem: 'body > div[role="menu"] [role="menuitem"]', // 宿主原生菜单项(button[role=menuitem];自绘兜底藏;stable)
 };
 
 
