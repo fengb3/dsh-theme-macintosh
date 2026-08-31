@@ -165,8 +165,8 @@ const McSidebar = {
 
     // —— 真 DOM 标题栏：.mc-titlebar 插为 sidebarRoot 首子（React 容器内外来节点，
     //    MutationObserver 监听 childList 自愈重插；sidebarRoot 晚于 apply 出现时经
-    //    CLOCK 100ms 栅格轮询定位，上限 ~10s）。tclose = 折叠/展开：flashIn 白闪包裹
-    //    官方隐藏钮的程序化 click（保官方行为与状态持久化）。 ——
+    //    CLOCK 100ms 栅格轮询定位，上限 ~10s）。tclose = 折叠/展开：accToggle 四拍包裹
+    //    官方隐藏钮的程序化 click（七轮裁定：状态切换统一走库；保官方行为与状态持久化）。 ——
     let stopped = false;
     let bar = null;
     let heal = null;
@@ -176,8 +176,8 @@ const McSidebar = {
       const btn = document.querySelector(MC_MAP.sidebarCollapseBtn);
       if (!btn) return;
       const col = document.querySelector(MC_MAP.sidebar);
-      // 折叠/展开过场：ghost 下瞬切宽度 → 白闪 → 撤（官方 300ms/150ms 过渡已压 0）
-      if (col) flashIn(col, function () { btn.click(); });
+      // 折叠/展开过场：ghost 下瞬切宽度 → 白块+瞬变 → 揭开（官方 300ms/150ms 过渡已压 0）
+      if (col) accToggle(col, function () { btn.click(); });
       else btn.click();
     };
     const build = function () {

@@ -50,9 +50,10 @@ function flashOut(el, hide) {
   }, 100);
 }
 
-// 状态切换五拍（验收六轮改版：一切同内容状态切换统一走此——卡片折叠/展开、文字 A→B）：
-// t0 ghost(整卡透明) → t100 flash(白块遮盖) → t200 清残高+fn(被遮内容在此拍瞬变,可大可小)
-// → t300 同时撤 flash+ghost+mcfx(揭开且显回,一步到位) → t400 什么都不动(纯滞空拍,只清 busy)。
+// 状态切换四拍（验收七轮改版：一切同内容状态切换统一走此——卡片折叠/展开、文字 A→B；
+// 由五拍并拍而来——原拍1(盖白块)与拍2(瞬变内容)合成一拍，观感更紧凑）：
+// t0 ghost(整卡透明) → t100 flash+清残高+fn(盖白块的同时瞬变被遮内容) →
+// t200 同撤 flash+ghost+mcfx(揭开且显回,一步到位) → t300 什么都不动(滞空拍,只清 busy)。
 // dataset.busy 防重入；断连/异常路径也要清 busy，避免卡片永久卡死
 function accToggle(card, fn) {
   try {
@@ -66,23 +67,17 @@ function accToggle(card, fn) {
     try {
       if (!card || !card.isConnected) { done(); return; }
       card.classList.add('mc-flash');
-    } catch (e) { done(); return; }
+      card.style.height = ''; // 清展开动画残留的 inline 高度
+      fn(); // 白块已全遮，被遮内容在此拍瞬变（可大可小）
+    } catch (e) { /* fn 抛错仍走完撤拍 */ }
     mcfxSchedule(() => {
+      // 拍2：flash 与 ghost 同时撤（含 mcfx 连撤，元素零残留、内容一步显回）
       try {
-        if (card && card.isConnected) {
-          card.style.height = ''; // 清展开动画残留的 inline 高度
-          fn();
-        }
-      } catch (e) { /* fn 抛错仍走完撤拍 */ }
+        if (card && card.isConnected) card.classList.remove('mc-flash', 'mc-ghost', 'mcfx');
+      } catch (e) { /* 同上 */ }
       mcfxSchedule(() => {
-        // 拍3：flash 与 ghost 同时撤（含 mcfx 连撤，元素零残留、内容一步显回）
-        try {
-          if (card && card.isConnected) card.classList.remove('mc-flash', 'mc-ghost', 'mcfx');
-        } catch (e) { /* 同上 */ }
-        mcfxSchedule(() => {
-          // 拍4：什么都不动（滞空拍，维持五拍栅格；只清 busy）
-          done();
-        }, 100);
+        // 拍3：什么都不动（滞空拍，维持四拍栅格；只清 busy）
+        done();
       }, 100);
     }, 100);
   }, 100);

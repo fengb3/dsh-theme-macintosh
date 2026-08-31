@@ -445,3 +445,13 @@ if (typeof module !== 'undefined') module.exports = { MC_FLOW_ICONS: MC_FLOW_ICO
 建议实施序:⑤①⑦⑨⑧③④ 纯样式先行,②⑥ 压轴(需 live 回合)。验证:每项截图 shots/acc2-*.png + `npm test` 全绿 + commit `fix(mcx-flow): 验收二轮九项…`。
 
 **其余未决(合并前)**:finishing 菜单三选一(本地合 main / PR / 保留分支)——用户尚未选。工具清理批(audit longhand/MO 批级 catch/teardown 三拍/脚本对照/make-persistent-client mods 缺 McFlow/dist 快照旧版)归待办 #11 一并议。
+
+## 验收七轮(2026-09)—— ✅ 系统卡四族真·重绘 + accToggle 并拍四拍 + sidebar 状态切换收编
+
+用户两项裁定:①「上下文压缩」「模型调用(=重试卡)」「上下文注入」三族卡不再是 CSS 套壳,走重绘流程;②accToggle 中间两拍合一(盖白块与瞬变内容同拍),五拍→四拍;sidebar 折叠面板(状态栏)状态切换一并收编 accToggle。
+
+1. **McSysCard(src/conv/syscard.js + client.js 镜像)**:遮蔽 `conversation.chat.node` 四 keyed 槽(context/compaction/manual-compaction/model-retry,priority:-1)——宿主卡整体替换为自有 DOM。注入条=表单图标(doc/list/copy/clock)+来源 label+notice 摘要,展开体=文本块连缀(20k 截断)+JsonBlock;压缩条=全空「正在压缩…」/双计数完成语/折叠体摘要 markdown;重试条=八角点 scheduled 脉冲(相位组件内 syncAnim)+倒计时 CLOCK 1s 递减+详情折叠。状态切换(压缩中→完成/重试 scheduled→started·cancelled)持值走 accToggle(busy 期间新值直落地不丢更新,mcSwap)。
+2. **accToggle 四拍(七轮并拍改版)**:t0 ghost → t100 flash+清残高+fn(白块遮下瞬变) → t200 同撤 flash+ghost+mcfx → t300 滞空只清 busy。think 摘要/正文揭盖拍随迁 t300→t200,周期 700ms 不变(四拍 400+滞空 300)。
+3. **sidebar 收编**:McFinder 会话行选中/分组折叠开合、tclose 整体折叠/展开,flashIn→accToggle(七轮裁定:状态切换统一走库);「展开其余 N」=元素出现仍 flashIn;树快照轻闪(flashOut→flashIn)保持。
+4. **flow.js 退役**:四 kind CSS 皮肤/:has 图标细分/leading 槽清理/T4 压缩图标位/卡头 click 委托(TOGGLE/onHeadClick/offClick)整体下岗;MC_MAP 11 死键删除;重试行相位同步移出观察器 SYNC(组件自管)。
+5. 测试 34/34+audit 绿(mcx 四拍断言改版;flow-mount 改七起零 click 监言/retry 行级三拍;新增 syscard.test.mjs 纯函数)。

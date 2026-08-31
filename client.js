@@ -298,9 +298,10 @@ function flashOut(el, hide) {
   }, 100);
 }
 
-// 状态切换五拍（验收六轮改版：一切同内容状态切换统一走此——卡片折叠/展开、文字 A→B、元素形 A→形 B）：
-// t0 ghost(整卡透明) → t100 flash(白块遮盖) → t200 清残高+fn(被遮内容在此拍瞬变,可大可小)
-// → t300 同时撤 flash+ghost+mcfx(揭开且显回,一步到位) → t400 什么都不动(纯滞空拍,只清 busy)。
+// 状态切换四拍（验收七轮改版：一切同内容状态切换统一走此——卡片折叠/展开、文字 A→B、元素形 A→形 B；
+// 由五拍并拍而来——原拍1(盖白块)与拍2(瞬变内容)合成一拍，观感更紧凑）：
+// t0 ghost(整卡透明) → t100 flash+清残高+fn(盖白块的同时瞬变被遮内容) →
+// t200 同撤 flash+ghost+mcfx(揭开且显回,一步到位) → t300 什么都不动(滞空拍,只清 busy)。
 // dataset.busy 防重入；断连/异常路径也要清 busy，避免卡片永久卡死
 function accToggle(card, fn) {
   try {
@@ -314,23 +315,17 @@ function accToggle(card, fn) {
     try {
       if (!card || !card.isConnected) { done(); return; }
       card.classList.add('mc-flash');
-    } catch (e) { done(); return; }
+      card.style.height = ''; // 清展开动画残留的 inline 高度
+      fn(); // 白块已全遮，被遮内容在此拍瞬变（可大可小）
+    } catch (e) { /* fn 抛错仍走完撤拍 */ }
     mcfxSchedule(function () {
+      // 拍2：flash 与 ghost 同时撤（含 mcfx 连撤，元素零残留、内容一步显回）
       try {
-        if (card && card.isConnected) {
-          card.style.height = ''; // 清展开动画残留的 inline 高度
-          fn();
-        }
-      } catch (e) { /* fn 抛错仍走完撤拍 */ }
+        if (card && card.isConnected) card.classList.remove('mc-flash', 'mc-ghost', 'mcfx');
+      } catch (e) { /* 同上 */ }
       mcfxSchedule(function () {
-        // 拍3：flash 与 ghost 同时撤（含 mcfx 连撤，元素零残留、内容一步显回）
-        try {
-          if (card && card.isConnected) card.classList.remove('mc-flash', 'mc-ghost', 'mcfx');
-        } catch (e) { /* 同上 */ }
-        mcfxSchedule(function () {
-          // 拍4：什么都不动（滞空拍，维持五拍栅格；只清 busy）
-          done();
-        }, 100);
+        // 拍3：什么都不动（滞空拍，维持四拍栅格；只清 busy）
+        done();
       }, 100);
     }, 100);
   }, 100);
@@ -816,7 +811,7 @@ const McSidebar = {
 
     // —— 真 DOM 标题栏：.mc-titlebar 插为 sidebarRoot 首子（React 容器内外来节点，
     //    MutationObserver 监听 childList 自愈重插；sidebarRoot 晚于 apply 出现时经
-    //    CLOCK 100ms 栅格轮询定位，上限 ~10s）。tclose = 折叠/展开：flashIn 白闪包裹
+    //    CLOCK 100ms 栅格轮询定位，上限 ~10s）。tclose = 折叠/展开：accToggle 四拍包裹
     //    官方隐藏钮的程序化 click（保官方行为与状态持久化）。 ——
     let stopped = false;
     let bar = null;
@@ -828,7 +823,7 @@ const McSidebar = {
       if (!btn) return;
       const col = document.querySelector(MC_MAP.sidebar);
       // 折叠/展开过场：ghost 下瞬切宽度 → 白闪 → 撤（官方 300ms/150ms 过渡已压 0）
-      if (col) flashIn(col, function () { btn.click(); });
+      if (col) accToggle(col, function () { btn.click(); });
       else btn.click();
     };
     const build = function () {
@@ -1053,7 +1048,7 @@ function McFinderMini(props) {
 }
 
 // 会话行：状态槽（run=脉冲点 / done=✓ / wait=空占位）+ 标题 + 三点菜单钮。
-// 选中行 .on 整行反色方角；onClick 走 flashIn 三拍（ghost→show→白闪→撤，100ms×2 走 CLOCK）。
+// 选中行 .on 整行反色方角；onClick 走 accToggle 四拍（七轮裁定：选中=状态切换统一走库；
 function McFinderSess(props) {
   const h = React.createElement;
   const s = props.sess;
@@ -1061,7 +1056,7 @@ function McFinderSess(props) {
   const cls = 'mc-sess' + (on ? ' on' : '') + (s.status === 'run' ? ' run' : '') + (s.xtra ? ' xtra' : '');
   const pick = function (e) {
     const row = e.currentTarget; // 事件对象即刻取 DOM（不依赖事件池生命周期）
-    flashIn(row, function () { props.onPick(s.id); }); // 选中态切换包进闪烁中拍
+    accToggle(row, function () { props.onPick(s.id); }); // 选中态切换包进白块遮盖中拍
   };
   let slot = null;
   if (s.status === 'run') slot = h('i', { className: 'mc-s-dot' });
@@ -1076,7 +1071,7 @@ function McFinderSess(props) {
 }
 
 // 工作区分组：group-head（折叠三角 i-tri + 文件夹 i-folder + 名称 + 计数 + dots/plus 小钮）+
-// group-body（会话行 + 超 5 条的「展开其余 N 个会话」钮）。折叠开合同走 flashIn 过场。
+// group-body（会话行 + 超 5 条的「展开其余 N 个会话」钮）。折叠开合走 accToggle 四拍
 function McFinderGroup(props) {
   const h = React.createElement;
   const g = props.group;
@@ -1085,7 +1080,7 @@ function McFinderGroup(props) {
   const xtraCount = g.sessions.filter(function (s) { return s.xtra; }).length;
   const toggle = function (e) {
     const grp = e.currentTarget.closest('.mc-group');
-    flashIn(grp, function () { props.onToggle(g.id); });
+    accToggle(grp, function () { props.onToggle(g.id); });
   };
   const ghBtn = function (title, icon) {
     return h('button', { className: 'mc-gh-btn', type: 'button', title: title, 'aria-label': title, 'data-mc-finder': '' },
@@ -1553,9 +1548,9 @@ const McThink = {
     '.mc-think:not(.open) .mc-think-body{height:0}',
     '.mc-think-body .mc-think-txt{padding:2px 9px 9px 26px;font:400 12px/1.8 var(--font-ui);color:var(--mc-muted);white-space:pre-wrap}',
     '.mc-think.run .mc-think-txt .mc-app-cover{color:transparent}',
-    /* 摘要行文字 A→B(验收六轮改版):统一走 lib accToggle 五拍——
-       t0 旧字透明(.mc-ghost+color:transparent) → t100 白块盖 → t200 文本瞬换新字
-       (mcfx::after 随 span 宽) → t300 同撤两类新字显现 → t400 滞空(周期余量) */
+    /* 摘要行文字 A→B(验收七轮并拍改版):统一走 lib accToggle 四拍——
+       t0 旧字透明(.mc-ghost+color:transparent) → t100 白块盖+文本瞬换新字
+       (mcfx::after 随 span 宽) → t200 同撤两类新字显现 → t300 滞空(周期余量) */
     '.mc-think-head .mc-think-sum .s-in{position:relative}',
     '.mc-think-head .mc-think-sum .s-in.mc-ghost{color:transparent}',
   ].join('\n'),
@@ -1591,12 +1586,12 @@ const McThink = {
           var spanEl = sumRef.current;
           var swap = function () { s.sum = r.delta.replace(/\n/g, ' '); paint(); };
           if (spanEl) accToggle(spanEl, swap); else swap();
-          CLOCK.next(function () { // t300 揭盖:与摘要 accToggle 拍3(同撤 flash+ghost)同步
+          CLOCK.next(function () { // t200 揭盖:与摘要 accToggle 拍2(同撤 flash+ghost)同步
             var s6 = st.current; if (!s6.mounted) return;
             s6.pending = ''; paint();
-          }, 300);
+          }, 200);
         }
-        s.timer = CLOCK.next(tick, 700); // accToggle 五拍 500ms + 滞空 200ms(文本驻留可读)
+        s.timer = CLOCK.next(tick, 700); // accToggle 四拍 400ms + 滞空 300ms(文本驻留可读)
       }
       React.useEffect(function () {
         var s = st.current; s.mounted = true;
@@ -1780,7 +1775,7 @@ const McThink = {
 // 'model-retry'（priority:-1 同 user/assistant-step 先例）——宿主卡整体替换为自有 DOM
 // （真·重绘，非 CSS 套壳）；primitives 缺席时不注册（宿主原生渲染兜底）。
 // 动效纪律（验收六轮改版沿用）：出场 = flowItem 行级 flashIn（McFlow 观察器供给）；折叠开合与
-// 状态切换（压缩中→已压缩 / 重试 scheduled→started·cancelled）= lib accToggle 五拍，文字 A→B
+// 状态切换（压缩中→已压缩 / 重试 scheduled→started·cancelled）= lib accToggle 四拍，文字 A→B
 // 挂 .s-in span（ghost 拍 color:transparent，白块随 span 宽）；REDUCED 全跳过功能不受影响。
 // 纯函数经 CJS 兼容出口供测试 createRequire 使用。
 var MC_SYS_PRIM = null;
@@ -1875,13 +1870,13 @@ const McSysCard = {
     let REDUCED = false;
     try { REDUCED = window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) {}
 
-    // 持值切换：props 变化不在提交拍直出，而是包进 accToggle 五拍（t200 被白块遮盖时瞬变）；
+    // 持值切换：props 变化不在提交拍直出，而是包进 accToggle 四拍（t100 白块遮盖的同时瞬变）；
     // busy 期间到的新值直接落地（accToggle 防重入会吞 fn —— 不丢更新优先）；REDUCED 直出
     function mcSwap(el, apply) {
       if (REDUCED || !el || !el.isConnected || (el.dataset && el.dataset.busy)) { apply(); return; }
       accToggle(el, apply);
     }
-    // 折叠开合（卡头点击）：REDUCED/busy 直翻，否则五拍（几何变化发生在白块遮盖下）
+    // 折叠开合（卡头点击）：REDUCED/busy 直翻，否则四拍（几何变化发生在白块遮盖下）
     function mcFold(card, flip) {
       if (!card) { flip(); return; }
       if (REDUCED || (card.dataset && card.dataset.busy)) { flip(); return; }
@@ -1937,7 +1932,7 @@ const McSysCard = {
       var inRef = React.useRef(null);
       var v = React.useState(0), setV = v[1];
       React.useEffect(function () { st.current.mounted = true; return function () { st.current.mounted = false; }; }, []);
-      React.useEffect(function () { // 状态切换（验收六轮裁定）：压缩中→完成 文字换形走五拍
+      React.useEffect(function () { // 状态切换（验收六轮裁定）：压缩中→完成 文字换形走四拍
         var s = st.current;
         if (s.line === line) return;
         var apply = function () { s.line = line; if (s.mounted) setV(function (x) { return x + 1; }); };
@@ -1995,7 +1990,7 @@ const McSysCard = {
         try { if (dotRef.current && CLOCK && typeof CLOCK.syncAnim === 'function') CLOCK.syncAnim(dotRef.current, CLOCK.PULSE, '--pulse-delay'); } catch (e) {}
       }, []);
       var stateKey = parts.label + '/' + cur.retry + '/' + maximum;
-      React.useEffect(function () { // 状态切换：等待中→重试中/已重试/已取消 文字换形走五拍
+      React.useEffect(function () { // 状态切换：等待中→重试中/已重试/已取消 文字换形走四拍
         var prev = st.current.stateKey;
         st.current.stateKey = stateKey;
         if (prev === undefined) return; // 首挂不闪（历史存量卡）

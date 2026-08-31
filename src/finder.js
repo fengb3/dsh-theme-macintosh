@@ -27,7 +27,8 @@ function McFinderMini(props) {
 }
 
 // 会话行：状态槽（run=脉冲点 / done=✓ / wait=空占位）+ 标题 + 三点菜单钮。
-// 选中行 .on 整行反色方角；onClick 走 flashIn 三拍（ghost→show→白闪→撤，100ms×2 走 CLOCK）。
+// 选中行 .on 整行反色方角；onClick 走 accToggle 四拍（七轮裁定：选中=状态切换统一走库；
+// t0 整行隐 → t100 白块+瞬切选中 → t200 揭开 → t300 滞空，走 CLOCK 100ms 栅格）。
 function McFinderSess(props) {
   const h = React.createElement;
   const s = props.sess;
@@ -35,7 +36,7 @@ function McFinderSess(props) {
   const cls = 'mc-sess' + (on ? ' on' : '') + (s.status === 'run' ? ' run' : '') + (s.xtra ? ' xtra' : '');
   const pick = function (e) {
     const row = e.currentTarget; // 事件对象即刻取 DOM（不依赖事件池生命周期）
-    flashIn(row, function () { props.onPick(s.id); }); // 选中态切换包进闪烁中拍
+    accToggle(row, function () { props.onPick(s.id); }); // 选中态切换包进白块遮盖中拍
   };
   let slot = null;
   if (s.status === 'run') slot = h('i', { className: 'mc-s-dot' });
@@ -50,7 +51,8 @@ function McFinderSess(props) {
 }
 
 // 工作区分组：group-head（折叠三角 i-tri + 文件夹 i-folder + 名称 + 计数 + dots/plus 小钮）+
-// group-body（会话行 + 超 5 条的「展开其余 N 个会话」钮）。折叠开合同走 flashIn 过场。
+// group-body（会话行 + 超 5 条的「展开其余 N 个会话」钮）。折叠开合走 accToggle 四拍
+// （七轮裁定：状态切换统一走库；「展开其余」=元素出现，仍走 flashIn）。
 function McFinderGroup(props) {
   const h = React.createElement;
   const g = props.group;
@@ -59,7 +61,7 @@ function McFinderGroup(props) {
   const xtraCount = g.sessions.filter(function (s) { return s.xtra; }).length;
   const toggle = function (e) {
     const grp = e.currentTarget.closest('.mc-group');
-    flashIn(grp, function () { props.onToggle(g.id); });
+    accToggle(grp, function () { props.onToggle(g.id); });
   };
   const ghBtn = function (title, icon) {
     return h('button', { className: 'mc-gh-btn', type: 'button', title: title, 'aria-label': title, 'data-mc-finder': '' },
