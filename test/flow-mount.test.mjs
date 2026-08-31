@@ -14,8 +14,11 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const req = createRequire(import.meta.url);
 const tmp = mkdtempSync(join(tmpdir(), 'mc-flowmount-'));
 // require 期 css IIFE 走 typeof MC_MAP 守卫返回 ''（此时 globalThis.MC_MAP 尚未注入）
+// 验收六轮改版:flow 不再手抄 cardToggle/enterFlash,自由引用 lib accToggle/flashIn——
+// 测试域照 client.js 拼接顺序前置 mcfx 源(其默认调度器闭包引用 CLOCK,桩注入后生效)
 const flowSrc = readFileSync(join(ROOT, 'src/conv/flow.js'), 'utf8');
-writeFileSync(join(tmp, 'flow-mount.cjs'), flowSrc + '\nmodule.exports.McFlow = McFlow;\n');
+const mcfxSrc = readFileSync(join(ROOT, 'src/core/mcfx.js'), 'utf8');
+writeFileSync(join(tmp, 'flow-mount.cjs'), mcfxSrc + '\n' + flowSrc + '\nmodule.exports.McFlow = McFlow;\n');
 const { McFlow, MC_FLOW_ICONS } = req(join(tmp, 'flow-mount.cjs'));
 
 // —— 假 CLOCK：next 入队 + flush 同步跑一拍；syncAnim 记录；clear 与真实现同语义（句柄闭包注销）——
@@ -152,15 +155,25 @@ test('mount 主线：轮询晚挂载→存量不闪→新行三拍(mcfx 同伴�
   mo.cb([{ addedNodes: [oldRow] }]);
   assert.equal(oldRow.classes.size, 0, 'attach 标记过的存量行不得加闪烁类（验证③）');
 
-  // 新 user 行：三拍 ghost → flash → 撤净（mcfx 同伴，拍2 连撤）
-  const userRow = new FakeElement({ attrs: { 'data-chat-flow-kind': 'user' } });
-  mo.cb([{ addedNodes: [userRow] }]);
-  assert.ok(userRow.classList.contains('mcfx') && userRow.classList.contains('mc-ghost'), '拍0：mcfx+mc-ghost');
+  // 新 assistant-step 行:三拍 ghost → flash → 撤净(mcfx 同伴,拍2 连撤)
+  const stepRow = new FakeElement({ attrs: { 'data-chat-flow-kind': 'assistant-step' } });
+  mo.cb([{ addedNodes: [stepRow] }]);
+  assert.ok(stepRow.classList.contains('mcfx') && stepRow.classList.contains('mc-ghost'), '拍0：mcfx+mc-ghost');
   clock.flush();
-  assert.ok(userRow.classList.contains('mc-flash') && !userRow.classList.contains('mc-ghost'), '拍1：换 mc-flash');
+  assert.ok(stepRow.classList.contains('mc-flash') && !stepRow.classList.contains('mc-ghost'), '拍1：换 mc-flash');
   clock.flush();
-  assert.equal(userRow.classes.size, 0, '拍2：mc-flash/mcfx 全撤净（零残留）');
+  assert.equal(stepRow.classes.size, 0, '拍2：mc-flash/mcfx 全撤净（零残留）');
   assert.equal(clock.pending(), 0);
+
+  // 验收六轮②:user/steering 行由 McUserNodeView 气泡自带 flashIn——观察器跳过整行闪
+  const FakeEl2 = class extends FakeElement {
+    getAttribute(n) { return this.attrs[n] !== undefined ? String(this.attrs[n]) : null; }
+  };
+  const userRow = new FakeEl2({ attrs: { 'data-chat-flow-kind': 'user' } });
+  const steerRow = new FakeEl2({ attrs: { 'data-chat-flow-kind': 'steering' } });
+  mo.cb([{ addedNodes: [userRow, steerRow] }]);
+  assert.equal(userRow.classes.size, 0, 'user 行不吃整行三拍');
+  assert.equal(steerRow.classes.size, 0, 'steering 行不吃整行三拍');
 
   // retry 行：SYNC[0] 负延迟注入（kindModelRetry）
   const retryRow = new FakeElement({ attrs: { 'data-chat-flow-kind': 'model-retry' } });
@@ -254,11 +267,12 @@ test('⑥ 主线:attach 对 flowColumn 注册捕获 click;三卡头命中即对�
   li.fn({ target: ctxRow }); // busy 期间重入
   clock.flush(); // 拍1(t100):+flash,ghost 保留
   assert.ok(ctxCard.classList.contains('mc-flash') && ctxCard.classList.contains('mc-ghost'), '拍1:白块遮盖,内容仍隐');
-  clock.flush(); // 拍2(t200):清残高(被遮内容瞬变拍)
-  clock.flush(); // 拍3(t300):撤 flash 揭开,ghost 保留
-  assert.ok(!ctxCard.classList.contains('mc-flash') && ctxCard.classList.contains('mc-ghost'), '拍3:块撤内容未显');
-  clock.flush(); // 拍4(t400):撤 ghost 显回 + 清 busy
-  assert.equal(ctxCard.classes.size, 0, '拍4:mc-flash/mc-ghost/mcfx 全撤净(零残留)');
+  clock.flush(); // 拍2(t200):清残高+fn(被遮内容瞬变拍)
+  clock.flush(); // 拍3(t300):flash+ghost+mcfx 同撤(揭开且显回,一步到位)
+  assert.equal(ctxCard.classes.size, 0, '拍3:mc-flash/mc-ghost/mcfx 同撤净(零残留)');
+  assert.equal(ctxCard.dataset.busy, '1', 'busy 未清(滞空拍守防重入)');
+  clock.flush(); // 拍4(t400):什么都不动,只清 busy
+  assert.equal(ctxCard.classes.size, 0, '拍4:滞空拍零类操作');
   assert.notEqual(ctxCard.dataset.busy, '1', 'busy 清除');
   assert.equal(clock.pending(), 0);
 

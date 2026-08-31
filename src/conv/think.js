@@ -30,6 +30,12 @@ const McThink = {
     '.mc-amd-root{flex-direction:column;display:flex}',
     '.mc-amd-body{flex-direction:column;gap:16px;display:flex}',
     '.mc-amd-stopped{align-self:flex-start;padding:0 6px;font-size:11px;line-height:18px;border-radius:var(--mc-r-btn);background:var(--mc-surface-2);color:var(--mc-muted)}',
+    /* 用户/steering 行重写(验收六轮):原型 .msg.user .bubble L316-321 语汇;右对齐纵栈 */
+    '.mc-user-row{display:flex;flex-direction:column;align-items:flex-end;gap:6px;max-width:100%}',
+    '.mc-user-bubble{max-width:520px;padding:7px 12px;background:var(--mc-accent);color:var(--mc-accent-ink);border:1px solid var(--mc-border);border-radius:8px;font:400 14px/1.7 var(--font-ui);white-space:pre-wrap;word-break:break-word;text-align:left}',
+    '.mc-user-chip{border:1px solid var(--mc-border);border-radius:var(--mc-r-tag);padding:0 4px;background:var(--mc-accent-strong);font:500 12px var(--font-mono)}',
+    '.mc-user-attach{max-width:360px;display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap}',
+    '.mc-user-ref{font:400 12px/1.6 var(--font-ui);color:var(--mc-muted)}',
     /* 原型 .reasoning 段(interactive L339-366)平移,.mc-think 前缀 */
     '.mc-think{background:var(--mc-surface-3);border:1px solid var(--mc-border);border-radius:var(--mc-r-card);overflow:hidden}',
     '.mc-think.run{background:color-mix(in oklab,var(--mc-spark) 9%,var(--mc-surface-3))}',
@@ -42,13 +48,11 @@ const McThink = {
     '.mc-think:not(.open) .mc-think-body{height:0}',
     '.mc-think-body .mc-think-txt{padding:2px 9px 9px 26px;font:400 12px/1.8 var(--font-ui);color:var(--mc-muted);white-space:pre-wrap}',
     '.mc-think.run .mc-think-txt .mc-app-cover{color:transparent}',
-    /* 摘要行五阶段节拍(验收五轮):A .mcut 旧字全透明 → B .flash 白块盖 → C 文本瞬换新字
-       (span 宽即块宽,白块随新字变宽) → D 撤两类新字显现 → E 滞空一拍 */
+    /* 摘要行文字 A→B(验收六轮改版):统一走 lib accToggle 五拍——
+       t0 旧字透明(.mc-ghost+color:transparent) → t100 白块盖 → t200 文本瞬换新字
+       (mcfx::after 随 span 宽) → t300 同撤两类新字显现 → t400 滞空(周期余量) */
     '.mc-think-head .mc-think-sum .s-in{position:relative}',
-    '.mc-think-head .mc-think-sum .s-in.mcut{color:transparent}',
-    '.mc-think-head .mc-think-sum .s-in::after{content:\'\';position:absolute;inset:-1px -2px;opacity:0;pointer-events:none;background:#fff;background-image:repeating-linear-gradient(0deg,transparent 0 2px,rgba(0,0,0,.06) 2px 3px)}',
-    '.mc-think-head .mc-think-sum .s-in.flash::after{opacity:1}',
-    'html[data-theme="light"] .mc-think-head .mc-think-sum .s-in::after{background:#000;background-image:repeating-linear-gradient(0deg,transparent 0 2px,rgba(255,255,255,.07) 2px 3px)}',
+    '.mc-think-head .mc-think-sum .s-in.mc-ghost{color:transparent}',
   ].join('\n'),
   slots(ctx) {
     if (!MC_PRIM || typeof React === 'undefined') return; // primitives 缺席:不遮蔽,宿主原生渲染兜底
@@ -59,14 +63,14 @@ const McThink = {
     const JsonBlock = MC_PRIM.JsonBlock;
 
     /* —— McThinkCard:缓冲积攒 + 周期吐出(原型 showThinking 状态机) ——
-       摘要行五阶段节拍(验收五轮,用户逐拍定义;每拍 100ms,500ms 一循环):
-       A 旧字全透明(color:transparent,.mcut) → B 白块盖住(.flash) → C 文本瞬换新字
-       (span 宽即块宽,白块随新字变宽) → D 撤透明撤块(新字显现) → E 滞空一拍 */
+       摘要文字 A→B 与 running→完成 换形统一走 lib accToggle(验收六轮改版):
+       t0 旧字/旧形透明 → t100 白块盖 → t200 瞬换 → t300 同撤两类 → t400 滞空 */
     function McThinkCard(props) {
       var text = props.text || '', running = !!props.running;
-      var st = React.useRef({ committed: '', pending: '', sum: '', ghost: false, block: false, open: false, timer: null, mounted: true });
+      var st = React.useRef({ committed: '', pending: '', sum: '', open: false, timer: null, mounted: true, wasRunning: false });
       st.current.text = text;
       var cardRef = React.useRef(null);
+      var sumRef = React.useRef(null);
       var version = React.useState(0), setV = version[1];
       function paint() { setV(function (x) { return x + 1; }); }
       function tick() {
@@ -76,26 +80,16 @@ const McThink = {
         if (r.delta) {
           s.committed = r.shown;
           s.pending = r.delta;
-          s.ghost = true;                                   /* A:旧字全透明 */
-          paint();
-          CLOCK.next(function () {                          /* B:白块盖住 */
-            var s2 = st.current; if (!s2.mounted) return;
-            s2.block = true; paint();
-            CLOCK.next(function () {                        /* C:换新字(块随新字宽) */
-              var s3 = st.current; if (!s3.mounted) return;
-              s3.sum = r.delta.replace(/\n/g, ' '); paint();
-              CLOCK.next(function () {                      /* D:撤透明撤块,新字显现 */
-                var s4 = st.current; if (!s4.mounted) return;
-                s4.ghost = false; s4.block = false; paint();
-                CLOCK.next(function () {                    /* E:滞空一拍 */
-                  var s5 = st.current; if (!s5.mounted) return;
-                  s5.pending = ''; paint();
-                }, 100);
-              }, 100);
-            }, 100);
-          }, 100);
+          var spanEl = sumRef.current;
+          var swap = function () { s.sum = r.delta.replace(/\n/g, ' '); paint(); };
+          if (spanEl) accToggle(spanEl, swap); else swap();
+          // 旧 E 拍残留语义:积攒尾遮罩(mc-app-cover)在五拍走完后撤
+          CLOCK.next(function () {
+            var s6 = st.current; if (!s6.mounted) return;
+            s6.pending = ''; paint();
+          }, 500);
         }
-        s.timer = CLOCK.next(tick, 500); // A+B+C+D+E = 500ms 一循环
+        s.timer = CLOCK.next(tick, 700); // accToggle 五拍 500ms + 滞空 200ms(文本驻留可读)
       }
       React.useEffect(function () {
         var s = st.current; s.mounted = true;
@@ -103,14 +97,20 @@ const McThink = {
       }, []);
       React.useEffect(function () {
         var s = st.current;
+        var wasRunning = s.wasRunning; s.wasRunning = running;
         s.running = running;
         if (running) {
           if (!s.timer) s.timer = CLOCK.next(tick, 200);
         } else {
           if (s.timer) { try { CLOCK.clear(s.timer); } catch (e) {} s.timer = null; }
-          s.committed = text; s.pending = ''; s.ghost = false; s.block = false;
-          s.sum = text ? (text.length > 26 ? text.slice(0, 26) + '…' : text) : '';
-          paint();
+          // 六轮改版:running→完成 属「形 A→形 B」状态切换,统一走 accToggle(白块盖住期间定格);
+          // 历史存量卡首挂不闪
+          var settle = function () {
+            s.committed = text; s.pending = ''; s.sum = text ? (text.length > 26 ? text.slice(0, 26) + '…' : text) : '';
+            paint();
+          };
+          if (wasRunning && cardRef.current) accToggle(cardRef.current, settle);
+          else settle();
         }
       }, [running]);
       function toggleCard() {
@@ -118,13 +118,12 @@ const McThink = {
         accToggle(card, function () { st.current.open = !st.current.open; paint(); });
       }
       var s = st.current;
-      var sInCls = 's-in' + (s.ghost ? ' mcut' : '') + (s.block ? ' flash' : '');
       return h('div', { className: 'mc-think' + (running ? ' run' : '') + (s.open ? ' open' : ''), ref: cardRef },
         h('button', { className: 'mc-think-head', type: 'button', onClick: toggleCard },
           h('svg', { className: 'mc-tri' + (s.open ? ' open' : ''), 'aria-hidden': true }, h('use', { href: '#i-tri' })),
           h('span', { className: 'mc-think-tag' }, 'Think'),
           h('span', { className: 'mc-think-sum' },
-            h('span', { className: sInCls }, running ? (s.sum || '正在思考…') : s.sum)),
+            h('span', { className: 's-in', ref: sumRef }, running ? (s.sum || '正在思考…') : s.sum)),
           h('span', { className: 'mc-think-dur' }, running ? 'streaming' : '')),
         h('div', { className: 'mc-think-body' },
           h('div', { className: 'mc-think-txt' }, s.committed,
@@ -184,5 +183,79 @@ const McThink = {
       priority: -1,
       registrant: 'macintosh',
     }, McAssistantNodeView)));
+
+    /* —— McUserNodeView:用户/steering 行重写(验收六轮)——
+       官方 UserMessageNodeView(L5393-5408)平移:content 块拆 text/images/rest;气泡为
+       自有 .mc-user-bubble(原型 .msg.user .bubble L318-321 语汇),出场走 lib flashIn
+       挂在气泡自身——白块=inset:0=气泡面积,不再整行铺白(此前观察器挂 flowItem 之弊);
+       @引用//命令 chip 为自有 .mc-user-chip 类(audit §5 安全)。 */
+    function mcProjectUserText(h, MessageText, text, referenceLabels) {
+      var ranges = [];
+      var labels = [];
+      try { labels = Array.from(new Set(referenceLabels || [])).sort(function (a, b) { return b.length - a.length; }); } catch (e) {}
+      for (var li = 0; li < labels.length; li++) {
+        var lab = '@' + labels[li], st2 = text.indexOf(lab);
+        while (st2 >= 0) { ranges.push({ start: st2, end: st2 + lab.length, label: lab, kind: 'session' }); st2 = text.indexOf(lab, st2 + lab.length); }
+      }
+      var re = /(^|\s)(\/[\w-]+|@"[^"\n]+"|@[^\s]+)/gu, m;
+      while ((m = re.exec(text)) !== null) {
+        var ts = m.index + (m[1] ? m[1].length : 0);
+        var raw = m[2] || '';
+        var lab2 = raw.indexOf('@"') === 0 ? raw : raw.replace(/[.,;:!?，。；：！？]+$/gu, '');
+        if (lab2.length <= 1) continue;
+        ranges.push({ start: ts, end: ts + lab2.length, label: lab2, kind: 'plain' });
+      }
+      ranges.sort(function (a, b) { return a.start - b.start || (a.kind === b.kind ? b.end - a.end : a.kind === 'session' ? -1 : 1); });
+      var parts = [], cur = 0;
+      for (var i = 0; i < ranges.length; i++) {
+        var r = ranges[i];
+        if (r.start < cur) continue;
+        var kind = r.kind === 'session' ? 'session' : r.label.indexOf('@') === 0 ? (r.label.slice(-1) === '/' ? 'folder' : 'file') : 'skill';
+        if (r.start > cur) parts.push(h(MessageText, { key: 't' + cur, text: text.slice(cur, r.start) }));
+        parts.push(h('span', { key: 'c' + r.start, className: 'mc-user-chip', title: r.label }, r.label));
+        cur = r.end;
+      }
+      if (!parts.length) return h(MessageText, { text: text });
+      if (cur < text.length) parts.push(h(MessageText, { key: 't' + cur, text: text.slice(cur) }));
+      return h(React.Fragment, null, parts);
+    }
+    function McUserNodeView(props) {
+      var node = props.node, data = (node && node.data) || {};
+      var renderMessageImages = props.renderMessageImages;
+      var MessageText = MC_PRIM.MessageText;
+      var texts = [], images = [], rest = [];
+      var content = data.content || [];
+      for (var i = 0; i < content.length; i++) {
+        var b = content[i];
+        if (b && b.type === 'text' && typeof b.text === 'string') texts.push(b.text);
+        else if (b && b.type === 'image' && b.attachment !== undefined) images.push({ attachment: b.attachment });
+        else rest.push(b);
+      }
+      var text = texts.join('');
+      var bubbleRef = React.useRef(null);
+      React.useEffect(function () { // 出场:气泡自身三拍(ghost→白块→显现),白块面积=气泡
+        var el = bubbleRef.current;
+        if (el) flashIn(el, function () {});
+      }, []);
+      var refs = data.referenceLabels;
+      return h('div', { className: 'mc-user-row' },
+        images.length ? h('div', { className: 'mc-user-attach' }, renderMessageImages({ images: images, align: 'end' })) : null,
+        (text !== '' || rest.length) ? h('div', { className: 'mc-user-bubble', ref: bubbleRef },
+          mcProjectUserText(h, MessageText, text, refs),
+          rest.map(function (b2, j) { return h(JsonBlock, { key: 'r' + j, label: 'extra', payload: b2 }); })) : null,
+        refs && refs.length ? h('div', { className: 'mc-user-ref' }, '引用 · ' + refs.join(' · ')) : null);
+    }
+    ctx.effect(() => S.inject('conversation.chat.node', () => S.register({
+      name: 'conversation.chat.node',
+      key: 'user',
+      priority: -1,
+      registrant: 'macintosh',
+    }, McUserNodeView)));
+    ctx.effect(() => S.inject('conversation.chat.node', () => S.register({
+      name: 'conversation.chat.node',
+      key: 'steering',
+      priority: -1,
+      registrant: 'macintosh',
+    }, McUserNodeView)));
   },
 };

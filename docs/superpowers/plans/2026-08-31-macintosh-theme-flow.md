@@ -413,6 +413,19 @@ if (typeof module !== 'undefined') module.exports = { MC_FLOW_ICONS: MC_FLOW_ICO
 5. **退役清单**:宿主 ReasoningRow 全部覆写(thinkCard 段 CSS、MC_FLOW_ICON_TRI、thinkStream/thinkBodyStream 观察器、thinkCard/thinkSummary/ariaExpanded 三 MC_MAP 键、TOGGLE think 表项);MO 撤 characterData。
 6. 测试 31/31(think.test.mjs×5 新增)+audit 绿;证据 shots/acc4-*(01 存量渲染/02 展开/03 flash 帧)+ tools/acc4-check.mjs;教训入笔记 §8.6。
 
+## 验收六轮(2026-09)—— ✅ 闪烁库统一:三函数 + accToggle 新五拍
+
+用户裁定库只留三函数:**flashIn=出现 / flashOut=消失 / accToggle=一切状态切换**(卡片折叠展开、文字 A→B、元素形 A→形 B);accToggle 五拍改为 t0 ghost → t100 flash → t200 fn → **t300 同撤 flash+ghost+mcfx(一步显回)** → **t400 什么都不动(滞空拍,只清 busy)**。
+
+- 手抄变体收编:flow 的 `cardToggle`/`enterFlash` 删除,改调库 `accToggle`/`flashIn`;`enterFlash=flashIn(el,noop)`。
+- McThinkCard 摘要 A→B 改走 accToggle(s-in span,`.s-in.mc-ghost{color:transparent}` 替代私有 .mcut/.flash 两套 CSS,白块复用 .mcfx::after);tick 五连拍状态机删除,周期 700ms=五拍 500+滞空 200。
+- running→完成换形由 flashOut 改走 accToggle(六轮③④合一)。
+- 修 flashOut/flashIn 不撤 mcfx 的残留 bug(终态 cls='mc-think' 零残留)。
+- 测试:mcfx 五拍断言改版;flow-mount 前置 mcfx 源同 client.js 拼接顺序;修「user 行三拍」盲区(FakeElement 无 getAttribute 致 skip 永不触发,补 user/steering 跳过断言)。31/31+audit 绿。
+- acc6 活体:①可见 19 拍 vs 被遮 10(每周期 ~750ms 驻留 vs 500ms 遮盖) ②气泡闪整行不闪(546×80 vs 748) ③收尾 accToggle 闪到+零残留。证据 tools/acc6-check.mjs(①③须并发采样:顺序两段会扑空;长思考提示词)。
+
+其余六轮遗留:①用户复验(视觉为准)。
+
 ## 验收五轮(2026-09)—— ✅ 摘要行五阶段节拍
 
 用户逐拍定义摘要切换:A 旧字全透明 → B 白块盖住 → C 文本瞬换新字(白块随新字变宽) → D 撤块新字显现 → E 滞空一拍;每拍 100ms、500ms 循环,直至流式结束全文吐尽。已落地于 McThinkCard tick(s.ghost/s.block 双状态 + CLOCK 五连拍,CSS 增 .s-in.mcut{color:transparent});live 采样序列 `-, mcut, mcut+flash(旧字), mcut+flash(新字/块宽 610→629 变化), -` 逐拍对应;测试 31/31+audit 绿;证据 tools/acc5-check.mjs 状态序列。

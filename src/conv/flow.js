@@ -62,7 +62,7 @@ var McFlow = {
       MC_MAP.bubbleUser + '{color:var(--mc-accent-ink);border:1px solid var(--mc-border);border-radius:8px;padding:7px 12px;font:400 14px/1.7 var(--font-ui)}',
       MC_MAP.bubbleUser + ':active{border-color:var(--mc-fg)}',
       MC_MAP.userGallery + '{border:1px solid var(--mc-border);border-radius:var(--mc-r-card)}',
-      MC_MAP.refChip + '{background:var(--mc-sel-bg);border-radius:var(--mc-r-tag);padding:0 4px;font:500 12px var(--font-mono)}',
+      // 验收六轮:refChip 宿主 chip 覆写随用户行重写退役(McUserNodeView 自有 .mc-user-chip)
       MC_MAP.pendingSteering + '{outline:1px dashed var(--mc-faint);outline-offset:2px;border-radius:8px}',
       // §7:注入条(context + 双 compaction 同款;kind 行即条壳)
       // 验收③:行改 align-items:center、图标位去 margin-top(宿主行高下 flex-start+1px 不居中);
@@ -157,40 +157,11 @@ var McFlow = {
       [MC_MAP.kindModelRetry + ' summary', MC_MAP.kindModelRetry],
       [':is(' + MC_MAP.kindCompaction + ',' + MC_MAP.kindManualCompaction + ') button', ':is(' + MC_MAP.kindCompaction + ',' + MC_MAP.kindManualCompaction + ')'],
     ];
+    // 验收六轮改版:手抄变体全部收编回库——开合走 lib accToggle、新行入场走 lib flashIn,
+    // 协议唯一定义在 src/core/mcfx.js(t0 ghost→t100 flash→t200 fn→t300 同撤 flash+ghost→t400 滞空)。
+    // 宿主卡 fn=空转+清残高——宿主 React 在捕获拍后自行瞬切,几何变化发生在白块遮盖下
     var mo = null, tries = 0, timer = null, offClick = null;
     var seen = new WeakSet();
-    // 通用开合五拍(验收三轮⑥:与 lib accToggle / 原型 L1290-1303 逐拍同款协议;
-    // 宿主卡 fn=空转+清残高——宿主 React 在捕获拍后自行瞬切,几何变化发生在白块遮盖下):
-    // t0 ghost → t100 flash → t200 清残高(被遮内容瞬变拍) → t300 撤 flash → t400 撤 ghost+清 busy。
-    // 未来一切宿主/自有元素的显示/隐藏/换形/换内容动画均应走本协议(lib: accToggle/flashIn/flashOut)
-    function cardToggle(card, fn) {
-      try {
-        if (!card || !card.isConnected) return;
-        if (card.dataset.busy) return; // 防重入(同 accToggle 协议)
-        card.dataset.busy = '1';
-        card.classList.add('mcfx', 'mc-ghost');
-      } catch (e) { return; }
-      var done = function () { try { delete card.dataset.busy; } catch (e2) {} };
-      CLOCK.next(function () { try {
-        if (!card.isConnected) { done(); return; }
-        card.classList.add('mc-flash');
-      } catch (e) { done(); return; }
-        CLOCK.next(function () { try {
-          if (!card.isConnected) { /* 仍走完撤拍 */ }
-          try { card.style.height = ''; } catch (e2) {} // 清展开残高(宿主卡无 inline 高亦无害)
-          if (fn) { try { fn(); } catch (e3) {} }
-        } catch (e) { /* 仍走完撤拍 */ }
-          CLOCK.next(function () {
-            try { if (card.isConnected) card.classList.remove('mc-flash'); } catch (e) {}
-            CLOCK.next(function () {
-              // 拍4:内容显回;mcfx 连撤——宿主行零残留(position:relative 不长留)
-              try { if (card.isConnected) card.classList.remove('mc-ghost', 'mcfx'); } catch (e) {}
-              done();
-            }, 100);
-          }, 100);
-        }, 100);
-      }, 100);
-    }
     function syncEl(el) {
       for (var i = 0; i < SYNC.length; i++) { try {
         if (el.matches(SYNC[i][0])) CLOCK.syncAnim(el, SYNC[i][2], SYNC[i][1]);
@@ -198,16 +169,8 @@ var McFlow = {
         for (var j = 0; j < qs.length; j++) CLOCK.syncAnim(qs[j], SYNC[i][2], SYNC[i][1]);
       } catch (e) {} }
     }
-    function enterFlash(el) { // 三拍：ghost→flash→撤（无 show 回调变体）。
-      // mcfx 同伴类必挂（css 为组合选择器 .mcfx.mc-ghost/.mcfx.mc-flash，照一期 flashIn 协议），
-      // 拍2 连 mcfx 一并撤净——流上零残留（position:relative 不长留宿主行）
-      try { el.classList.add('mcfx', 'mc-ghost'); } catch (e) { return; }
-      CLOCK.next(function () { try {
-        if (!el.isConnected) return;
-        el.classList.remove('mc-ghost'); el.classList.add('mc-flash');
-        CLOCK.next(function () { try { el.classList.remove('mc-flash', 'mcfx'); } catch (e) {} }, 100);
-      } catch (e) {} }, 100);
-    }
+    // 验收六轮:enterFlash 收编为 lib flashIn 空回调(show 在 ghost 遮罩下空转,拍3 撤净含 mcfx)
+    function enterFlash(el) { flashIn(el, function () {}); }
     // 验收四轮:think 摘要/正文观察器(thinkStream/thinkBodyStream)随宿主 ReasoningRow 覆写
     // 一并退役——think 卡由 McThink 组件整体重写(缓冲积攒+周期吐出),不再需要 DOM 干预
     function enter(node) {
@@ -220,7 +183,10 @@ var McFlow = {
         var it = items[i];
         if (seen.has(it)) continue; seen.add(it);
         syncEl(it);
-        if (!REDUCED) enterFlash(it);
+        // 验收六轮:user/steering 行由 McUserNodeView 气泡自带 flashIn 出场——
+        // flowItem 级整行白块(铺满左右)不再适用,跳过
+        var mk = null; try { mk = it.getAttribute('data-chat-flow-kind'); } catch (e) {}
+        if (!REDUCED && mk !== 'user' && mk !== 'steering') enterFlash(it);
       }
     }
     function onHeadClick(ev) { // 验收二轮⑥:卡头捕获委托(见 TOGGLE 表注释;think 卡已由
@@ -235,7 +201,7 @@ var McFlow = {
           if (!head) continue;
           var card = null;
           try { card = head.closest(TOGGLE[i][1]); } catch (e) { card = null; }
-          if (card) cardToggle(card);
+          if (card) accToggle(card, function () {});
           break; // 卡头互不嵌套,单命中即止
         }
       } catch (e) { /* 委托失败不影响宿主自身开合 */ }
