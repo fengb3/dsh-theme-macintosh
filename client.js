@@ -568,6 +568,9 @@ const MC_MAP = {
   statusRow: '[role="status"]',                // stable(TurnStatus 宿主状态行；使用时限定 flowColumn 内，spec §4 行10)
   commandCard: '[data-variant="others"]',      // stable(command 卡壳锚，spec §4 行9「[data-variant="others"][data-state]」)
   dataState: '[data-state=',                   // 属性前缀键（任意取值形态；think 双锚第二锚 / command 三态）
+  // —— 用户验收五项收编（2026-08-31 live 探测，host 0.1.1-rc.2）——
+  thinkSummary: '[data-follow-end]',           // stable(running think 卡折叠摘要 span，disclosure 行内直接子；单行 flash 定位锚，spec §4 行5 修订)
+  ariaExpanded: '[aria-expanded=',             // 属性前缀键（宿主折叠行展开态；think 像素三角 rotate 用）
 };
 
 
@@ -1310,28 +1313,39 @@ var McFlow = {
       F + ' blockquote{margin:8px 0;padding:2px 12px;color:var(--mc-muted);border-left:2px solid var(--mc-accent-dim)}',
       F + ' a{color:var(--mc-accent)}',
       F + ' input[type="checkbox"]{accent-color:var(--mc-accent)}',
-      // 宿主代码块包装(.md-code-block 全局稳定类;banner=首子 div:语言条+复制钮)
+      // 宿主代码块包装(.md-code-block 全局稳定类)。banner 重样式(验收② 2026-08-31 live 探明):
+      // 首子 bannerWrap div 内还有一层 _banner 哈希壳(自带 tab 底/9px 粗 padding/12px 顶圆角 =
+      // 宿主 tab 感来源)→ display:contents 让位;bannerWrap 直接作 22px 细条:surface-2 底 +
+      // 底部 1px border-soft 分隔,infostring 语言名(mono 11 muted)左置,action 复制钮
+      // (18×18 方钮+像素 copy 图标,「复制」文字 font-size:0 藏但 AT 可读)margin-left:auto 右置
       F + ' .md-code-block{background:var(--mc-bg-deep);border:1px solid var(--mc-border-soft);border-radius:var(--mc-r-card);overflow:hidden}',
       F + ' .md-code-block pre{margin:0;border:none;border-radius:0}',
-      F + ' .md-code-block>div:first-child{display:flex;align-items:center;gap:8px;padding:4px 10px;background:var(--mc-surface-2);border-bottom:1px solid var(--mc-border-soft);font:500 11px/1.4 var(--font-mono);color:var(--mc-muted)}',
-      F + ' .md-code-block>div:first-child button{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border:1px solid var(--mc-border);border-radius:var(--mc-r-btn);background:var(--mc-surface);color:var(--mc-fg)}',
+      F + ' .md-code-block>div:first-child{display:flex;align-items:center;gap:8px;box-sizing:border-box;height:22px;padding:0 10px;background:var(--mc-surface-2);border-bottom:1px solid var(--mc-border-soft);border-radius:0;font:500 11px/1 var(--font-mono);color:var(--mc-muted)}',
+      F + ' .md-code-block>div:first-child>div{display:contents}',
+      F + ' .md-code-block>div:first-child>div>div:first-child{flex:none;min-width:0;font:500 11px/1 var(--font-mono);color:var(--mc-muted)}',
+      F + ' .md-code-block>div:first-child>div>div:last-child{margin-left:auto;flex:none;display:inline-flex}',
+      F + ' .md-code-block>div:first-child button{display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box;width:18px;height:18px;padding:0;border:1px solid var(--mc-border);border-radius:var(--mc-r-btn);background:var(--mc-surface);color:var(--mc-fg);font-size:0;cursor:pointer}',
+      F + ' .md-code-block>div:first-child button::before{content:"";width:11px;height:11px;background-color:currentColor;-webkit-mask:url("data:image/svg+xml,' + MC_FLOW_ICON_COPY + '") center/contain no-repeat;mask:url("data:image/svg+xml,' + MC_FLOW_ICON_COPY + '") center/contain no-repeat}',
       F + ' .md-code-block>div:first-child button:active{background:var(--mc-fg);color:var(--mc-surface);border-color:var(--mc-fg)}',
       F + ' .md-table-wide{overflow-x:auto}',
       // §6:用户气泡(user/steering)+ 变量通道(原型 L483-497;气泡底色走 overrideTokens --dsw-specific-bubble)
-      MC_MAP.bubbleUser + '{color:var(--mc-accent-ink);border:1px solid var(--mc-border);border-radius:8px;font:400 14px/1.7 var(--font-ui)}',
+      // 验收①:宿主气泡自带 padding(~10px 16px)未覆写 → 补 7px 12px(原型 L485)
+      MC_MAP.bubbleUser + '{color:var(--mc-accent-ink);border:1px solid var(--mc-border);border-radius:8px;padding:7px 12px;font:400 14px/1.7 var(--font-ui)}',
       MC_MAP.bubbleUser + ':active{border-color:var(--mc-fg)}',
       MC_MAP.userGallery + '{border:1px solid var(--mc-border);border-radius:var(--mc-r-card)}',
       MC_MAP.refChip + '{background:var(--mc-sel-bg);border-radius:var(--mc-r-tag);padding:0 4px;font:500 12px var(--font-mono)}',
       MC_MAP.pendingSteering + '{outline:1px dashed var(--mc-faint);outline-offset:2px;border-radius:8px}',
       // §7:注入条(context + 双 compaction 同款;kind 行即条壳)
-      ':is(' + MC_MAP.kindContext + ',' + MC_MAP.kindCompaction + ',' + MC_MAP.kindManualCompaction + '){display:flex;align-items:flex-start;gap:7px;padding:7px 9px;background:var(--mc-surface-2);border:1px dashed var(--mc-border-soft);border-radius:var(--mc-r-card);font:400 12px/1.7 var(--font-ui);color:var(--mc-muted)}',
+      // 验收③:行改 align-items:center、图标位去 margin-top(宿主行高下 flex-start+1px 不居中);
+      // ctxBody 展开体在行外,不受影响
+      ':is(' + MC_MAP.kindContext + ',' + MC_MAP.kindCompaction + ',' + MC_MAP.kindManualCompaction + '){display:flex;align-items:center;gap:7px;padding:7px 9px;background:var(--mc-surface-2);border:1px dashed var(--mc-border-soft);border-radius:var(--mc-r-card);font:400 12px/1.7 var(--font-ui);color:var(--mc-muted)}',
       MC_MAP.ctxBody + '{font:400 12px/1.7 var(--font-ui);color:var(--mc-muted);padding-left:22px}',
       // 图标:mask + data-URI;:has() 细分 form(Chromium 105+)。宿主原图标隐藏——live 实测
       // 2026-08-31(裁定10:data-slot 包装层计入):折叠态 idle 图标链 = kind 行>data-slot 包装>
       // root>disclosure row>leading span>iconIdle span>svg,brief 原 '>:first-child>svg' 两条
       // 均够不着,按实况改写;展开态 iconIdle 不渲染、chevron 为 leading 直接子 svg,均不受本条影响
       MC_MAP.kindContext + ' ' + MC_MAP.disclosureRow + '>span:first-of-type>span:first-child>svg:first-of-type{display:none}',
-      MC_MAP.kindContext + '::before{content:"";flex:none;width:15px;height:15px;margin-top:1px;background-color:var(--mc-faint);-webkit-mask:url("data:image/svg+xml,' + MC_FLOW_ICON_DOC + '") center/contain no-repeat;mask:url("data:image/svg+xml,' + MC_FLOW_ICON_DOC + '") center/contain no-repeat}',
+      MC_MAP.kindContext + '::before{content:"";flex:none;width:15px;height:15px;background-color:var(--mc-faint);-webkit-mask:url("data:image/svg+xml,' + MC_FLOW_ICON_DOC + '") center/contain no-repeat;mask:url("data:image/svg+xml,' + MC_FLOW_ICON_DOC + '") center/contain no-repeat}',
       MC_MAP.kindContext + ':has(' + MC_MAP.contextForm + '"catalog"])::before{-webkit-mask-image:url("data:image/svg+xml,' + MC_FLOW_ICON_LIST + '");mask-image:url("data:image/svg+xml,' + MC_FLOW_ICON_LIST + '")}',
       MC_MAP.kindContext + ':has(' + MC_MAP.contextForm + '"snapshot"])::before{-webkit-mask-image:url("data:image/svg+xml,' + MC_FLOW_ICON_COPY + '");mask-image:url("data:image/svg+xml,' + MC_FLOW_ICON_COPY + '")}',
       MC_MAP.kindContext + ':has(' + MC_MAP.contextForm + '"recall"])::before{-webkit-mask-image:url("data:image/svg+xml,' + MC_FLOW_ICON_CLOCK + '");mask-image:url("data:image/svg+xml,' + MC_FLOW_ICON_CLOCK + '")}',
@@ -1351,14 +1365,32 @@ var McFlow = {
       // 宿主 shimmer 移除(原型 run 态信号=琥珀染;标题染 spark 由行内继承,faint 摘要):
       MC_MAP.thinkCard + MC_MAP.dataState + '"running"]::after{content:none}',
       MC_MAP.thinkCard + MC_MAP.dataState + '"running"] *::after{animation:none!important}',
+      // 验收④a(2026-08-31 live 探明):折叠箭头换全局像素三角——宿主 leading 图标(running=
+      // iconIdle 原子图标/展开=chevron 直系 svg)全隐,leading span ::before 顶上;三角语汇同
+      // turn-max-tokens cap-row(border-left 5 + top/bottom 4,11px 级);展开态 rotate(90deg) 硬切
+      MC_MAP.thinkCard + ' ' + MC_MAP.disclosureRow + '>span:first-of-type svg{display:none}',
+      MC_MAP.thinkCard + ' ' + MC_MAP.disclosureRow + '>span:first-of-type::before{content:"";display:inline-block;width:0;height:0;border-left:5px solid currentColor;border-top:4px solid transparent;border-bottom:4px solid transparent}',
+      MC_MAP.thinkCard + ' ' + MC_MAP.disclosureRow + MC_MAP.ariaExpanded + '"true"]>span:first-of-type::before{transform:rotate(90deg)}',
+      // 验收④b(spec §4 行5 修订):running think 折叠摘要行单行 flash——mount 观察到摘要文本变化即
+      // 挂 .mc-line-flash,CLOCK.next 100ms 撤;类切换直切零过渡;样式照原型 L515-520(s-in)
+      '.mc-line-flash{position:relative}',
+      '.mc-line-flash::after{content:"";position:absolute;inset:-1px -2px;pointer-events:none;background:#fff;background-image:repeating-linear-gradient(0deg,transparent 0 2px,rgba(0,0,0,.06) 2px 3px)}',
+      'html[data-theme="light"] .mc-line-flash::after{background:#000;background-image:repeating-linear-gradient(0deg,transparent 0 2px,rgba(255,255,255,.07) 2px 3px)}',
       // T4 补遗(spec §2 行「compaction/manual-compaction → i-px-copy」;T4 裁定并入本 commit):
       // 压缩条 ::before 图标位,复用 T4 已内联的 copy data-URI 常量插值(context snapshot 同款)
-      ':is(' + MC_MAP.kindCompaction + ',' + MC_MAP.kindManualCompaction + ')::before{content:"";flex:none;width:15px;height:15px;margin-top:1px;background-color:var(--mc-faint);-webkit-mask:url("data:image/svg+xml,' + MC_FLOW_ICON_COPY + '") center/contain no-repeat;mask:url("data:image/svg+xml,' + MC_FLOW_ICON_COPY + '") center/contain no-repeat}',
+      ':is(' + MC_MAP.kindCompaction + ',' + MC_MAP.kindManualCompaction + ')::before{content:"";flex:none;width:15px;height:15px;background-color:var(--mc-faint);-webkit-mask:url("data:image/svg+xml,' + MC_FLOW_ICON_COPY + '") center/contain no-repeat;mask:url("data:image/svg+xml,' + MC_FLOW_ICON_COPY + '") center/contain no-repeat}',
       // §10:turn-tail 操作条(spec §4 行6;原型 L533-536)+ 钳形钮壳(只造壳不换宿主图标;
       // 后代选择器命中 .actions 容器内钮,data-slot 包装层不减后代深度)
       MC_MAP.turnTailBar + '{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding-top:2px;font:500 11px/1.6 var(--font-mono);color:var(--mc-faint)}',
       MC_MAP.turnTailBar + ' button{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border:1px solid var(--mc-border);border-radius:var(--mc-r-btn);background:var(--mc-surface);color:var(--mc-fg)}',
       MC_MAP.turnTailBar + ' button:active{background:var(--mc-fg);color:var(--mc-surface);border-color:var(--mc-fg)}',
+      // 验收⑤(2026-08-31 live 探明):钮组靠左、统计常驻靠右——root[data-time-hover-root] 下
+      // 统计 span(.actions 末子 timeEnd)宿主 opacity:0 hover 显隐 → opacity/visibility 反制
+      // (裁定:此两属性允许作为对宿主动效反制)+transition:none 压平;DOM 序本就 [copy,extra
+      // (contents),branch,time] time 末位。宿主 root 为 flex-direction:column(实测)→ actions
+      // align-self:stretch 横向撑满(行向由 flex:1 兜底,方向无关),margin-left:auto 推右
+      MC_MAP.turnTailBar + '>div:last-child{display:flex;align-items:center;gap:8px;flex:1;min-width:0;align-self:stretch}',
+      MC_MAP.turnTailBar + '>div:last-child>span:last-child{margin-left:auto;flex:none;white-space:nowrap;opacity:1!important;visibility:visible!important;transition:none;font:500 11px/1.6 var(--font-mono);color:var(--mc-faint)}',
       // §11:command 三态卡壳(spec §4 行9;默认 border / running spark / error danger;
       // [data-variant="others"] 在 kindCommand 行内任意深度;细节留 toolcard 周期)
       MC_MAP.kindCommand + ' ' + MC_MAP.commandCard + '{background:var(--mc-surface);border:1px solid var(--mc-border);border-radius:var(--mc-r-card);overflow:hidden}',
@@ -1378,6 +1410,7 @@ var McFlow = {
     ];
     var mo = null, tries = 0, timer = null;
     var seen = new WeakSet();
+    var flashLast = new WeakMap(); // 验收④b:摘要 span → 上次挂 flash 时刻(100ms 窗节流合一拍)
     function syncEl(el) {
       for (var i = 0; i < SYNC.length; i++) { try {
         if (el.matches(SYNC[i][0])) CLOCK.syncAnim(el, SYNC[i][2], SYNC[i][1]);
@@ -1394,6 +1427,26 @@ var McFlow = {
         el.classList.remove('mc-ghost'); el.classList.add('mc-flash');
         CLOCK.next(function () { try { el.classList.remove('mc-flash', 'mcfx'); } catch (e) {} }, 100);
       } catch (e) {} }, 100);
+    }
+    // 验收④b:running think 折叠摘要行单行 flash(spec §4 行5 修订)。流式换字(characterData)
+    // 命中摘要 span([data-follow-end],经 MC_MAP.thinkSummary)且属 running think 卡时挂
+    // .mc-line-flash,CLOCK.next 100ms 撤;同一 span 100ms 窗内多次变化合一拍(与 CLOCK 栅格
+    // 天然对齐);REDUCED 跳过;isConnected + try/catch 防御,零渲染干预(类切换直切)
+    function lineFlash(node) {
+      if (REDUCED) return;
+      try {
+        var el = node && node.parentElement;
+        if (!el || !el.isConnected) return;
+        var span = el.closest(MC_MAP.thinkSummary);
+        if (!span || !span.closest(MC_MAP.thinkCard + MC_MAP.dataState + '"running"]')) return;
+        var now = Date.now();
+        if (now - (flashLast.get(span) || 0) < 100) return; // 节流:同拍合一
+        flashLast.set(span, now);
+        span.classList.add('mc-line-flash');
+        CLOCK.next(function () {
+          try { if (span.isConnected) span.classList.remove('mc-line-flash'); } catch (e) {}
+        }, 100);
+      } catch (e) { /* 单点失败不拖垮观察管道 */ }
     }
     function enter(node) {
       if (!(node instanceof Element)) return;
@@ -1413,9 +1466,19 @@ var McFlow = {
         var q = root.querySelectorAll(MC_MAP.flowItem); for (var i = 0; i < q.length; i++) seen.add(q[i]);
       } catch (e) {}
       mo = new MutationObserver(function (muts) {
-        try { for (var i = 0; i < muts.length; i++) for (var j = 0; j < muts[i].addedNodes.length; j++) enter(muts[i].addedNodes[j]); } catch (e) {}
+        try {
+          for (var i = 0; i < muts.length; i++) {
+            var m = muts[i];
+            if (m.type === 'characterData') { lineFlash(m.target); continue; }
+            for (var j = 0; j < m.addedNodes.length; j++) {
+              var n = m.addedNodes[j];
+              if (n instanceof Element) enter(n);
+              else lineFlash(n); // 文本节点整换(宿主换节点而非改 data)同走摘要 flash 判定
+            }
+          }
+        } catch (e) {}
       });
-      mo.observe(root, { childList: true, subtree: true });
+      mo.observe(root, { childList: true, subtree: true, characterData: true });
     }
     timer = CLOCK.next(function poll() { // flowColumn 晚挂载轮询（最多 ~8s）
       tries++;

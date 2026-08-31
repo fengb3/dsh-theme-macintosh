@@ -36,13 +36,15 @@ function fakeClock() {
   };
 }
 
-// —— 假 Element：matches 按种子属性映射 MC_MAP 三键选择器；classList 走 Set ——
+// —— 假 Element：matches 按种子属性映射 MC_MAP 三键选择器；classList 走 Set；
+// closest 沿 parent 链上溯（lineFlash 摘要锚/running 卡复合选择器两形态）——
 class FakeElement {
   constructor(opts = {}) {
     this.attrs = opts.attrs || {};
     this.isStatusInColumn = !!opts.isStatusInColumn;
     this.qsa = opts.qsa || {};
     this.isConnected = true;
+    this.parent = opts.parent || null;
     const classes = new Set();
     this.classes = classes;
     this.classList = {
@@ -56,6 +58,16 @@ class FakeElement {
     if (sel === '[data-chat-flow-kind="model-retry"]') return this.attrs['data-chat-flow-kind'] === 'model-retry';
     if (sel === '[data-chat-flow] [role="status"]') return this.isStatusInColumn;
     return false;
+  }
+  matchesCompound(sel) {
+    if (sel === '[data-follow-end]') return 'data-follow-end' in this.attrs;
+    if (sel === '[data-variant="think"][data-state="running"]')
+      return this.attrs['data-variant'] === 'think' && this.attrs['data-state'] === 'running';
+    return false;
+  }
+  closest(sel) {
+    for (let el = this; el; el = el.parent) if (el.matchesCompound(sel)) return el;
+    return null;
   }
   querySelectorAll(sel) { return this.qsa[sel] || []; }
 }
@@ -117,7 +129,7 @@ test('mount 主线：轮询晚挂载→存量不闪→新行三拍(mcfx 同伴�
   const mo = FakeMO.last;
   assert.ok(mo, 'attach 应建 MutationObserver');
   assert.equal(mo.observed, column, 'observer 应挂在 flowColumn 上');
-  assert.deepEqual(mo.opts, { childList: true, subtree: true }, 'childList+subtree 全开');
+  assert.deepEqual(mo.opts, { childList: true, subtree: true, characterData: true }, 'childList+subtree+characterData 全开(验收④b 摘要观察)');
   assert.equal(clock.pending(), 0, '挂上后不再轮询');
 
   // 存量/已见行：宿主再次挂入（如懒加载补挂）不得闪
@@ -187,4 +199,74 @@ test('无 MutationObserver 环境静默返回 null', () => {
   stubEnv(clock, {}); // 注：MutationObserver 桩覆写为 undefined（模拟缺席）
   G.MutationObserver = undefined;
   assert.strictEqual(McFlow.mount({}), null);
+});
+
+// —— 验收④b:running think 摘要行单行 flash ——
+function stubFlashEnv(clock, opts = {}) {
+  stubEnv(clock, { columnReady: true, column: new FakeElement({}), ...opts });
+  G.MC_MAP.thinkSummary = '[data-follow-end]';
+  G.MC_MAP.thinkCard = '[data-variant="think"]';
+  G.MC_MAP.dataState = '[data-state=';
+}
+function runningThinkChain() {
+  const card = new FakeElement({ attrs: { 'data-variant': 'think', 'data-state': 'running' } });
+  const row = new FakeElement({ parent: card });
+  const span = new FakeElement({ attrs: { 'data-follow-end': '' }, parent: row });
+  return { card, row, span, text: { parentElement: span, isConnected: true } };
+}
+
+test('lineFlash 主线:running think 摘要换字即挂类,CLOCK 一拍撤净;100ms 窗内二次变化节流合一拍', () => {
+  const clock = fakeClock();
+  stubFlashEnv(clock);
+  const td = McFlow.mount({});
+  clock.flush(); // poll → attach
+  const mo = FakeMO.last;
+  const { span, text } = runningThinkChain();
+  mo.cb([{ type: 'characterData', target: text, addedNodes: [] }]);
+  assert.ok(span.classList.contains('mc-line-flash'), '换字瞬间挂 mc-line-flash');
+  clock.flush();
+  assert.ok(!span.classList.contains('mc-line-flash'), '100ms 拍后撤');
+  assert.equal(span.classes.size, 0, '零残留');
+  assert.equal(clock.pending(), 0);
+  mo.cb([{ type: 'characterData', target: text, addedNodes: [] }]);
+  assert.ok(!span.classList.contains('mc-line-flash'), '同 100ms 窗内二次变化被节流(不重排)');
+  assert.equal(clock.pending(), 0);
+  td();
+});
+
+test('lineFlash 域限定:非 running 卡摘要 / 摘要 span 外文本变化不闪', () => {
+  const clock = fakeClock();
+  stubFlashEnv(clock);
+  const td = McFlow.mount({});
+  clock.flush();
+  const mo = FakeMO.last;
+  // ok 态卡:closest running 复合选择器不命中
+  const okCard = new FakeElement({ attrs: { 'data-variant': 'think', 'data-state': 'ok' } });
+  const okSpan = new FakeElement({ attrs: { 'data-follow-end': '' }, parent: okCard });
+  mo.cb([{ type: 'characterData', target: { parentElement: okSpan, isConnected: true }, addedNodes: [] }]);
+  assert.ok(!okSpan.classList.contains('mc-line-flash'), 'ok 卡摘要不闪');
+  // 流上普通文本(assistant md 正文):closest 摘要锚不命中
+  const plain = new FakeElement({});
+  mo.cb([{ type: 'characterData', target: { parentElement: plain, isConnected: true }, addedNodes: [] }]);
+  assert.equal(plain.classes.size, 0, '普通文本节点零类');
+  // 文本节点整换(childList addedNodes 非 Element)同走判定
+  const { span } = runningThinkChain();
+  mo.cb([{ addedNodes: [{ parentElement: span, isConnected: true }] }]);
+  assert.ok(span.classList.contains('mc-line-flash'), '宿主换节点式文本更新同样触发');
+  clock.flush();
+  assert.equal(span.classes.size, 0);
+  td();
+});
+
+test('lineFlash REDUCED:跳过(零类零调度)', () => {
+  const clock = fakeClock();
+  stubFlashEnv(clock, { reduced: true });
+  const td = McFlow.mount({});
+  clock.flush();
+  const mo = FakeMO.last;
+  const { span, text } = runningThinkChain();
+  mo.cb([{ type: 'characterData', target: text, addedNodes: [] }]);
+  assert.equal(span.classes.size, 0, 'REDUCED 不加 flash 类');
+  assert.equal(clock.pending(), 0, '未调度任何拍');
+  td();
 });

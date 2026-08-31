@@ -126,5 +126,8 @@ const MC_MAP = {
   statusRow: '[role="status"]',                // stable(TurnStatus 宿主状态行；使用时限定 flowColumn 内，spec §4 行10)
   commandCard: '[data-variant="others"]',      // stable(command 卡壳锚，spec §4 行9「[data-variant="others"][data-state]」)
   dataState: '[data-state=',                   // 属性前缀键（任意取值形态；think 双锚第二锚 / command 三态）
+  // —— 用户验收五项收编（2026-08-31 live 探测，host 0.1.1-rc.2）——
+  thinkSummary: '[data-follow-end]',           // stable(running think 卡折叠摘要 span，disclosure 行内直接子；单行 flash 定位锚，spec §4 行5 修订)
+  ariaExpanded: '[aria-expanded=',             // 属性前缀键（宿主折叠行展开态；think 像素三角 rotate 用）
 };
 
