@@ -921,5 +921,6 @@ PROBE_DONE
 - **flashIn/flashOut 接入**：出场=官方菜单元素直挂 `flashIn`（按元素身份判新，二段式换卡亦闪）；退场=宿主瞬时卸载菜单元素不可闪，以最近 rect+皮底色建「同形替身块」（`[data-mc-popfx]`）补 `flashOut`，拍1 撤块零残留
 - 冒烟实证（`tools/probe-popfx-smoke.mjs`）：半径 0px / 开层 80ms `mcfx mc-ghost`→400ms 撤净 / 关层 80ms 替身 `mc-flash`→500ms 零残留+门控摘除；npm test 45/45+audit 全绿；verify-dock GREEN
 - **ctx 圆环 busy/idle 同款弹窗**（commit 762de04，用户裁定）：idle 官方卡三轮勘定无圆环锚（busy 卸载；vanilla 态真实会话/active/有用量复核仍四钮无环——用户原版所见可点环判定为 busy 残留窗口）→ idle 用同款皮本地弹层顶上（直角/`--font-ui`/同底色），开合走 `popFlash`（mcfx 三拍+防重入），点外收口同款闪退；busy 路径不变（官方锚+门控）
-- 主题临时停用勘验二例（profile 补丁层 `disabled: true` 热重载，勘毕即恢复）：vanilla idle/hero/active 全态无 ctx 环；`tools/probe-ctx-*.mjs` 留盘
+- 主题临时停用勘验三例（profile 补丁层 `disabled: true` 热重载，勘毕即恢复）：vanilla idle/hero/active 全态无 ctx 环；`tools/probe-ctx-*.mjs` 留盘
+- **ctx 锚勘定改判（commit b0c91bd，终局）**：官方 ctx 钮挂载条件=**用量>0**（busy→idle 40s 采样实证：回复结束后 idle 持续在场 `上下文已用 1%`）——旧结论「busy 才挂载」系 idle 探针全测在 0% 用量会话的误判（用户活体观察正确）。圆环点击**不判忙闲**：锚在场→转点官方钮+门控→官方真弹窗（ctx=`role=dialog`，皮选择器并入 dialog）；锚缺席（0% 空会话）→本地同款皮兜底。终验：idle 点环→官方 dialog（系统提示词/工具/对话消息分项真数据）弹出+收口 GREEN。**装回 dsh-context 插件**（profile bundle `^0.40.0`，用户裁定；idle 锚存续观测系插件在场态，移除或影响 idle 常驻）。装饰级 backlog：dialog 内滚动条/关闭图标像素化、深色下硬投影弱可见
 - 待办 1-3 照旧顺延
