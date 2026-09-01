@@ -98,10 +98,10 @@ const MC_DOCK_CSS = [
   '[data-mc-dock] .ctx-ring[data-hot] .cr-arc{stroke:var(--mc-danger)}',
   '[data-mc-dock] .ctx-pop{display:none;position:absolute;bottom:calc(100% + 6px);right:0;z-index:80;',
   ' width:236px;flex-direction:column;gap:6px;padding:9px 11px;background:var(--mc-surface);',
-  ' border:1px solid var(--mc-border);border-radius:var(--mc-r-card);box-shadow:var(--mc-shadow-pop);',
-  ' font:400 11.5px/1.7 var(--font-ui);color:var(--mc-muted);font-family:var(--font-sb)}',
+  ' border:1px solid var(--mc-border);border-radius:0;box-shadow:var(--mc-shadow-pop);',
+  ' font:500 12px/1.6 var(--font-ui);color:var(--mc-muted)}', // 验收轮3:idle 本地弹层对齐官方注入皮(直角/--font-ui,用户裁定 busy/idle 同款弹窗)
   '[data-mc-dock] .ctx-pop.open{display:flex}',
-  '[data-mc-dock] .ctx-pop b{color:var(--mc-fg);font-family:var(--font-sb);font-weight:500}',
+  '[data-mc-dock] .ctx-pop b{color:var(--mc-fg);font-weight:500}',
   '[data-mc-dock] .ctx-line{display:flex;align-items:center;gap:7px}',
   '[data-mc-dock] .ctx-line i{width:8px;height:8px;flex:none;',
   ' clip-path:polygon(33% 0,67% 0,100% 33%,100% 67%,67% 100%,33% 100%,0 67%,0 33%)}',
@@ -286,12 +286,18 @@ var McDock = {
       var bModel = cmp.querySelector('[data-mc-model]');
       if (bModel) bModel.addEventListener('click', openOfficialPop(bModel, MC_MAP.composerModel));
       var ringBar = cmp.querySelector('[data-mc-ctx] .ctx-ring');
-      if (ringBar) ringBar.addEventListener('click', function (e) { // 验收轮2(方案2):busy 走官方弹层门控;idle 官方钮缺席→自绘 ctx-pop 兜底(最近观测 pct)
+      if (ringBar) ringBar.addEventListener('click', function (e) {
+        // 验收轮3(用户裁定:busy/idle 同款弹窗):busy 官方 DOM 有锚(上下文已用 N% 钮)→官方弹层门控;
+        // idle 三轮勘定官方卡无圆环锚(busy 卸载)→同款皮本地弹层顶上(直角/同字体/flash 特效一致)
         try {
           e.stopPropagation();
-          if (state.mode === 'busy' && q(MC_MAP.composerCtx)) { openOfficialPop(ringBar, MC_MAP.composerCtx)(); return; }
           var pop = cmp.querySelector('[data-mc-ctxpop]');
-          pop.classList.toggle('open');
+          if (state.mode === 'busy' && q(MC_MAP.composerCtx)) {
+            if (pop) pop.classList.remove('open');
+            openOfficialPop(ringBar, MC_MAP.composerCtx)();
+            return;
+          }
+          if (pop) popFlash(pop, !pop.classList.contains('open'));
         } catch (er) {}
       });
       syncBar(); // 挂载路径首回填(观察器回调每拍续填)
@@ -396,6 +402,22 @@ var McDock = {
         }
       } catch (e) {}
     }
+    // 验收轮3:本地 ctx-pop 开合走 mcfx 三拍(与官方弹层门控的 flashIn/flashOut 同语言);
+    // _mcfxBusy 防重入(闪拍期内再点/点外不叠闪;flashIn/flashOut 自身无守卫)
+    function popFlash(pop, open) {
+      try {
+        if (!pop || pop._mcfxBusy) return;
+        pop._mcfxBusy = 1;
+        var done = function () { try { delete pop._mcfxBusy; } catch (er) {} };
+        if (open) {
+          flashIn(pop, function () { pop.classList.add('open'); });
+          mcfxSchedule(function () { mcfxSchedule(done, 100); }, 100);
+        } else {
+          flashOut(pop, function () { pop.classList.remove('open'); });
+          mcfxSchedule(done, 100);
+        }
+      } catch (er) { try { delete pop._mcfxBusy; } catch (e) {} }
+    }
     function doSend() { // 镜像桥唯一发送路径:本地值 → 官方 textarea → 官方 Send click
       try {
         var ta = cmp.querySelector('textarea');
@@ -498,12 +520,12 @@ var McDock = {
         } catch (er) {}
       });
     }
-    function onDocClose(e) { // 点外收 ctx-pop(浮层互斥,原型 §9.4;验收轮1:cmp bar 圆环同款收口)
+    function onDocClose(e) { // 点外收 ctx-pop(浮层互斥,原型 §9.4;验收轮3:收口同样走 flashOut 闪退)
       try {
         var scopes = [furn, cmp];
         for (var i = 0; i < scopes.length; i++) {
           var pop = scopes[i] && scopes[i].querySelector('[data-mc-ctxpop]');
-          if (pop && pop.classList.contains('open') && !pop.contains(e.target)) pop.classList.remove('open');
+          if (pop && pop.classList.contains('open') && !pop.contains(e.target)) popFlash(pop, false);
         }
       } catch (er) {}
     }
