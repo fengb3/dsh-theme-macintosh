@@ -2282,7 +2282,7 @@ var McDock = {
   css: MC_DOCK_CSS,
   mount: function (ctx) {
     var state = { mode: 'idle', has: false };
-    var root = null, furn = null, cmp = null;
+    var root = null, rootEl = null, furn = null, cmp = null; // rootEl 持元素引用:置空 root 后退场/teardown 仍能 remove
     var mo = null, dead = false;
     var off = { card: null, field: null, send: null, stop: null, phaseEl: null, phaseVal: '' };
     var MC_DOCK_API = null; // 模块级桥(Task 5/6/kit 消费)
@@ -2300,7 +2300,8 @@ var McDock = {
       try { if (MC_DOCK_API === api) MC_DOCK_API = null; } catch (e) {}
       try { document.documentElement.removeAttribute('data-mc-dock-on'); } catch (e) {}
       try { if (mo) { mo.disconnect(); mo = null; } } catch (e) {}
-      try { if (root) flashOut(root, function () { try { root.remove(); } catch (e) {} }); } catch (e) {}
+      var el = root; // 置空前捕获:flashOut hide 回调经 mcfxSchedule 异步派发,触发时外层 root 已置空,闭包须捕 el 才能真正移除
+      try { if (el) flashOut(el, function () { try { el.remove(); } catch (e) {} }); } catch (e) {}
       root = null;
     }
     function mountDock() {
@@ -2308,6 +2309,7 @@ var McDock = {
       var seat = q(MC_MAP.composerSeat) || off.card.parentElement;
       if (!seat) return false;
       root = document.createElement('div');
+      rootEl = root;
       root.setAttribute('data-mc-dock', '');
       root.className = 'dock';
       furn = document.createElement('div'); // Task 6 家具区(本任务先空置)
@@ -2335,10 +2337,16 @@ var McDock = {
       } catch (e) {}
     }
     // React 重渲染守护:官方卡/自绘坞被冲 → 重插;官方件失活 → 降级(McThink 观察器嫁接先例)
+    var missCount = 0, MISS_MAX = 3; // 失配去抖裁定:瞬时失配(切会话/React keyed 重挂 1-2 批)不桥断;连续 MISS_MAX 拍缺席才判真失配退场(真失配约 3 拍内恢复官方,绝不双输入框红线不变)
     mo = new window.MutationObserver(function () {
       try {
         if (dead) return;
-        if (!findOfficial()) { bridgeFail(); return; }
+        if (!findOfficial()) {
+          missCount += 1;
+          if (missCount >= MISS_MAX) bridgeFail();
+          return;
+        }
+        missCount = 0;
         if ((!root || !root.isConnected) && off.card) {
           var seat = q(MC_MAP.composerSeat) || off.card.parentElement;
           if (seat && root && root.parentNode !== seat) seat.appendChild(root);
@@ -2385,7 +2393,7 @@ var McDock = {
       try { if (mo) mo.disconnect(); } catch (e) {}
       try { if (timer) CLOCK.clear(timer); } catch (e) {}
       try { document.documentElement.removeAttribute('data-mc-dock-on'); } catch (e) {}
-      try { if (root) root.remove(); } catch (e) {}
+      try { if (rootEl) rootEl.remove(); } catch (e) {} // rootEl 捕获:bridgeFail 置空 root 后 teardown 仍能移除退场元素
     };
   },
 };
