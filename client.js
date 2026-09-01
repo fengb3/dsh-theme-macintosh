@@ -1544,8 +1544,8 @@ const McFinder = {
 .mc-sb-find .mc-sb-la,.mc-sb-find .mc-gh-act,.mc-sb-find .mc-sess{position:relative}
 /* 验收轮5终:单列表平铺体(无折叠面板壳)与行首工作区名前缀 */
 .mc-sb-find .mc-flat-body{display:flex;flex-direction:column}
-.mc-sb-find .mc-s-ws{flex:none;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
-  font:500 10px/1.6 var(--font-mono);color:var(--mc-faint)}
+.mc-sb-find .mc-s-ws{flex:none;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  font:500 12px/1.6 var(--font-mono);color:var(--mc-muted)}
 /* ===== 折叠态迷你条（原型 .sb-mini；56px 官方轨内一列 26px 图标钮）===== */
 .mc-sb-mini{display:flex;flex-direction:column;align-items:center;gap:6px;flex:1;min-height:0;padding:8px 0}
 .mc-mini-btn{display:grid;place-items:center;width:34px;height:30px;flex:none;
