@@ -65,7 +65,7 @@ const MC_DOCK_CSS = [
   ' box-shadow:inset 0 0 0 1px var(--mc-surface),inset 0 0 0 2px var(--mc-border);',
   ' font:500 11px/1 var(--font-ui);color:var(--mc-muted);cursor:pointer;white-space:nowrap}',
   '[data-mc-dock] .cb-btn svg{width:12px;height:12px;flex:none}',
-  '[data-mc-dock] .cb-btn.model{font-family:var(--font-mono);font-size:11px}',
+  '[data-mc-dock] .cb-btn.model{font-size:11px}', // 验收轮2:去 font-mono,与正文统一 --font-ui(用户裁定;族随 .cb-btn 基线)
   '[data-mc-dock] .cb-btn[hidden]{display:none}', // 验收轮1:author display 压过 UA [hidden],镜像代理降级隐藏须显式复原(同 .btn[hidden] 先例)
   // Task 8 浅色 QA 补:.btn 系(原型 §2 L205-224 直抄换 token)。renderCmp 照原型 §9.2 镜像
   // `btn sm primary/danger` 类,而主题原语命名 mc-btn → 落地初版活体 Send/Stop 裸奔(浏览器
@@ -113,6 +113,26 @@ const MC_DOCK_CSS = [
   (function () {
     return typeof MC_MAP === 'undefined' ? '' : 'html[data-mc-dock-on] ' + MC_MAP.composerHide + '{display:none!important}';
   })(),
+  // 验收轮2:官方弹层 CSS 注入(用户裁定:弃自绘转写,官方菜单+皮)。html[data-mc-pop] 门控开层:
+  // 官方卡从 display:none 切「离屏抹除态」(fixed -32000px 1px 盒,overflow:visible)——display:none
+  // 祖先纯 CSS 不可复活,门控期换藏匿形态;卡无 transform/filter,fixed 子件仍以视口定位,卡内官方
+  // 菜单经 position:fixed 逃逸到视口。锚位 --mc-pop-b/--mc-pop-r 由 JS 自绘钮 rect 回填(右下对齐,
+  // 弹于钮上方)。菜单卸载后 JS 摘属性恢复 display:none 门控。权限/模型/命令/ctx(busy)四钮共用;
+  // 皮观感对齐 overlays .mc-menu(像素边框/硬投影/--font-ui);无 :hover/transition(审计 §1),
+  // 属性选择器一律不带引号(带引号形态会撞 map 值提取 token,审计 §5)。
+  (function () {
+    if (typeof MC_MAP === 'undefined' || !MC_MAP.composerHide) return '';
+    var C = 'html[data-mc-pop] ' + MC_MAP.composerHide;
+    return [
+      C + '{display:block!important;position:fixed!important;left:-32000px;top:0;width:1px;height:1px;overflow:visible;pointer-events:none}',
+      C + ' [role=menu],' + C + ' [role=listbox]{position:fixed;left:var(--mc-pop-l,16px);right:auto;bottom:var(--mc-pop-b,140px);margin:0;min-width:216px;max-height:44vh;overflow-y:auto;pointer-events:auto;z-index:9000;background:var(--mc-surface);border:1px solid var(--mc-border);border-radius:var(--mc-r-card);box-shadow:var(--mc-shadow-pop);padding:4px;font:500 12px/1.6 var(--font-ui);color:var(--mc-fg)}',
+      C + ' [role=menuitem],' + C + ' [role=menuitemradio],' + C + ' [role=option]{display:flex;align-items:center;gap:8px;padding:5px 9px;cursor:pointer;font:inherit;line-height:1.6;color:var(--mc-muted);background:none;border:none;white-space:nowrap}',
+      C + ' [role=menuitem]:active,' + C + ' [role=menuitemradio]:active,' + C + ' [role=option]:active{background:var(--mc-fg);color:var(--mc-surface)}',
+      C + ' [aria-checked=true],' + C + ' [aria-selected=true]{background:var(--mc-accent);color:var(--mc-accent-ink)}',
+      C + ' [role=separator],' + C + ' hr{height:1px;margin:4px 5px;background:var(--mc-border-soft)}',
+      C + ' [role=menu] *,' + C + ' [role=listbox] *{font-family:inherit}', // 冒烟视觉勘定:宿主 span 自带字体令 CJK 回退不一致,全继承统一
+    ].join('\n');
+  })(),
 ].join('\n');
 var McDock = {
   css: MC_DOCK_CSS,
@@ -135,6 +155,7 @@ var McDock = {
       if (dead) return; dead = true;
       try { if (MC_DOCK_API === api) MC_DOCK_API = null; } catch (e) {}
       try { document.documentElement.removeAttribute('data-mc-dock-on'); } catch (e) {}
+      try { document.documentElement.removeAttribute('data-mc-pop'); } catch (e) {} // 验收轮2:弹层门控随退场摘除
       try { if (mo) { mo.disconnect(); mo = null; } } catch (e) {}
       var el = root; // 置空前捕获:flashOut hide 回调经 mcfxSchedule 异步派发,触发时外层 root 已置空,闭包须捕 el 才能真正移除
       try { if (el) flashOut(el, function () { try { el.remove(); } catch (e) {} }); } catch (e) {}
@@ -193,6 +214,7 @@ var McDock = {
         }
         syncBusy();
         syncBar(); // 验收轮1:官方钮 aria-label/title 变异与挂载沿每拍回填(文字/pct 镜像)
+        syncPopGate(); // 验收轮2:官方弹层卸载收口(每拍)
       } catch (e) {}
     });
     // —— Task 5:自绘 composer 卡壳 + 三态 + Enter 纪律(定义在 api 前;onState 赋值在 api 后)——
@@ -220,10 +242,8 @@ var McDock = {
         '<circle class="cr-arc" cx="11" cy="11" r="8.5" fill="none" stroke-width="3" stroke-dasharray="' +
         arc0.dash + '" transform="rotate(-90 11 11)"/></svg></span>' +
         '<div class="ctx-pop" data-mc-ctxpop></div></span>';
-      bar += '<button type="button" class="btn sm primary" data-mc-send disabled>' +
-        '<svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-px-send"/></svg>Send</button>';
-      bar += '<button type="button" class="btn sm danger" data-mc-stop hidden>' +
-        '<svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-px-stop"/></svg>Stop</button>';
+      bar += '<button type="button" class="btn sm primary" data-mc-send disabled>Send</button>'; // 验收轮2:去图标(用户裁定,纯文字)
+      bar += '<button type="button" class="btn sm danger" data-mc-stop hidden>Stop</button>';
       bar += '</span>';
       cmp.innerHTML = '<div class="composer" data-mc-state="idle">' +
         '<label class="mc-field"><textarea rows="1" placeholder="Message the agent…"></textarea></label>' +
@@ -243,19 +263,33 @@ var McDock = {
       cmp.querySelector('[data-mc-stop]').addEventListener('click', function () {
         try { api.stop(); } catch (er) {} // 官方中断(off.stop 每观察批次由 findOfficial 刷新,busy 期必到位)
       });
-      function mirrorClick(sel) { // 镜像代理点击:点击时经管制表选择器实时取官方钮,缺席 no-op(照 api.send 守卫)
-        return function () { try { var b = q(sel); if (b) b.click(); } catch (er) {} };
+      // 验收轮2:官方弹层门控开层(用户裁定:弹窗弃自绘,官方菜单+CSS 注入皮)——
+      // 设锚位参数 + html[data-mc-pop] 后镜像点击官方钮;菜单卸载由 syncPopGate 收口
+      function openOfficialPop(anchor, sel) {
+        return function () {
+          try {
+            var b = q(sel); if (!b) return;
+            var r = anchor.getBoundingClientRect();
+            document.documentElement.style.setProperty('--mc-pop-b', Math.max(8, window.innerHeight - r.top + 8) + 'px');
+            document.documentElement.style.setProperty('--mc-pop-l', // 左锚定+视口钳制(冒烟实测:命令钮左置,右锚定会顶出左缘)
+              Math.min(Math.max(8, r.left), Math.max(8, window.innerWidth - 224)) + 'px');
+            popSeen = false; // 新一轮:菜单挂载异步,未见即不算(防开层当拍误收门)
+            document.documentElement.setAttribute('data-mc-pop', '');
+            b.click();
+          } catch (er) {}
+        };
       }
       var bCmd = cmp.querySelector('[data-mc-cmd]');
-      if (bCmd) bCmd.addEventListener('click', mirrorClick(MC_MAP.composerCmd));
+      if (bCmd) bCmd.addEventListener('click', openOfficialPop(bCmd, MC_MAP.composerCmd));
       var bPerm = cmp.querySelector('[data-mc-perm]');
-      if (bPerm) bPerm.addEventListener('click', mirrorClick(MC_MAP.composerPerm));
+      if (bPerm) bPerm.addEventListener('click', openOfficialPop(bPerm, MC_MAP.composerPerm));
       var bModel = cmp.querySelector('[data-mc-model]');
-      if (bModel) bModel.addEventListener('click', mirrorClick(MC_MAP.composerModel));
+      if (bModel) bModel.addEventListener('click', openOfficialPop(bModel, MC_MAP.composerModel));
       var ringBar = cmp.querySelector('[data-mc-ctx] .ctx-ring');
-      if (ringBar) ringBar.addEventListener('click', function (e) { // ctx-pop 硬切显隐(原型 §9 无淡入;同 furn 交互)
+      if (ringBar) ringBar.addEventListener('click', function (e) { // 验收轮2(方案2):busy 走官方弹层门控;idle 官方钮缺席→自绘 ctx-pop 兜底(最近观测 pct)
         try {
           e.stopPropagation();
+          if (state.mode === 'busy' && q(MC_MAP.composerCtx)) { openOfficialPop(ringBar, MC_MAP.composerCtx)(); return; }
           var pop = cmp.querySelector('[data-mc-ctxpop]');
           pop.classList.toggle('open');
         } catch (er) {}
@@ -267,6 +301,7 @@ var McDock = {
     // (i18n 等)→ 对应自绘钮隐藏,优雅降级(裁定 4 在菜单项层面继续适用)。文字一律 textContent 赋值
     // 或 esc()(esc 纪律);全部写入先比对后赋值——MO 盯 aria-label/title,同值回写会自激观察器。
     var lastCtxPct = 0; // 官方 ctx 钮仅 busy 挂载(aria-label 实时 %)——自绘环常驻(原型形态),pct 取最近观测值回填
+    var popSeen = false; // 验收轮2:官方弹层「见过至少一拍」标记——菜单挂载前不算卸载,防开层当拍误收门(syncPopGate)
     function syncBar() {
       try {
         if (dead || !cmp) return;
@@ -320,6 +355,16 @@ var McDock = {
             if (pop._mcLine !== line) { pop._mcLine = line; pop.innerHTML = line; } // Number+esc2 后比对缓存,防自激
           }
         }
+      } catch (e) {}
+    }
+    // 验收轮2:官方弹层收口——菜单卸载(点选/点外/ESC 后宿主摘 DOM)即摘 data-mc-pop,
+    // 恢复官方卡 display:none 门控;观察器 childList 每拍回调此处(卸载必触发 mutation)
+    function syncPopGate() {
+      try {
+        var de = document.documentElement;
+        if (!de.hasAttribute('data-mc-pop')) return;
+        if (off.card && off.card.querySelector('[role=menu],[role=listbox],[role=dialog]')) { popSeen = true; return; }
+        if (popSeen) { popSeen = false; de.removeAttribute('data-mc-pop'); }
       } catch (e) {}
     }
     function doSend() { // 镜像桥唯一发送路径:本地值 → 官方 textarea → 官方 Send click
@@ -475,6 +520,7 @@ var McDock = {
       try { if (mo) mo.disconnect(); } catch (e) {}
       try { if (timer) CLOCK.clear(timer); } catch (e) {}
       try { document.documentElement.removeAttribute('data-mc-dock-on'); } catch (e) {}
+      try { document.documentElement.removeAttribute('data-mc-pop'); } catch (e) {} // 验收轮2:弹层门控随 teardown 摘除
       try { if (rootEl) rootEl.remove(); } catch (e) {} // rootEl 捕获:bridgeFail 置空 root 后 teardown 仍能移除退场元素
       try { document.removeEventListener('click', onDocClose); } catch (e) {} // Task 6:点外收 pop 监听随坞撤除(两参=同一函数引用,注册相无关)
     };
