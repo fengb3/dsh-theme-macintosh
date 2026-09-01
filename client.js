@@ -2375,6 +2375,7 @@ var McDock = {
         paint();
       });
       ta.addEventListener('keydown', function (e) { // 原型 §9.2:Enter 无 Shift=发送;busy 早退
+        if (e.isComposing) return; // 裁定:IME 组字期 Enter=选字确认,不得发送(中文交互主场景;Task 5 fix-1)
         try { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); doSend(); } } catch (er) {}
       });
       cmp.querySelector('[data-mc-send]').addEventListener('click', function () { doSend(); });
