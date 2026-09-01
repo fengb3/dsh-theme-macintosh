@@ -2323,6 +2323,7 @@ const MC_DOCK_CSS = [
     return [
       C + '{display:block!important;position:fixed!important;left:-32000px;top:0;width:1px;height:1px;overflow:visible;pointer-events:none}',
       C + ' [role=menu],' + C + ' [role=listbox],' + C + ' [role=dialog]{position:fixed;left:var(--mc-pop-l,16px);right:auto;bottom:var(--mc-pop-b,140px);margin:0;min-width:216px;max-height:44vh;overflow-y:auto;pointer-events:auto;z-index:9000;background:var(--mc-surface);border:1px solid var(--mc-border);border-radius:0;box-shadow:var(--mc-shadow-pop);padding:4px;font:500 12px/1.6 var(--font-ui);color:var(--mc-fg)}', // 直角(验收轮3 用户裁定,弃 --mc-r-card);ctx 弹窗=role=dialog(终验勘定)并入同款定位与皮
+      'html[data-mc-pop=r] ' + MC_MAP.composerHide + ' [role=menu],html[data-mc-pop=r] ' + MC_MAP.composerHide + ' [role=listbox],html[data-mc-pop=r] ' + MC_MAP.composerHide + ' [role=dialog]{left:auto;right:var(--mc-pop-r,16px)}', // 验收轮4:右半屏钮右缘对齐(右下角对准点击处,修溢出)
       C + ' [role=menuitem],' + C + ' [role=menuitemradio],' + C + ' [role=option]{display:flex;align-items:center;gap:8px;padding:5px 9px;cursor:pointer;font:inherit;line-height:1.6;color:var(--mc-muted);background:none;border:none;white-space:nowrap}',
       C + ' [role=menuitem]:active,' + C + ' [role=menuitemradio]:active,' + C + ' [role=option]:active{background:var(--mc-fg);color:var(--mc-surface)}',
       C + ' [aria-checked=true],' + C + ' [aria-selected=true]{background:var(--mc-accent);color:var(--mc-accent-ink)}',
@@ -2461,17 +2462,21 @@ var McDock = {
         try { api.stop(); } catch (er) {} // 官方中断(off.stop 每观察批次由 findOfficial 刷新,busy 期必到位)
       });
       // 验收轮2:官方弹层门控开层(用户裁定:弹窗弃自绘,官方菜单+CSS 注入皮)——
-      // 设锚位参数 + html[data-mc-pop] 后镜像点击官方钮;菜单卸载由 syncPopGate 收口
+      // 设锚位参数 + html[data-mc-pop] 后镜像点击官方钮;菜单卸载由 syncPopGate 收口。
+      // 验收轮4 选边锚定:钮在右半屏→右缘对齐钮右缘(右下角对准点击处,修圆环弹窗溢出右缘);
+      // 左半屏→左缘对齐(命令钮先例,左锚防顶出左缘)。属性值 l/r 兼作门控与选边信号。
       function openOfficialPop(anchor, sel) {
         return function () {
           try {
             var b = q(sel); if (!b) return;
             var r = anchor.getBoundingClientRect();
+            var useRight = r.left + r.width / 2 > window.innerWidth / 2;
             document.documentElement.style.setProperty('--mc-pop-b', Math.max(8, window.innerHeight - r.top + 8) + 'px');
-            document.documentElement.style.setProperty('--mc-pop-l', // 左锚定+视口钳制(冒烟实测:命令钮左置,右锚定会顶出左缘)
+            document.documentElement.style.setProperty('--mc-pop-r', Math.max(8, window.innerWidth - r.right) + 'px');
+            document.documentElement.style.setProperty('--mc-pop-l',
               Math.min(Math.max(8, r.left), Math.max(8, window.innerWidth - 224)) + 'px');
             popSeen = false; // 新一轮:菜单挂载异步,未见即不算(防开层当拍误收门)
-            document.documentElement.setAttribute('data-mc-pop', '');
+            document.documentElement.setAttribute('data-mc-pop', useRight ? 'r' : 'l');
             b.click();
           } catch (er) {}
         };
