@@ -130,6 +130,7 @@ var McDock = {
       root.appendChild(furn); root.appendChild(cmp);
       seat.appendChild(root); // 官方卡之后(视觉在下方;官方卡被藏后占整个席位)
       document.documentElement.setAttribute('data-mc-dock-on', '');
+      renderCmp(); // Task 5:自绘 composer 卡壳(findOfficial 成功后 off 已填充,仅挂载成功路径可达)
       flashIn(root, function () {});
       return true;
     }
@@ -165,6 +166,56 @@ var McDock = {
         syncBusy();
       } catch (e) {}
     });
+    // —— Task 5:自绘 composer 卡壳 + 三态 + Enter 纪律(定义在 api 前;onState 赋值在 api 后)——
+    function renderCmp() {
+      var bar = '';
+      // —— 左组(斜杠命令/权限位;Task 1 附录A勘定逐钮补,勘不通不渲染;本批默认无)——
+      bar += '<span class="cb-right">';
+      // —— 模型位(勘定补;勘不通不渲染;本批默认无)——
+      bar += '<button type="button" class="btn sm primary" data-mc-send disabled>' +
+        '<svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-px-send"/></svg>Send</button>';
+      bar += '<button type="button" class="btn sm danger" data-mc-stop hidden>' +
+        '<svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-px-stop"/></svg>Stop</button>';
+      bar += '</span>';
+      cmp.innerHTML = '<div class="composer" data-mc-state="idle">' +
+        '<label class="mc-field"><textarea rows="1" placeholder="Message the agent…"></textarea></label>' +
+        '<div class="composer-bar">' + bar + '</div></div>';
+      var ta = cmp.querySelector('textarea');
+      ta.addEventListener('input', function () {
+        state = mcDockState(state, { t: 'input', has: !!ta.value.trim() });
+        paint();
+      });
+      ta.addEventListener('keydown', function (e) { // 原型 §9.2:Enter 无 Shift=发送;busy 早退
+        try { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); doSend(); } } catch (er) {}
+      });
+      cmp.querySelector('[data-mc-send]').addEventListener('click', function () { doSend(); });
+      cmp.querySelector('[data-mc-stop]').addEventListener('click', function () {
+        try { api.stop(); } catch (er) {}
+      });
+    }
+    function doSend() { // 镜像桥唯一发送路径:本地值 → 官方 textarea → 官方 Send click
+      try {
+        var ta = cmp.querySelector('textarea');
+        var text = ta ? ta.value : '';
+        if (state.mode === 'busy' || !text.trim()) return; // busy 早退(原型 §9.2)
+        if (!api.setText(text)) { bridgeFail(); return; } // 镜像失败 = 桥断 → 降级
+        if (!api.send()) return; // 官方钮 disabled = 官方拒绝,保留草稿不降级
+        ta.value = '';
+        state = mcDockState(state, { t: 'input', has: false });
+        paint();
+      } catch (er) {}
+    }
+    function paint() { // 三态渲染(原型 §9.2;accToggle 状态切换)
+      var box = cmp.querySelector('.composer');
+      if (!box) return;
+      box.setAttribute('data-mc-state', state.mode);
+      box.classList.toggle('busy', state.mode === 'busy');
+      var send = cmp.querySelector('[data-mc-send]');
+      var stop = cmp.querySelector('[data-mc-stop]');
+      var busy = state.mode === 'busy';
+      if (busy) { stop.hidden = false; send.hidden = true; }
+      else { stop.hidden = true; send.hidden = false; send.disabled = state.mode === 'idle'; }
+    }
     var api = {
       state: function () { return state; },
       onState: null, // Task 5 注册:状态机 → 三态渲染回调
@@ -180,6 +231,7 @@ var McDock = {
       officials: function () { return off; },
       die: bridgeFail,
     };
+    api.onState = paint; // Task 4 syncBusy → 状态机 → 本渲染
     // 挂载成功后置:观察器守护注册 + 忙闲首同步(轮询路径挂载成功时同样要走)
     function activate() {
       mo.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['data-phase', 'disabled', 'hidden'] });
