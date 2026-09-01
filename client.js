@@ -2191,7 +2191,7 @@ const McSysCard = {
 // 协议 { css, mount(ctx) }。自绘坞挂官方 composer 席位;官方卡经 html[data-mc-dock-on] 属性门控藏匿。
 // 原语(原型 §6 L554-703 直抄;token 换 --mc-*;全部 scoped 到 [data-mc-dock])
 const MC_DOCK_CSS = [
-  // (藏匿门控规则 Task 4 追加:html[data-mc-dock-on] + MC_MAP.composerHide → display:none!important;骨架期零行为)
+  // (藏匿门控规则 Task 4 已追加:见数组末位;standalone CJS 载入无 MC_MAP 由末位守卫回退)
   '[data-mc-dock]{flex:none;display:flex;flex-direction:column;gap:8px;padding:10px 12px;background:var(--mc-rail-2);',
   ' border-top:1px solid var(--mc-border)}',
   '[data-mc-dock] .queue-row{display:flex;align-items:center;gap:8px;padding:5px 9px;',
@@ -2272,12 +2272,121 @@ const MC_DOCK_CSS = [
   '[data-mc-dock] .ctx-line .cl-bar{flex:1;height:5px;background:var(--mc-surface-3);',
   ' border:1px solid var(--mc-border-soft);border-radius:0}',
   '[data-mc-dock] .ctx-line .cl-bar i{display:block;height:100%;border-radius:0;clip-path:none}',
+  // 藏匿门控行(brief 逐字;包守卫因本数组顶层求值——standalone CJS(测试 loadSrc)无 MC_MAP
+  // 会 ReferenceError,flow.js css 同款先例 typeof 守卫回退空串;client.js 装配域恒有 MC_MAP)
+  (function () {
+    return typeof MC_MAP === 'undefined' ? '' : 'html[data-mc-dock-on] ' + MC_MAP.composerHide + '{display:none!important}';
+  })(),
 ].join('\n');
 var McDock = {
   css: MC_DOCK_CSS,
   mount: function (ctx) {
-    // Task 4 实装:挂载入口 + 镜像驱动桥 + 降级
-    return function () {};
+    var state = { mode: 'idle', has: false };
+    var root = null, furn = null, cmp = null;
+    var mo = null, dead = false;
+    var off = { card: null, field: null, send: null, stop: null, phaseEl: null, phaseVal: '' };
+    var MC_DOCK_API = null; // 模块级桥(Task 5/6/kit 消费)
+    function q(sel) { try { return sel ? document.querySelector(sel) : null; } catch (e) { return null; } }
+    function findOfficial() {
+      off.card = q(MC_MAP.composerHide);
+      off.field = q(MC_MAP.composerField);
+      off.send = q(MC_MAP.composerSend);
+      off.stop = q(MC_MAP.composerStop);
+      off.phaseEl = q(MC_MAP.composerPhase);
+      return !!(off.card && off.field);
+    }
+    function bridgeFail() { // 桥断降级(spec §1):自绘坞退场 + 摘门控属性恢复官方;绝不双输入框
+      if (dead) return; dead = true;
+      try { if (MC_DOCK_API === api) MC_DOCK_API = null; } catch (e) {}
+      try { document.documentElement.removeAttribute('data-mc-dock-on'); } catch (e) {}
+      try { if (mo) { mo.disconnect(); mo = null; } } catch (e) {}
+      try { if (root) flashOut(root, function () { try { root.remove(); } catch (e) {} }); } catch (e) {}
+      root = null;
+    }
+    function mountDock() {
+      if (!findOfficial()) return false;
+      var seat = q(MC_MAP.composerSeat) || off.card.parentElement;
+      if (!seat) return false;
+      root = document.createElement('div');
+      root.setAttribute('data-mc-dock', '');
+      root.className = 'dock';
+      furn = document.createElement('div'); // Task 6 家具区(本任务先空置)
+      furn.setAttribute('data-mc-dock-furn', '');
+      cmp = document.createElement('div');  // Task 5 composer 卡(本任务先空置)
+      cmp.setAttribute('data-mc-dock-cmp', '');
+      root.appendChild(furn); root.appendChild(cmp);
+      seat.appendChild(root); // 官方卡之后(视觉在下方;官方卡被藏后占整个席位)
+      document.documentElement.setAttribute('data-mc-dock-on', '');
+      flashIn(root, function () {});
+      return true;
+    }
+    // 官方属性镜像 → 状态机(忙闲通道;composerPhase 空 = 降级读 Send/Stop disabled)
+    function syncBusy() {
+      try {
+        if (dead) return;
+        var busy = false;
+        if (off.phaseEl) busy = off.phaseEl.getAttribute('data-phase') === 'running'
+          || off.phaseEl.getAttribute('data-phase') === 'busy';
+        else if (off.stop && off.send) busy = !off.stop.hidden || off.send.hidden;
+        if (busy !== (state.mode === 'busy')) {
+          state = mcDockState(state, { t: busy ? 'busy' : 'idle' });
+          if (api && api.onState) api.onState(state);
+        }
+      } catch (e) {}
+    }
+    // React 重渲染守护:官方卡/自绘坞被冲 → 重插;官方件失活 → 降级(McThink 观察器嫁接先例)
+    mo = new window.MutationObserver(function () {
+      try {
+        if (dead) return;
+        if (!findOfficial()) { bridgeFail(); return; }
+        if ((!root || !root.isConnected) && off.card) {
+          var seat = q(MC_MAP.composerSeat) || off.card.parentElement;
+          if (seat && root && root.parentNode !== seat) seat.appendChild(root);
+        }
+        syncBusy();
+      } catch (e) {}
+    });
+    var api = {
+      state: function () { return state; },
+      onState: null, // Task 5 注册:状态机 → 三态渲染回调
+      setText: function (text) { return mcMirrorValue(off.field, text); }, // 桥通道 1
+      send: function () { // 桥通道 2:唯一发送通道 = 官方原钮
+        if (!off.send || off.send.disabled) return false;
+        try { off.send.click(); return true; } catch (e) { return false; }
+      },
+      stop: function () {
+        if (!off.stop) return false;
+        try { off.stop.click(); return true; } catch (e) { return false; }
+      },
+      officials: function () { return off; },
+      die: bridgeFail,
+    };
+    // 挂载成功后置:观察器守护注册 + 忙闲首同步(轮询路径挂载成功时同样要走)
+    function activate() {
+      mo.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['data-phase', 'disabled', 'hidden'] });
+      syncBusy();
+    }
+    function poll4Dock() { // 400ms 栅格候卡:在场即挂;不在场续候(teardown 兜底撤轮询)
+      timer = null;
+      if (dead) return;
+      if (mountDock()) { activate(); return; }
+      timer = CLOCK.next(poll4Dock, 400);
+    }
+    MC_DOCK_API = api;
+    // 晚挂载轮询(McFlow poll 同款纪律):live 实测主题 apply(style 注入 788ms)早于宿主 React
+    // 渲染官方卡(912ms),一次性探测必败且观察器仅在挂载成功后才注册、永不重试 → 400ms 栅格
+    // 轮询候卡;CLOCK 缺席(装配域不可达)退一次性语义,探针失配=静默退场,官方照常
+    var timer = null;
+    if (!mountDock() && typeof CLOCK !== 'undefined') timer = CLOCK.next(poll4Dock, 400);
+    if (root) activate();
+    else if (!timer) { MC_DOCK_API = null; return function () {}; } // 探针失配=静默退场,官方照常
+    return function teardown() {
+      try { if (MC_DOCK_API === api) MC_DOCK_API = null; } catch (e) {}
+      try { if (mo) mo.disconnect(); } catch (e) {}
+      try { if (timer) CLOCK.clear(timer); } catch (e) {}
+      try { document.documentElement.removeAttribute('data-mc-dock-on'); } catch (e) {}
+      try { if (root) root.remove(); } catch (e) {}
+    };
   },
 };
 // —— 纯函数(Task 3)——
