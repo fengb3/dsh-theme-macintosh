@@ -1073,12 +1073,19 @@ let MC_FINDER_QUERY = '';
 var MC_FINDER_SWAP = null;
 function mcViewSwapRestore(swap) {
   try { document.documentElement.removeAttribute('data-mc-viewswap'); } catch (e) {}
+  try { var tb0 = document.querySelector('.mc-titlebar'); if (tb0 && tb0.parentNode) tb0.parentNode.removeAttribute('data-mc-sbroot'); } catch (e) {}
   try { swap.mount(); } catch (e) {}
 }
 function mcViewSwapOfficial() {
   if (!MC_FINDER_SWAP || typeof CLOCK === 'undefined' || typeof MutationObserver === 'undefined') return;
   try { if (document.documentElement.hasAttribute('data-mc-viewswap')) return; } catch (e) {} // 防重入
   var swap = MC_FINDER_SWAP;
+  // 运行时自标记:从自绘标题栏反查官方侧栏根(结构无关,任何布局下都命中),标记先于官方
+  // 挂载就位 → CSS 藏匿零闪烁;标题栏缺席(遮蔽失败态)则无标记=不藏,官方照常
+  try {
+    var tb = document.querySelector('.mc-titlebar');
+    if (tb && tb.parentNode) tb.parentNode.setAttribute('data-mc-sbroot', '');
+  } catch (e) {}
   swap.unmount();
   try { document.documentElement.setAttribute('data-mc-viewswap', ''); } catch (e) {}
   var tryClick = function (n) {
@@ -1439,9 +1446,9 @@ const McFinder = {
 .mc-mini-btn svg{width:16px;height:16px}
 .mc-mini-new{background:var(--mc-accent);color:var(--mc-accent-ink)}
 .mc-mini-new:active{background:var(--mc-border);color:var(--mc-surface)}
-/* 验收轮5:视图选项瞬时换场窗口——侧栏根下全部官方子件 visibility 藏匿(占位不塌;官方菜单
-   portal 挂 body 逃逸可见;只留自绘 .mc-titlebar)。CJS 测试加载 MC_MAP 缺席时空串 */
-${typeof MC_MAP !== 'undefined' && MC_MAP.sidebarRoot ? 'html[data-mc-viewswap] ' + MC_MAP.sidebarRoot + ' > *:not(.mc-titlebar){visibility:hidden!important}' : ''}`,
+/* 验收轮5:视图选项瞬时换场窗口——官方侧栏根(运行时从 .mc-titlebar 父节点反查,标 data-mc-sbroot)
+   下全部官方子件 visibility 藏匿(占位不塌;官方菜单 portal 挂 body 逃逸可见;只留自绘标题栏) */
+html[data-mc-viewswap] [data-mc-sbroot] > *:not(.mc-titlebar){visibility:hidden!important}`,
 
   slots(ctx) {
     // 可选读取 'slots' 服务（ctx.slots 常驻直达；勿属性访问未声明服务）
