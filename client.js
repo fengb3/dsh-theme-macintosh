@@ -1766,10 +1766,28 @@ var McFlow = {
         for (var ri = 0; ri < list.length; ri++) (function (host) {
           if (host.hasAttribute('data-mc-dl')) { dlPaint(host); return; }
           host.setAttribute('data-mc-dl', ''); // 嫁接标记(藏匿已改无条件 CSS,与 JS 解耦)
-          // 轮5补2:宿主振荡整建重挂 → 旧 host 移除、新 host 入场;复用旧 host 前插的自绘行防重复
-          var prev = host.previousElementSibling;
+          // 轮5补3:流式期宿主把整个产物块(含 root 的无类包装 DIV)整体挂/卸循环——自绘行若插在
+          // 包装内会随之消失复现("有、没有")。上提一层:插到包装 DIV 之前的兄弟位,挂卸带不走;
+          // 复用检测同位(包装前的既有行)
+          var box = host.parentNode; // 无类包装 DIV(osXY9a_root 直下;可能整体被挂卸)
+          var anchor = box && box.parentNode ? box : host;
+          var prev = anchor.previousElementSibling;
+          if (!(prev && prev.classList && prev.classList.contains('mc-deliver'))) {
+            // 深层重挂(包装层也换新):全局回收失联行(宿主已断链)搬到锚前复用,防重复行
+            try {
+              var orphans = document.querySelectorAll('.mc-deliver');
+              for (var oi = 0; oi < orphans.length; oi++) {
+                if (orphans[oi].__mcHost && !orphans[oi].__mcHost.isConnected) {
+                  prev = orphans[oi];
+                  anchor.parentNode.insertBefore(prev, anchor);
+                  break;
+                }
+              }
+            } catch (e) {}
+          }
           if (prev && prev.classList && prev.classList.contains('mc-deliver')) {
             host.__mcRow = prev;
+            prev.__mcHost = host;
             host.__mcNames = [];
             DL_DRAWN.push(host);
             dlPaint(host);
@@ -1779,7 +1797,8 @@ var McFlow = {
           var row = document.createElement('div');
           row.className = 'mc-deliver';
           row.setAttribute('data-mc-deliver', '');
-          host.parentNode.insertBefore(row, host);
+          anchor.parentNode.insertBefore(row, anchor);
+          row.__mcHost = host;
           host.__mcRow = row;
           DL_DRAWN.push(host);
           if (!REDUCED) flashIn(row, function () {});
