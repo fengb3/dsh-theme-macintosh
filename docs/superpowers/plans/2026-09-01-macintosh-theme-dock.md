@@ -937,3 +937,14 @@ PROBE_DONE
 - 修复过程缺口补：新增节点恰为 root 本体时 `querySelectorAll` 不含自身 → `skinDeliver` 补 `matches` 自查（React 直插链槽实况）。
 - 验证：npm test 45/45 + audit 全绿；verify-dock GREEN；合成 DOM 注入活体验证（真实会话流内注入三文件 root → drawn=true、host absolute/hidden、chips 三枚全量平铺）。生成期活体复验待用户观察（产物行仅 busy 态渲染，探针无法静止复现）。
 - 顺带发现：产物行**只在回合进行中在场**（回合结束宿主即撤）——此前「idle 会话扫不到 root」非主题问题。
+
+## 验收轮 5 续：侧栏菜单直角化 + 视图选项/加号官方代理（2026-09-01）
+
+- **侧栏菜单直角**：自绘 `.mc-menu` 弃 `--mc-r-card` → 0（勘定：用户所见"官方圆角弹窗"实为自绘菜单残留圆角；官方 portal 一直被藏）。选项行 `.m-opt` 圆角一并拍平（用户裁定"彻底拍平"）。
+- **官方菜单 portal 皮**：overlays 的 `[data-mc-menuhide]` 全局藏匿退役，改 `[data-mc-menuskin]` CSS 注入（直角+`--mc-surface`/`--mc-border`/`--mc-shadow-pop`/`--font-ui`，容器与子件 `!important` 拍平）。
+- **官方三钮勘定**（部署源 `dsh-client-ui-workspace` 直读）：搜索会话（内嵌搜索行）/ 视图选项（分组方式+排序方式 Menu portal，状态持久化 `dsh.workspace.view.v5` store）/ 添加工作区（目录选择 dialog）；顶栏另有官方「新建会话」图标钮（槽外常驻 DOM）。
+- **视图选项瞬时换场**（官方三钮住 `sidebar.workspaces` 槽内，被 Finder 遮蔽即不在 DOM）：点钮→撤 Finder 注册→官方槽挂载（`html[data-mc-viewswap]` + `MC_MAP.sidebarRegion` visibility 藏匿，占位不塌）→点官方钮→菜单 portal 挂 body 逃逸可见（0px 直角）→MO 观菜单撤净→复注册。CLOCK 拍驱动，8 拍未现/3s 菜单未开双兜底复原。注册改可卸装（`MC_FINDER_SWAP` 模块句柄，ctx.effect 生命周期照旧）。
+- **加号代理**：`MC_MAP.sidebarNewSess`（官方顶栏图标钮，DOM 常驻）程序化 click；官方加号无弹层（直建会话）。`MC_MAP.sidebarViewOpts` 同款代理选择器，`data-mc-finder` 过滤防自点递归。
+- audit：finder 段入白名单反查机制（`FINDER_WHITELIST` = menuPortal + sidebar 三键；dist/client 快照段同步豁免）。
+- 验证：npm test 45/45 + audit 绿；verify-dock GREEN；活体：视图钮→官方菜单弹出 radius 0px 内容正确→Escape 关→换场复原 Finder 回归；加号代理捕获拦截验证命中官方钮（hit=1）。
+- 已知限制：Finder 不消费 groupBy/orderBy（官方视图设置改动不影响自绘树，后续若要遵从需读 `dsh.workspace.view.v5`）；搜索钮仍为本地 prompt 过滤（官方内嵌搜索行未接）。

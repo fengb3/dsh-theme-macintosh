@@ -8,7 +8,7 @@ const MC_MENUS_CSS = [
   '.mc-menu .m-group{padding:5px 9px 3px;font:600 10px/1.6 var(--font-display);letter-spacing:.1em;',
   ' color:var(--mc-faint);text-transform:uppercase}',
   '.mc-menu .m-opt{display:flex;align-items:center;gap:10px;padding:5px 9px;cursor:pointer;',
-  ' border-radius:var(--mc-r-tag);font:400 13px/1.5 var(--font-ui);color:var(--mc-fg);background:none;border:0;text-align:left;width:100%}',
+  ' border-radius:0;font:400 13px/1.5 var(--font-ui);color:var(--mc-fg);background:none;border:0;text-align:left;width:100%}', // 轮5:选项行圆角彻底拍平(用户裁定)
   '.mc-menu .m-opt:active{background:var(--mc-fg);color:var(--mc-surface)}',
   '.mc-menu .m-opt.danger{color:var(--mc-danger)}',
   '.mc-menu .m-opt.danger:active{background:var(--mc-danger);color:var(--mc-surface)}',
@@ -249,12 +249,17 @@ var McMenus = {
     document.addEventListener('click', onDocClick, true);
     document.addEventListener('keydown', onKey, true);
     document.addEventListener('scroll', onScroll, { capture: true, passive: true });
-    // 宿主原生菜单兜底隐藏(Task 1 勘定键为空则跳过;藏不删)
+    // 验收轮5:官方菜单 portal 由「全局藏匿」改「CSS 注入皮肤」(用户裁定:视图选项/加号走官方
+    // 代理弹层)——直角+像素皮(同 dock 弹层注入皮语汇),容器与子件全量拍平(!important 压宿主
+    // 哈希类样式);官方菜单只在官方钮被程序化代理点击时出现,无并存双菜风险
     var styleEl = null;
     if (MC_MAP.menuPortal) {
       styleEl = document.createElement('style');
-      styleEl.setAttribute('data-mc-menuhide', '');
-      styleEl.textContent = MC_MAP.menuPortal + '{display:none!important}';
+      styleEl.setAttribute('data-mc-menuskin', '');
+      styleEl.textContent = MC_MAP.menuPortal + '{border-radius:0!important;background:var(--mc-surface)!important;'
+        + 'border:1px solid var(--mc-border)!important;box-shadow:var(--mc-shadow-pop)!important;'
+        + 'font-family:var(--font-ui)!important;color:var(--mc-fg)!important;padding:4px!important}'
+        + MC_MAP.menuPortal + ' *{font-family:inherit!important;border-radius:0!important}';
       document.head.appendChild(styleEl);
     }
     return function teardown() {

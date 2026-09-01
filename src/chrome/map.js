@@ -136,6 +136,8 @@ const MC_MAP = {
   // 触发 = 行内 dots 钮左键(workspace SessionNodeItem/ProjectRowItem 的 rowActions),无 contextmenu 右键。
   // 主题在装时官方树被 McFinder 遮蔽,此组键是遮蔽失败时的兜底隐藏通道(Task 4 自绘兜底藏原生菜单)。
   menuPortal: 'body > div[role="menu"]',            // 宿主菜单 portal 容器(createPortal 直挂 body;类名全哈希,role 语义锚 stable)
+  sidebarViewOpts: 'button[aria-label=视图选项]',    // 官方侧栏「视图选项」钮(轮5:视图钮官方代理;主题同名钮经 data-mc-finder 在代理侧过滤,防自点递归)
+  sidebarNewSess: 'button[aria-label=新建会话]',     // 官方侧栏「新建会话」图标钮(轮5:加号官方代理,直建会话无弹层)
   menuHostItem: 'body > div[role="menu"] [role="menuitem"]', // 宿主原生菜单项(button[role=menuitem];自绘兜底藏;stable)
   // —— dock 段(输入坞;探针 2026-09-01,host 0.1.1-rc.2 rev aba836a0c42d——dock 附录A;
   //     验收轮1 回填 2026-09-01:live-runtime 探针 acceptance1-probe 勘定 busy 面貌)——

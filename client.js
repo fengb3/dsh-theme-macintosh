@@ -586,6 +586,8 @@ const MC_MAP = {
   // 触发 = 行内 dots 钮左键(workspace SessionNodeItem/ProjectRowItem 的 rowActions),无 contextmenu 右键。
   // 主题在装时官方树被 McFinder 遮蔽,此组键是遮蔽失败时的兜底隐藏通道(Task 4 自绘兜底藏原生菜单)。
   menuPortal: 'body > div[role="menu"]',            // 宿主菜单 portal 容器(createPortal 直挂 body;类名全哈希,role 语义锚 stable)
+  sidebarViewOpts: 'button[aria-label=视图选项]',    // 官方侧栏「视图选项」钮(轮5:视图钮官方代理;主题同名钮经 data-mc-finder 在代理侧过滤,防自点递归)
+  sidebarNewSess: 'button[aria-label=新建会话]',     // 官方侧栏「新建会话」图标钮(轮5:加号官方代理,直建会话无弹层)
   menuHostItem: 'body > div[role="menu"] [role="menuitem"]', // 宿主原生菜单项(button[role=menuitem];自绘兜底藏;stable)
   // —— dock 段(输入坞;探针 2026-09-01,host 0.1.1-rc.2 rev aba836a0c42d——dock 附录A;
   //     验收轮1 回填 2026-09-01:live-runtime 探针 acceptance1-probe 勘定 busy 面貌)——
@@ -1036,17 +1038,26 @@ function McFinderListbar(props) {
     if (v === null) return;
     props.onQuery(v);
   };
+  // 验收轮5:视图选项/添加改走官方代理(用户裁定)——程序化点官方侧栏钮,弹层=官方 portal
+  // + CSS 注入皮肤(见 overlays.js [data-mc-menuskin]);官方加号=直建会话(宿主无加号弹层)
+  var mcProxyOfficial = function (sel) {
+    return function () {
+      try {
+        if (typeof MC_MAP === 'undefined' || !MC_MAP[sel]) return;
+        var all = document.querySelectorAll(MC_MAP[sel]);
+        for (var i = 0; i < all.length; i++) {
+          if (all[i].hasAttribute('data-mc-finder')) continue; // 跳过主题同名钮,防自点递归
+          all[i].click(); return;
+        }
+      } catch (e) {}
+    };
+  };
   return h('div', { className: 'mc-sb-listbar' },
     h('span', { className: 'mc-sb-lb' }, '工作区'),
     h('span', { className: 'mc-sb-la' },
       btn('搜索会话', '#i-px-search', onSearch),
-      // 二批 D：视图选项钮勘不通 no-op（spec §0 裁定4 延伸）——CSS 隐藏（钮保留 DOM，宿主实有视图选项后恢复）
-      btn('视图选项', '#i-px-sliders', function (e) {
-        if (MC_MENU_OPEN) MC_MENU_OPEN('view', e.currentTarget, null);
-      }, 'mc-lb-view'),
-      btn('添加', '#i-px-plus', function (e) {
-        if (MC_MENU_OPEN) MC_MENU_OPEN('add', e.currentTarget, null);
-      })));
+      btn('视图选项', '#i-px-sliders', mcViewSwapOfficial, 'mc-lb-view'),
+      btn('添加', '#i-px-plus', mcProxyOfficial('sidebarNewSess'))));
 }
 
 // —— 折叠态迷你条（原型 .sb-mini）：官方 sidebar.workspaces 席位在折叠轨（wide:false）时的形态。
@@ -1054,6 +1065,45 @@ function McFinderListbar(props) {
 // 搜索词经模块级 MC_FINDER_QUERY + 自定义事件 mcx-finder-query 传给展开态 McFinderTree
 // （折叠/展开是组件形态切换=remount，state 不跨形态存活）。 ——
 let MC_FINDER_QUERY = '';
+
+// 验收轮5:视图选项「瞬时换场」——官方三钮(搜索/视图选项/添加工作区)住在本席位内容里,被
+// 遮蔽即不在 DOM。点视图钮:撤本注册→官方槽挂载(sidebarRegion visibility 藏匿,占位不塌;
+// 官方菜单 portal 挂 body 逃逸可见)→点官方钮→菜单关闭→复注册。全程经 CLOCK 拍,CLOCK 缺席
+// (CJS 测试加载)直接 no-op。MC_FINDER_SWAP 由 slots() 挂载期赋值、teardown 置空。
+var MC_FINDER_SWAP = null;
+function mcViewSwapRestore(swap) {
+  try { document.documentElement.removeAttribute('data-mc-viewswap'); } catch (e) {}
+  try { swap.mount(); } catch (e) {}
+}
+function mcViewSwapOfficial() {
+  if (!MC_FINDER_SWAP || typeof CLOCK === 'undefined' || typeof MutationObserver === 'undefined') return;
+  try { if (document.documentElement.hasAttribute('data-mc-viewswap')) return; } catch (e) {} // 防重入
+  var swap = MC_FINDER_SWAP;
+  swap.unmount();
+  try { document.documentElement.setAttribute('data-mc-viewswap', ''); } catch (e) {}
+  var tryClick = function (n) {
+    if (n > 8) { mcViewSwapRestore(swap); return; } // 官方钮 8 拍未现即复原(结构漂移兜底)
+    var all = typeof MC_MAP !== 'undefined' && MC_MAP.sidebarViewOpts ? document.querySelectorAll(MC_MAP.sidebarViewOpts) : [];
+    var btn = null;
+    for (var i = 0; i < all.length; i++) if (!all[i].hasAttribute('data-mc-finder')) { btn = all[i]; break; }
+    if (!btn) { CLOCK.next(function () { tryClick(n + 1); }, 100); return; }
+    btn.click();
+    var seen = false;
+    var mo = new MutationObserver(function () {
+      try {
+        if (document.querySelector(MC_MAP.menuPortal)) { seen = true; return; }
+      } catch (e) {}
+      if (!seen) return; // 菜单尚未挂载,继续等
+      mo.disconnect();
+      CLOCK.next(function () { mcViewSwapRestore(swap); }, 100); // 菜单撤净后再等一拍复原
+    });
+    mo.observe(document.body, { childList: true, subtree: true });
+    CLOCK.next(function () { // 兜底:菜单从未出现(点击无效等)→收观察器复原
+      if (!seen) { try { mo.disconnect(); } catch (e) {} mcViewSwapRestore(swap); }
+    }, 3000);
+  };
+  CLOCK.next(function () { tryClick(0); }, 100); // 撤注册后等一拍让官方槽挂载
+}
 
 // 二批 C：行内编辑桥——菜单「重命名」项（McMenus WIRING）不能直接设 React 状态，
 // 经模块级 MC_EDIT_HOOK 回调（McFinderTree 挂载时注册 editing setter、卸载置空）。
@@ -1370,7 +1420,7 @@ const McFinder = {
 .mc-sb-more:active{color:var(--mc-fg)}
 .mc-sb-find .mc-sb-more svg{width:11px;height:11px;flex:none}
 /* 二批 D：视图选项钮勘不通 no-op（spec §0 裁定4 延伸）——隐藏（DOM 保留；宿主实有视图选项后恢复） */
-.mc-sb-find .mc-lb-view{display:none}
+/* 验收轮5:视图选项钮复明(官方代理,藏匿规则退役) */
 /* 二批 C：行内重命名输入（方角 1px 边框、font 同位、宽随容器；无 hover/transition） */
 .mc-sb-find .mc-edit{flex:1;min-width:0;box-sizing:border-box;width:100%;
   padding:2px 4px;background:var(--mc-surface);
@@ -1388,7 +1438,10 @@ const McFinder = {
 .mc-mini-btn:active{background:var(--mc-border);color:var(--mc-surface)}
 .mc-mini-btn svg{width:16px;height:16px}
 .mc-mini-new{background:var(--mc-accent);color:var(--mc-accent-ink)}
-.mc-mini-new:active{background:var(--mc-border);color:var(--mc-surface)}`,
+.mc-mini-new:active{background:var(--mc-border);color:var(--mc-surface)}
+/* 验收轮5:视图选项瞬时换场窗口——官方槽内容 visibility 藏匿(占位不塌;官方菜单 portal 挂
+   body 逃逸可见;visibility 保几何不扰动布局)。CJS 测试加载 MC_MAP 缺席时空串 */
+${typeof MC_MAP !== 'undefined' && MC_MAP.sidebarRegion ? 'html[data-mc-viewswap] ' + MC_MAP.sidebarRegion + '{visibility:hidden!important}' : ''}`,
 
   slots(ctx) {
     // 可选读取 'slots' 服务（ctx.slots 常驻直达；勿属性访问未声明服务）
@@ -1399,7 +1452,9 @@ const McFinder = {
     // inject 返回 disposer，register 返回 disposer —— 经 ctx.effect(() => disp) 归入本 fiber。
     // ctx.sessions：plugin 尾部 inject:['sessions'] 声明（aurum 同款）——打开会话走 sessionsSvc.open。
     const sessionsSvc = ctx.sessions;
-    ctx.effect(() => S.inject('sidebar.workspaces', () => S.register(
+    // 验收轮5:注册改可卸装(视图选项瞬时换场)——mount/unmount 句柄存模块级 MC_FINDER_SWAP,
+    // 视图钮换场时撤/复注册;ctx.effect 生命周期照旧(卸载即撤)
+    const doRegister = () => S.inject('sidebar.workspaces', () => S.register(
       { name: 'sidebar.workspaces', priority: -1, registrant: 'macintosh' },
       function McFinderHost(props) {
         if (typeof React === 'undefined') return null;
@@ -1411,7 +1466,12 @@ const McFinder = {
           : null; // TODO(二期)：服务缺席时行内提示；当前静默降级假数据选中
         return React.createElement(McFinderTree, p);
       }
-    )));
+    ));
+    let reg = null;
+    const mount = () => { if (!reg) { try { reg = doRegister(); } catch (e) {} } };
+    const unmount = () => { if (reg) { try { reg(); } catch (e) {} reg = null; } };
+    MC_FINDER_SWAP = { mount: mount, unmount: unmount };
+    ctx.effect(() => { mount(); return function () { unmount(); MC_FINDER_SWAP = null; }; });
   },
 };
 
@@ -2917,7 +2977,7 @@ const MC_MENUS_CSS = [
   '.mc-menu .m-group{padding:5px 9px 3px;font:600 10px/1.6 var(--font-display);letter-spacing:.1em;',
   ' color:var(--mc-faint);text-transform:uppercase}',
   '.mc-menu .m-opt{display:flex;align-items:center;gap:10px;padding:5px 9px;cursor:pointer;',
-  ' border-radius:var(--mc-r-tag);font:400 13px/1.5 var(--font-ui);color:var(--mc-fg);background:none;border:0;text-align:left;width:100%}',
+  ' border-radius:0;font:400 13px/1.5 var(--font-ui);color:var(--mc-fg);background:none;border:0;text-align:left;width:100%}', // 轮5:选项行圆角彻底拍平(用户裁定)
   '.mc-menu .m-opt:active{background:var(--mc-fg);color:var(--mc-surface)}',
   '.mc-menu .m-opt.danger{color:var(--mc-danger)}',
   '.mc-menu .m-opt.danger:active{background:var(--mc-danger);color:var(--mc-surface)}',
@@ -3158,12 +3218,17 @@ var McMenus = {
     document.addEventListener('click', onDocClick, true);
     document.addEventListener('keydown', onKey, true);
     document.addEventListener('scroll', onScroll, { capture: true, passive: true });
-    // 宿主原生菜单兜底隐藏(Task 1 勘定键为空则跳过;藏不删)
+    // 验收轮5:官方菜单 portal 由「全局藏匿」改「CSS 注入皮肤」(用户裁定:视图选项/加号走官方
+    // 代理弹层)——直角+像素皮(同 dock 弹层注入皮语汇),容器与子件全量拍平(!important 压宿主
+    // 哈希类样式);官方菜单只在官方钮被程序化代理点击时出现,无并存双菜风险
     var styleEl = null;
     if (MC_MAP.menuPortal) {
       styleEl = document.createElement('style');
-      styleEl.setAttribute('data-mc-menuhide', '');
-      styleEl.textContent = MC_MAP.menuPortal + '{display:none!important}';
+      styleEl.setAttribute('data-mc-menuskin', '');
+      styleEl.textContent = MC_MAP.menuPortal + '{border-radius:0!important;background:var(--mc-surface)!important;'
+        + 'border:1px solid var(--mc-border)!important;box-shadow:var(--mc-shadow-pop)!important;'
+        + 'font-family:var(--font-ui)!important;color:var(--mc-fg)!important;padding:4px!important}'
+        + MC_MAP.menuPortal + ' *{font-family:inherit!important;border-radius:0!important}';
       document.head.appendChild(styleEl);
     }
     return function teardown() {

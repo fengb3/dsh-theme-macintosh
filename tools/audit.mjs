@@ -68,9 +68,9 @@ const clientRaw = existsSync(clientFile) ? readFileSync(clientFile, 'utf8') : nu
 // 预备各 check 用的走查文本
 const distText = scanText(distRaw, []); // dist 全量（check 1/2/3）
 const distNoClock = scanText(distRaw, [segmentRaw(distRaw, '// src/core/clock.js', '// src/core/mcfx.js')]); // check 2
-const distNoMap = scanText(distRaw, [segmentRaw(distRaw, '// src/chrome/map.js', '// src/chrome/chrome.js'), segmentRaw(distRaw, '// src/conv/overlays.js', '// src/kit.js'), segmentRaw(distRaw, '// src/conv/dock.js', '// src/conv/overlays.js')]); // check 5
+const distNoMap = scanText(distRaw, [segmentRaw(distRaw, '// src/chrome/map.js', '// src/chrome/chrome.js'), segmentRaw(distRaw, '// src/conv/overlays.js', '// src/kit.js'), segmentRaw(distRaw, '// src/conv/dock.js', '// src/conv/overlays.js'), segmentRaw(distRaw, '// src/finder.js', '// src/conv/think.js')]); // check 5
 const clientText = scanText(clientRaw, []); // client.js 全量（check 1/2/3；clock 段无裸定时器，无需豁免）
-const clientNoMap = scanText(clientRaw, [segmentRaw(clientRaw, '// src/chrome/map.js', '// src/chrome/chrome.js'), segmentRaw(clientRaw, '// src/conv/overlays.js', '// src/kit.js'), segmentRaw(clientRaw, '// src/conv/dock.js', '// src/conv/overlays.js')]); // check 5
+const clientNoMap = scanText(clientRaw, [segmentRaw(clientRaw, '// src/chrome/map.js', '// src/chrome/chrome.js'), segmentRaw(clientRaw, '// src/conv/overlays.js', '// src/kit.js'), segmentRaw(clientRaw, '// src/conv/dock.js', '// src/conv/overlays.js'), segmentRaw(clientRaw, '// src/finder.js', '// src/conv/think.js')]); // check 5
 // M5（终审修复批）：overlays 段不再整段豁免为盲区 —— 段内白名单反查。
 // 段内仅允许 menuPortal/menuHostItem 两 token 出现（Task 4 mount 兜底隐藏引用 MC_MAP.menuPortal）；
 // 其余任何 MC_MAP 特征片段（[data-…/[role=…/[aria-… 等）在段内出现即 FAIL。
@@ -88,6 +88,14 @@ const clientDock = clientRaw != null ? stripComments(segmentRaw(clientRaw, '// s
 const srcDockFile = join(ROOT, 'src', 'conv', 'dock.js');
 const srcDockText = srcText.get(srcDockFile) || null;
 const DOCK_WHITELIST = new Set(['composerCard', 'composerSeat', 'composerHide', 'composerField', 'composerSend', 'composerStop', 'composerPhase', 'composerCmd', 'composerPerm', 'composerModel', 'composerCtx']);
+// finder 段照 overlays/dock 同款机制（验收轮5）：段定位 '// src/finder.js' → '// src/conv/think.js'，
+// 白名单 = menuPortal（视图选项瞬时换场的菜单在场探测引用 MC_MAP.menuPortal）+
+// sidebar 三键名（sidebarRegion/sidebarViewOpts/sidebarNewSess——官方代理与换场藏匿引用）。
+const distFinder = distRaw != null ? stripComments(segmentRaw(distRaw, '// src/finder.js', '// src/conv/think.js') || '') : null;
+const clientFinder = clientRaw != null ? stripComments(segmentRaw(clientRaw, '// src/finder.js', '// src/conv/think.js') || '') : null;
+const srcFinderFile = join(ROOT, 'src', 'finder.js');
+const srcFinderText = srcText.get(srcFinderFile) || null;
+const FINDER_WHITELIST = new Set(['menuPortal', 'sidebarRegion', 'sidebarViewOpts', 'sidebarNewSess']);
 
 const failures = [];
 const fail = (msg) => { failures.push(msg); console.log(`FAIL ${msg}`); };
@@ -175,7 +183,7 @@ const rel = (f) => relative(ROOT, f).replace(/\\/g, '/');
   tokens.add('menuPortal'); // menu 段(2026-09-01):宿主菜单 portal 锚字面量,只允许出现在 map 段与 McMenus 段(src/conv/overlays.js + dist/client 对应快照段,Task 4 mount 兜底隐藏引用)
   let bad = [];
   for (const [f, t] of [...srcText, ...(distNoMap ? [[distFile, distNoMap]] : []), ...(clientNoMap ? [[clientFile, clientNoMap]] : [])]) {
-    if (rel(f) === 'src/chrome/map.js' || rel(f) === 'src/conv/overlays.js' || rel(f) === 'src/conv/dock.js') continue;
+    if (rel(f) === 'src/chrome/map.js' || rel(f) === 'src/conv/overlays.js' || rel(f) === 'src/conv/dock.js' || rel(f) === 'src/finder.js') continue;
     for (const tok of tokens)
       if (t.includes(tok)) bad.push(`${rel(f)} 含宿主选择器片段 ${tok}`);
   }
@@ -193,6 +201,14 @@ const rel = (f) => relative(ROOT, f).replace(/\\/g, '/');
     for (const tok of tokens) {
       if (DOCK_WHITELIST.has(tok)) continue;
       if (seg.includes(tok)) bad.push(`${name} dock 段含未白名单宿主选择器片段 ${tok}`);
+    }
+  }
+  // finder 段白名单反查(轮5):只许 FINDER_WHITELIST 键名出现在 finder 段
+  for (const [name, seg] of [['src/finder.js', srcFinderText], ['dist/client-body.js', distFinder], ['client.js', clientFinder]]) {
+    if (!seg) continue;
+    for (const tok of tokens) {
+      if (FINDER_WHITELIST.has(tok)) continue;
+      if (seg.includes(tok)) bad.push(`${name} finder 段含未白名单宿主选择器片段 ${tok}`);
     }
   }
   bad.length ? fail(`MC_MAP 选择器泄漏到管制文件之外:\n  ` + [...new Set(bad)].join('\n  '))
