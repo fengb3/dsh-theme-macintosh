@@ -920,4 +920,6 @@ PROBE_DONE
 - **弹层直角化**：菜单容器 `border-radius:0`（用户裁定，弃 `--mc-r-card`）
 - **flashIn/flashOut 接入**：出场=官方菜单元素直挂 `flashIn`（按元素身份判新，二段式换卡亦闪）；退场=宿主瞬时卸载菜单元素不可闪，以最近 rect+皮底色建「同形替身块」（`[data-mc-popfx]`）补 `flashOut`，拍1 撤块零残留
 - 冒烟实证（`tools/probe-popfx-smoke.mjs`）：半径 0px / 开层 80ms `mcfx mc-ghost`→400ms 撤净 / 关层 80ms 替身 `mc-flash`→500ms 零残留+门控摘除；npm test 45/45+audit 全绿；verify-dock GREEN
+- **ctx 圆环 busy/idle 同款弹窗**（commit 762de04，用户裁定）：idle 官方卡三轮勘定无圆环锚（busy 卸载；vanilla 态真实会话/active/有用量复核仍四钮无环——用户原版所见可点环判定为 busy 残留窗口）→ idle 用同款皮本地弹层顶上（直角/`--font-ui`/同底色），开合走 `popFlash`（mcfx 三拍+防重入），点外收口同款闪退；busy 路径不变（官方锚+门控）
+- 主题临时停用勘验二例（profile 补丁层 `disabled: true` 热重载，勘毕即恢复）：vanilla idle/hero/active 全态无 ctx 环；`tools/probe-ctx-*.mjs` 留盘
 - 待办 1-3 照旧顺延
