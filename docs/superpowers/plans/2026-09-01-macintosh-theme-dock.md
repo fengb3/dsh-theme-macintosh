@@ -914,3 +914,10 @@ PROBE_DONE
 1. 产物行抽搐根因续查（用户裁定本轮搁置；Phase 1 半程，假设=宿主测宽探针被主题皮肤改变度量，探针 `tools/probe-deliver-twitch.mjs` 留盘）
 2. ledger 4 条 minors（lastCtxPct 跨会话清零 / autogrow resize 重算 / 断言8 busy 窗挤压 / perm 前缀正则双处字面重复）
 3. 弹层活体验收：浅色态/IME 态/菜单键盘导航（Tab/箭头）未系统过验；模型菜单两段式（23 项 radio）驱动实链路未测（本轮仅验弹层形态与皮）
+
+## 验收轮 3 状态快照（2026-09-01，commit 8a3f839）
+
+- **弹层直角化**：菜单容器 `border-radius:0`（用户裁定，弃 `--mc-r-card`）
+- **flashIn/flashOut 接入**：出场=官方菜单元素直挂 `flashIn`（按元素身份判新，二段式换卡亦闪）；退场=宿主瞬时卸载菜单元素不可闪，以最近 rect+皮底色建「同形替身块」（`[data-mc-popfx]`）补 `flashOut`，拍1 撤块零残留
+- 冒烟实证（`tools/probe-popfx-smoke.mjs`）：半径 0px / 开层 80ms `mcfx mc-ghost`→400ms 撤净 / 关层 80ms 替身 `mc-flash`→500ms 零残留+门控摘除；npm test 45/45+audit 全绿；verify-dock GREEN
+- 待办 1-3 照旧顺延
