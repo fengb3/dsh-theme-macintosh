@@ -1055,16 +1055,26 @@ function mcFinderGroups(list, wsState) {
     }
     return raws;
   };
-  if (flat) { // 单列表:全部可见会话平铺一组(用户语义:不按工作区分组直接全列;不折叠——
-    // 「展开其余」截断在大平铺列表上反直觉);手动序走 __flat_session_order__ 账号
+  if (flat) { // 单列表:全部可见会话平铺(用户语义:不分组直接全列,不进折叠面板不截断);
+    // 行前缀带所属工作区名(wsOf 映射;散会话=未分组);手动序走 __flat_session_order__ 账号
+    const wsOf = {};
     const all = [];
-    for (let i = 0; i < workspaces.length; i++) all.push.apply(all, collect(workspaces[i].sessionIds || []));
+    for (let i = 0; i < workspaces.length; i++) {
+      const label = mcWsLabel(workspaces[i]);
+      const ids = workspaces[i].sessionIds || [];
+      for (let j = 0; j < ids.length; j++) wsOf[ids[j]] = label;
+      all.push.apply(all, collect(ids));
+    }
     all.push.apply(all, collect(list.ids || [])); // 含未编入工作区的散会话(collect 内 accounted 已含,不重)
     const seen = new Set();
     const uniq = all.filter(function (s) { if (seen.has(s.id)) return false; seen.add(s.id); return true; });
     const sorted = mcViewSortSessions(uniq, MC_FLAT_KEY, prefs);
     const out = [];
-    for (let i = 0; i < sorted.length; i++) out.push(norm(sorted[i], false));
+    for (let i = 0; i < sorted.length; i++) {
+      const n = norm(sorted[i], false);
+      n.ws = wsOf[sorted[i].id] || '未分组';
+      out.push(n);
+    }
     groups.push({ id: '__flat__', name: '会话', path: '', sessions: out });
     return groups;
   }
@@ -1281,7 +1291,10 @@ function McFinderSess(props) {
         onCancel: function () { props.onEdit(null); },
       })
     : h('span', { className: 'mc-s-tt' }, esc(s.title));
+  // 单列表:行首工作区名前缀(小字浅色,斜杠分隔;悬停原 title 即会话名)
+  const wsEl = s.ws ? h('span', { className: 'mc-s-ws' }, esc(s.ws) + ' /') : null;
   return h('div', { className: cls, role: 'button', tabIndex: 0, onClick: pick, title: s.title, 'aria-selected': on ? 'true' : 'false' },
+    wsEl,
     titleEl,
     h('span', { className: 'mc-s-slot' }, slot),
     h('button', {
@@ -1447,7 +1460,14 @@ function McFinderTree(props) {
   return h('div', { className: 'mc-sb-find', ref: root },
     h(McFinderListbar, { onQuery: qState[1] }),
     h('nav', { className: 'mc-sb-tree' },
-      shown.map(function (g) {
+      // 单列表:平铺直列(无折叠面板壳、无分组头);行首带工作区名前缀(见 McFinderSess)
+      shown.length === 1 && shown[0].id === '__flat__'
+        ? h('div', { className: 'mc-flat-body' },
+            shown[0].sessions.map(function (s) {
+              return h(McFinderSess, { key: s.id, sess: s, selected: sel === s.id, onPick: onPick,
+                editing: editState[0], onEdit: editState[1] });
+            }))
+        : shown.map(function (g) {
         return h(McFinderGroup, {
           key: g.id, group: g,
           open: q !== '' ? true : (openState[0] === null ? true : openState[0][g.id] !== false),
@@ -1522,6 +1542,10 @@ const McFinder = {
 /* Task 5 菜单锚定(v2 裁剪 bug 修复后仅存样式作用)：按钮组/会话行容器预置 position:relative——
    菜单已改 body 挂载 fixed 定位不再依赖 offsetParent,.mc-anchor 锚类退役删除 */
 .mc-sb-find .mc-sb-la,.mc-sb-find .mc-gh-act,.mc-sb-find .mc-sess{position:relative}
+/* 验收轮5终:单列表平铺体(无折叠面板壳)与行首工作区名前缀 */
+.mc-sb-find .mc-flat-body{display:flex;flex-direction:column}
+.mc-sb-find .mc-s-ws{flex:none;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  font:500 10px/1.6 var(--font-mono);color:var(--mc-faint)}
 /* ===== 折叠态迷你条（原型 .sb-mini；56px 官方轨内一列 26px 图标钮）===== */
 .mc-sb-mini{display:flex;flex-direction:column;align-items:center;gap:6px;flex:1;min-height:0;padding:8px 0}
 .mc-mini-btn{display:grid;place-items:center;width:34px;height:30px;flex:none;
