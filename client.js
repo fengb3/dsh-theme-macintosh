@@ -2322,7 +2322,7 @@ const MC_DOCK_CSS = [
     var C = 'html[data-mc-pop] ' + MC_MAP.composerHide;
     return [
       C + '{display:block!important;position:fixed!important;left:-32000px;top:0;width:1px;height:1px;overflow:visible;pointer-events:none}',
-      C + ' [role=menu],' + C + ' [role=listbox]{position:fixed;left:var(--mc-pop-l,16px);right:auto;bottom:var(--mc-pop-b,140px);margin:0;min-width:216px;max-height:44vh;overflow-y:auto;pointer-events:auto;z-index:9000;background:var(--mc-surface);border:1px solid var(--mc-border);border-radius:var(--mc-r-card);box-shadow:var(--mc-shadow-pop);padding:4px;font:500 12px/1.6 var(--font-ui);color:var(--mc-fg)}',
+      C + ' [role=menu],' + C + ' [role=listbox]{position:fixed;left:var(--mc-pop-l,16px);right:auto;bottom:var(--mc-pop-b,140px);margin:0;min-width:216px;max-height:44vh;overflow-y:auto;pointer-events:auto;z-index:9000;background:var(--mc-surface);border:1px solid var(--mc-border);border-radius:0;box-shadow:var(--mc-shadow-pop);padding:4px;font:500 12px/1.6 var(--font-ui);color:var(--mc-fg)}', // 直角(验收轮3 用户裁定,弃 --mc-r-card)
       C + ' [role=menuitem],' + C + ' [role=menuitemradio],' + C + ' [role=option]{display:flex;align-items:center;gap:8px;padding:5px 9px;cursor:pointer;font:inherit;line-height:1.6;color:var(--mc-muted);background:none;border:none;white-space:nowrap}',
       C + ' [role=menuitem]:active,' + C + ' [role=menuitemradio]:active,' + C + ' [role=option]:active{background:var(--mc-fg);color:var(--mc-surface)}',
       C + ' [aria-checked=true],' + C + ' [aria-selected=true]{background:var(--mc-accent);color:var(--mc-accent-ink)}',
@@ -2555,13 +2555,42 @@ var McDock = {
       } catch (e) {}
     }
     // 验收轮2:官方弹层收口——菜单卸载(点选/点外/ESC 后宿主摘 DOM)即摘 data-mc-pop,
-    // 恢复官方卡 display:none 门控;观察器 childList 每拍回调此处(卸载必触发 mutation)
+    // 恢复官方卡 display:none 门控;观察器 childList 每拍回调此处(卸载必触发 mutation)。
+    // 验收轮3:出场=官方菜单元素直挂 flashIn(mcfx 三拍类全局可用);退场=宿主瞬时卸载菜单
+    // 元素不复存在,以「同形替身块」(最近 rect + 皮底色)补 flashOut 闪退(原型语义)
+    var popMenuEl = null, popRect = null;
     function syncPopGate() {
       try {
         var de = document.documentElement;
-        if (!de.hasAttribute('data-mc-pop')) return;
-        if (off.card && off.card.querySelector('[role=menu],[role=listbox],[role=dialog]')) { popSeen = true; return; }
-        if (popSeen) { popSeen = false; de.removeAttribute('data-mc-pop'); }
+        if (!de.hasAttribute('data-mc-pop')) { popMenuEl = null; return; }
+        var menu = off.card ? off.card.querySelector('[role=menu],[role=listbox],[role=dialog]') : null;
+        if (menu) {
+          popSeen = true;
+          if (menu !== popMenuEl) { // 新菜单元素(首开/二段式换卡)→ 出场三拍;React 若中途擦类只是闪不完整,无害
+            popMenuEl = menu;
+            try { flashIn(menu, function () {}); } catch (e) {}
+          }
+          var r = menu.getBoundingClientRect();
+          popRect = { x: r.left, y: r.top, w: r.width, h: r.height }; // 每拍续记(二段式换卡移位)
+          return;
+        }
+        if (popSeen) {
+          popSeen = false; popMenuEl = null;
+          de.removeAttribute('data-mc-pop');
+          try {
+            if (popRect && popRect.w > 20 && popRect.h > 10) {
+              var ghost = document.createElement('div');
+              ghost.setAttribute('data-mc-popfx', '');
+              ghost.style.cssText = 'position:fixed;left:' + popRect.x + 'px;top:' + popRect.y +
+                'px;width:' + popRect.w + 'px;height:' + popRect.h +
+                'px;z-index:9000;background:var(--mc-surface);border:1px solid var(--mc-border);pointer-events:none';
+              document.body.appendChild(ghost);
+              var g = ghost;
+              flashOut(g, function () { try { g.remove(); } catch (e) {} }); // 拍1 白闪后撤块,零残留
+            }
+          } catch (e) {}
+          popRect = null;
+        }
       } catch (e) {}
     }
     function doSend() { // 镜像桥唯一发送路径:本地值 → 官方 textarea → 官方 Send click
