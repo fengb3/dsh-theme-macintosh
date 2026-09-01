@@ -1439,9 +1439,9 @@ const McFinder = {
 .mc-mini-btn svg{width:16px;height:16px}
 .mc-mini-new{background:var(--mc-accent);color:var(--mc-accent-ink)}
 .mc-mini-new:active{background:var(--mc-border);color:var(--mc-surface)}
-/* 验收轮5:视图选项瞬时换场窗口——官方槽内容 visibility 藏匿(占位不塌;官方菜单 portal 挂
-   body 逃逸可见;visibility 保几何不扰动布局)。CJS 测试加载 MC_MAP 缺席时空串 */
-${typeof MC_MAP !== 'undefined' && MC_MAP.sidebarRegion ? 'html[data-mc-viewswap] ' + MC_MAP.sidebarRegion + '{visibility:hidden!important}' : ''}`,
+/* 验收轮5:视图选项瞬时换场窗口——侧栏根下全部官方子件 visibility 藏匿(占位不塌;官方菜单
+   portal 挂 body 逃逸可见;只留自绘 .mc-titlebar)。CJS 测试加载 MC_MAP 缺席时空串 */
+${typeof MC_MAP !== 'undefined' && MC_MAP.sidebarRoot ? 'html[data-mc-viewswap] ' + MC_MAP.sidebarRoot + ' > *:not(.mc-titlebar){visibility:hidden!important}' : ''}`,
 
   slots(ctx) {
     // 可选读取 'slots' 服务（ctx.slots 常驻直达；勿属性访问未声明服务）
