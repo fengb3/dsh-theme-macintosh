@@ -2431,7 +2431,7 @@ var McDock = {
       var stop = cmp.querySelector('[data-mc-stop]');
       var busy = state.mode === 'busy';
       if (busy) { stop.hidden = false; send.hidden = true; }
-      else { stop.hidden = true; send.hidden = false; send.disabled = state.mode === 'idle'; }
+      else { stop.hidden = true; send.hidden = false; send.disabled = !state.has; }
     }
     // DOCK_DATA:Task 1 附录A勘定回填——键 → function():数据|null。全部勘不通 = 空表(家具静默)。
     // 形态约定(照原型 §9;勘定后按实况调整字段名):
@@ -2516,7 +2516,7 @@ var McDock = {
         if (pop && pop.classList.contains('open') && !pop.contains(e.target)) pop.classList.remove('open');
       } catch (er) {}
     }
-    document.addEventListener('click', onDocClose, true);
+    document.addEventListener('click', onDocClose); // bubble 相:capture 会抢在 ring toggle 前收 pop,再点 ring 即自锁(toggle 重开)
     var api = {
       state: function () { return state; },
       onState: null, // Task 5 注册:状态机 → 三态渲染回调
@@ -2558,7 +2558,7 @@ var McDock = {
       try { if (timer) CLOCK.clear(timer); } catch (e) {}
       try { document.documentElement.removeAttribute('data-mc-dock-on'); } catch (e) {}
       try { if (rootEl) rootEl.remove(); } catch (e) {} // rootEl 捕获:bridgeFail 置空 root 后 teardown 仍能移除退场元素
-      try { document.removeEventListener('click', onDocClose, true); } catch (e) {} // Task 6:点外收 pop 监听随坞撤除
+      try { document.removeEventListener('click', onDocClose); } catch (e) {} // Task 6:点外收 pop 监听随坞撤除(两参=同一函数引用,注册相无关)
     };
   },
 };
@@ -3258,7 +3258,7 @@ function McKitPage() {
     { t: 'idle' },
     { t: 'input', has: false },
   ];
-  function dockPaint() { // 照 dock.js paint():data-mc-state + busy 类 + Send/Stop 显隐(disabled=idle)
+  function dockPaint() { // 照 dock.js paint():data-mc-state + busy 类 + Send/Stop 显隐(disabled=!has)
     const box = dockCmpRef.current;
     if (!box) return;
     const busy = dockSt.state.mode === 'busy';
@@ -3267,7 +3267,7 @@ function McKitPage() {
     const send = box.querySelector('[data-mc-send]');
     const stop = box.querySelector('[data-mc-stop]');
     if (busy) { stop.hidden = false; send.hidden = true; }
-    else { stop.hidden = true; send.hidden = false; send.disabled = dockSt.state.mode === 'idle'; }
+    else { stop.hidden = true; send.hidden = false; send.disabled = !dockSt.state.has; }
   }
   function dockStop() { // 停拍 + 复位空稿(陈列回 idle;[open] 翻转/■ 停轮播共用)
     dockSt.on = false;

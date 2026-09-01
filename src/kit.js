@@ -378,7 +378,7 @@ function McKitPage() {
     { t: 'idle' },
     { t: 'input', has: false },
   ];
-  function dockPaint() { // 照 dock.js paint():data-mc-state + busy 类 + Send/Stop 显隐(disabled=idle)
+  function dockPaint() { // 照 dock.js paint():data-mc-state + busy 类 + Send/Stop 显隐(disabled=!has)
     const box = dockCmpRef.current;
     if (!box) return;
     const busy = dockSt.state.mode === 'busy';
@@ -387,7 +387,7 @@ function McKitPage() {
     const send = box.querySelector('[data-mc-send]');
     const stop = box.querySelector('[data-mc-stop]');
     if (busy) { stop.hidden = false; send.hidden = true; }
-    else { stop.hidden = true; send.hidden = false; send.disabled = dockSt.state.mode === 'idle'; }
+    else { stop.hidden = true; send.hidden = false; send.disabled = !dockSt.state.has; }
   }
   function dockStop() { // 停拍 + 复位空稿(陈列回 idle;[open] 翻转/■ 停轮播共用)
     dockSt.on = false;
