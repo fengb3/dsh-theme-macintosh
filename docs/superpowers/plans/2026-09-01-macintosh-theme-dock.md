@@ -890,3 +890,27 @@ PROBE_DONE
 ### ⚠️ 环境遗留
 
 - **会话权限卡在 Read Only**（探针真实点击流副作用，服务端持久、程序化无法复原）——须在 GUI 手动 `/permission` 切回 Full access
+
+## 验收轮 2 状态快照（2026-09-01，commit 9d8fb93）
+
+**弹层方案改判（用户裁定）**：弃「自绘菜单转写/斜杠填稿桥」，改**官方弹层 + CSS 注入**——原待办 1/2/3 三项合并为一套机制。
+
+### 已交付（commit 9d8fb93）
+
+- **官方弹层 CSS 注入门控**：bar 四钮（命令/权限/模型/busy-ctx）点击 = `openOfficialPop`——设 `--mc-pop-l/--mc-pop-b` 锚位（左锚定+视口钳制）+ `html[data-mc-pop]`；官方卡门控期从 `display:none` 切「离屏抹除态」（fixed -32000px 1px 盒、overflow:visible、pointer-events:none），卡内官方菜单（`[role=menu]/[role=listbox]`）经 `position:fixed` 逃逸到视口（display:none 祖先纯 CSS 不可复活，故门控期换藏匿形态；卡无 transform，fixed 子件仍视口定位）。菜单卸载由 `syncPopGate`（MO 每拍）收口摘属性，`popSeen` 防开层当拍误收
+- **注入皮**：像素边框/硬投影/`--font-ui`，菜单内 `*{font-family:inherit}`（宿主 span 自带字体曾令 CJK 回退不一致）；属性选择器一律不带引号（带引号形态撞 map 值提取 token，审计 §5）；无 :hover/transition
+- **ctx 圆环方案 2**：busy 走官方弹层门控；idle 官方钮缺席 → 自绘 ctx-pop 兜底（`lastCtxPct`）
+- **模型钮字体**：去 `--font-mono`，统一 `--font-ui`（与正文一致）
+- **Send/Stop 去图标**：纯文字（用户裁定）
+- 验证：npm test 45/45 + audit 全绿；verify-dock GREEN；活体冒烟 `tools/probe-pop-smoke.mjs`（三钮弹层/锚位/收口全 PASS，截图 `shots/dock-pop-*.png` 不入库）
+
+### 勘定补充（验收轮 2 探针）
+
+- **idle 期官方无上下文入口**（`tools/probe-ctx-idle*.mjs` 只读探针：卡内 5 交互件无 ctx 件，全页唯一「上下文」命中=「移除聊天框底部的上下文组成条插件」管理条目）——用户记忆的原版 idle 可点入口=宿主「上下文组成条」插件，**当前实例未渲染**（条本体不在 DOM）。busy 期才有卡内「上下文已用 N%」钮 → 方案 2 双轨裁定依据
+- 顶部菜单（menus 批）现为「藏官方 portal + 全自绘转写」——本轮 CSS 注入机制验证可行后为后续切换候选（另批）
+
+### 待办（验收轮 3）
+
+1. 产物行抽搐根因续查（用户裁定本轮搁置；Phase 1 半程，假设=宿主测宽探针被主题皮肤改变度量，探针 `tools/probe-deliver-twitch.mjs` 留盘）
+2. ledger 4 条 minors（lastCtxPct 跨会话清零 / autogrow resize 重算 / 断言8 busy 窗挤压 / perm 前缀正则双处字面重复）
+3. 弹层活体验收：浅色态/IME 态/菜单键盘导航（Tab/箭头）未系统过验；模型菜单两段式（23 项 radio）驱动实链路未测（本轮仅验弹层形态与皮）
