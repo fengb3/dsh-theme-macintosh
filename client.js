@@ -1071,9 +1071,11 @@ let MC_FINDER_QUERY = '';
 // 官方菜单 portal 挂 body 逃逸可见)→点官方钮→菜单关闭→复注册。全程经 CLOCK 拍,CLOCK 缺席
 // (CJS 测试加载)直接 no-op。MC_FINDER_SWAP 由 slots() 挂载期赋值、teardown 置空。
 var MC_FINDER_SWAP = null;
+var MC_FINDER_GHOST = null; // 换场定妆幽灵:自绘侧栏克隆(fixed 原矩形覆盖,不可交互)
 function mcViewSwapRestore(swap) {
   try { document.documentElement.removeAttribute('data-mc-viewswap'); } catch (e) {}
   try { var tb0 = document.querySelector('.mc-titlebar'); if (tb0 && tb0.parentNode) tb0.parentNode.removeAttribute('data-mc-sbroot'); } catch (e) {}
+  try { if (MC_FINDER_GHOST) { MC_FINDER_GHOST.remove(); MC_FINDER_GHOST = null; } } catch (e) {}
   try { swap.mount(); } catch (e) {}
 }
 function mcViewSwapOfficial() {
@@ -1085,6 +1087,25 @@ function mcViewSwapOfficial() {
   try {
     var tb = document.querySelector('.mc-titlebar');
     if (tb && tb.parentNode) tb.parentNode.setAttribute('data-mc-sbroot', '');
+  } catch (e) {}
+  // 定妆幽灵:换场期自绘侧栏以克隆态留在原地(视觉零变化;官方在底下挂载全被藏匿,
+  // 弹窗 portal 挂 body 逃逸可见)——body 挂载不经 React 管理,卸载即撤
+  try {
+    var el = document.querySelector('.mc-sb-find');
+    if (el) {
+      var r = el.getBoundingClientRect();
+      var g = el.cloneNode(true);
+      g.setAttribute('data-mc-sbghost', '');
+      g.style.position = 'fixed';
+      g.style.left = r.left + 'px';
+      g.style.top = r.top + 'px';
+      g.style.width = r.width + 'px';
+      g.style.height = r.height + 'px';
+      var fx = g.querySelectorAll('.mcfx, .mc-ghost, .mc-flash');
+      for (var fi = 0; fi < fx.length; fi++) fx[fi].classList.remove('mcfx', 'mc-ghost', 'mc-flash');
+      document.body.appendChild(g);
+      MC_FINDER_GHOST = g;
+    }
   } catch (e) {}
   swap.unmount();
   try { document.documentElement.setAttribute('data-mc-viewswap', ''); } catch (e) {}
@@ -1447,8 +1468,10 @@ const McFinder = {
 .mc-mini-new{background:var(--mc-accent);color:var(--mc-accent-ink)}
 .mc-mini-new:active{background:var(--mc-border);color:var(--mc-surface)}
 /* 验收轮5:视图选项瞬时换场窗口——官方侧栏根(运行时从 .mc-titlebar 父节点反查,标 data-mc-sbroot)
-   下全部官方子件 visibility 藏匿(占位不塌;官方菜单 portal 挂 body 逃逸可见;只留自绘标题栏) */
-html[data-mc-viewswap] [data-mc-sbroot] > *:not(.mc-titlebar){visibility:hidden!important}`,
+   下全部官方子件 visibility 藏匿(占位不塌;官方菜单 portal 挂 body 逃逸可见;只留自绘标题栏)。
+   自绘侧栏以 [data-mc-sbghost] 定妆幽灵覆盖原位(克隆挂 body,视觉零变化,不可交互) */
+html[data-mc-viewswap] [data-mc-sbroot] > *:not(.mc-titlebar){visibility:hidden!important}
+[data-mc-sbghost]{pointer-events:none;z-index:60;overflow:hidden}`,
 
   slots(ctx) {
     // 可选读取 'slots' 服务（ctx.slots 常驻直达；勿属性访问未声明服务）
