@@ -948,3 +948,10 @@ PROBE_DONE
 - audit：finder 段入白名单反查机制（`FINDER_WHITELIST` = menuPortal + sidebar 三键；dist/client 快照段同步豁免）。
 - 验证：npm test 45/45 + audit 绿；verify-dock GREEN；活体：视图钮→官方菜单弹出 radius 0px 内容正确→Escape 关→换场复原 Finder 回归；加号代理捕获拦截验证命中官方钮（hit=1）。
 - 已知限制：Finder 不消费 groupBy/orderBy（官方视图设置改动不影响自绘树，后续若要遵从需读 `dsh.workspace.view.v5`）；搜索钮仍为本地 prompt 过滤（官方内嵌搜索行未接）。
+
+## 验收轮 5 终：Finder 遵从官方视图设置（2026-09-01，本轮收口）
+
+- **`mcFinderGroups` 重写**：挂载时读官方持久化 store（`dsh.workspace.view.v5`，localStorage 纯 JSON；换场重挂载即重读）——`groupBy=flat` → 单列表一组（名「会话」，手动序账号 `__flat_session_order__`，工作区+散会话并一炉去重）；否则按工作区分组（散会话账号 `''`）。`orderBy=manual` → `sessionOrderByAccount` 账号序（缺席垫底原序）；否则 updatedAt 降序（官方默认，store 时间戳优先于快照字段）。listbar 标签随态切换（工作区↔会话）。
+- 新纯函数 `mcViewPrefs/mcViewSortSessions` 入 CJS shim 出口；新测试 `test/finder-view.test.mjs`（6 例：manual 序/updated 序/store 时间戳优先/默认分组/滤除/未分组）。
+- 活体四态实证（官方菜单真点）：单列表↔按工作区分组切换、手动↔最近更新行序实变、store 与视图一致、换场收口正常；51/51 + audit 绿 + verify-dock GREEN。
+- 剩余已知限制：搜索钮仍为本地 prompt 过滤（官方内嵌搜索行未接，另批）；视图设置变更只在换场/重挂载时被读取（无同 tab storage 事件监听——官方 store 无跨 tab 同步诉求，主题侧跟随重挂载节奏足够）。

@@ -989,34 +989,87 @@ function mcSessStatus(s, current) {
   return 'wait';
 }
 // 快照 → 分组列表（结构与假数据同形：id/name/path/sessions[{id,title,status,xtra}]）
-// 会话保持官方 sessionIds 手动序；每组前 5 条外标 xtra（sb-more 折叠语义）
+// 验收轮5终:遵从官方视图 store(dsh.workspace.view.v5,localStorage 持久化;换场重挂载即重读)——
+// groupBy=flat → 单列表(名称「会话」,手动序账号 __flat_session_order__);否则按工作区分组。
+// orderBy=manual → sessionOrderByAccount 账号序(缺席垫底原序);否则 updatedAt 降序(官方默认)。
+// 每组前 5 条外标 xtra（sb-more 折叠语义）
+function mcViewPrefs() {
+  try {
+    var raw = typeof localStorage !== 'undefined' ? localStorage.getItem('dsh.workspace.view.v5') : null;
+    if (!raw) return null;
+    var o = JSON.parse(raw);
+    return o && typeof o === 'object' ? o : null;
+  } catch (e) { return null; }
+}
+// 纯排序:arr=原始 session 对象列表;accountKey=手动序账号键(工作区 id/''/__flat_session_order__)
+function mcViewSortSessions(arr, accountKey, prefs) {
+  var p = prefs || {};
+  var order = p.sessionOrderByAccount || {};
+  var upd = (p.sessionUpdatedAtByAccount || {})[accountKey] || {};
+  var out = arr.slice();
+  if (p.orderBy === 'manual') {
+    var acc = order[accountKey] || [];
+    var idx = {};
+    for (var i = 0; i < acc.length; i++) idx[acc[i]] = i;
+    out.sort(function (a, b) {
+      var ia = idx[a.id], ib = idx[b.id];
+      if (ia === undefined && ib === undefined) return 0;
+      if (ia === undefined) return 1;
+      if (ib === undefined) return -1;
+      return ia - ib;
+    });
+    return out;
+  }
+  out.sort(function (a, b) {
+    var ta = upd[a.id] !== undefined ? upd[a.id] : (a.updatedAt || 0);
+    var tb = upd[b.id] !== undefined ? upd[b.id] : (b.updatedAt || 0);
+    return (tb - ta) || (a.id < b.id ? -1 : 1);
+  });
+  return out;
+}
+var MC_FLAT_KEY = '__flat_session_order__';
 function mcFinderGroups(list, wsState) {
+  const prefs = mcViewPrefs();
+  const flat = !!(prefs && prefs.groupBy === 'flat');
   const archived = new Set((wsState && wsState.archivedSessionIds) || []);
   const workspaces = (wsState && wsState.items) || [];
   const current = list.current;
   const norm = function (s, xtra) {
     return { id: s.id, title: mcTitle(s), status: mcSessStatus(s, current), xtra: xtra };
   };
+  const normAll = function (raws) {
+    const out = [];
+    for (let i = 0; i < raws.length; i++) out.push(norm(raws[i], i >= 5));
+    return out;
+  };
   const groups = [];
   const accounted = new Set();
-  for (let i = 0; i < workspaces.length; i++) {
-    const w = workspaces[i];
-    const members = [];
-    const ids = w.sessionIds || [];
+  const collect = function (ids) { // 原始可见 session 收集(保 updatedAt 供排序)
+    const raws = [];
     for (let j = 0; j < ids.length; j++) {
       const s = list.byId[ids[j]];
       if (s === undefined) continue;
       accounted.add(ids[j]);
       if (!mcVisible(s, current, archived)) continue;
-      members.push(norm(s, members.length >= 5));
+      raws.push(s);
     }
-    groups.push({ id: w.workspaceId, name: mcWsLabel(w), path: w.path || '', sessions: members });
+    return raws;
+  };
+  if (flat) { // 单列表:全部可见会话并一炉,手动序走 __flat_session_order__ 账号
+    const all = [];
+    for (let i = 0; i < workspaces.length; i++) all.push.apply(all, collect(workspaces[i].sessionIds || []));
+    all.push.apply(all, collect(list.ids || [])); // 含未编入工作区的散会话(collect 内 accounted 已含,不重)
+    const seen = new Set();
+    const uniq = all.filter(function (s) { if (seen.has(s.id)) return false; seen.add(s.id); return true; });
+    groups.push({ id: '__flat__', name: '会话', path: '', sessions: normAll(mcViewSortSessions(uniq, MC_FLAT_KEY, prefs)) });
+    return groups;
   }
-  const stray = (list.ids || []).filter(function (id) {
-    const s = list.byId[id];
-    return s !== undefined && !accounted.has(id) && mcVisible(s, current, archived);
-  }).map(function (id, i) { return norm(list.byId[id], i >= 5); });
-  if (stray.length > 0) groups.push({ id: '__ungrouped__', name: '未分组', path: '', sessions: stray });
+  for (let i = 0; i < workspaces.length; i++) {
+    const w = workspaces[i];
+    groups.push({ id: w.workspaceId, name: mcWsLabel(w), path: w.path || '', sessions: normAll(mcViewSortSessions(collect(w.sessionIds || []), w.workspaceId, prefs)) });
+  }
+  const stray = collect((list.ids || []).filter(function (id) { return !accounted.has(id); }));
+  if (stray.length > 0) groups.push({ id: '__ungrouped__', name: '未分组', path: '', sessions: normAll(mcViewSortSessions(stray, '', prefs)) });
   return groups;
 }
 
@@ -1053,7 +1106,7 @@ function McFinderListbar(props) {
     };
   };
   return h('div', { className: 'mc-sb-listbar' },
-    h('span', { className: 'mc-sb-lb' }, '工作区'),
+    h('span', { className: 'mc-sb-lb' }, (function () { try { var pf = mcViewPrefs(); return pf && pf.groupBy === 'flat' ? '会话' : '工作区'; } catch (e) { return '工作区'; } })()),
     h('span', { className: 'mc-sb-la' },
       btn('搜索会话', '#i-px-search', onSearch),
       btn('视图选项', '#i-px-sliders', mcViewSwapOfficial, 'mc-lb-view'),
@@ -1512,8 +1565,10 @@ html[data-mc-viewswap] [data-mc-sbregion]{visibility:hidden!important}
   },
 };
 
-// src/kit.js —— 检视页骨架（默认关闭零足迹；控制台 window.__MC_KIT_OPEN__ = true 打开）
-// 布局类全部 kit- 前缀，样式不外泄 kit 根之外；组件类直接复用 mc- 原语
+// CJS shim(测试 loadSrc 消费):视图纯函数出口
+if (typeof module !== 'undefined') module.exports = { mcViewPrefs: mcViewPrefs, mcViewSortSessions: mcViewSortSessions, mcFinderGroups: mcFinderGroups };
+
+// src/kit.js —— 检视页骨架（默认关闭零足迹；控制台 window.__MC_KIT_OPEN__ = true 打开）// 布局类全部 kit- 前缀，样式不外泄 kit 根之外；组件类直接复用 mc- 原语
 // 纯顶层声明，无模块系统语法；与 tokens/clock/mcfx/sprite 拼进同一作用域
 
 // src/conv/flow.js —— 会话流覆写(spec 2026-08-31)
