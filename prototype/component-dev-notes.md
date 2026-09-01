@@ -329,6 +329,44 @@ state = { view, mode, current, sessions, busy:{}, fallback:{}, queue:{}, stats:{
 - **浅色形态**：菜单仅依赖 --mc-surface/--mc-border/--mc-shadow-pop/--mc-danger/--mc-accent，
   深浅两套 token 直通，无需专门浅色规则（QA 实拍：白底黑边硬阴影 ✓、danger 红 ✓、on 选中 accent ✓）
 
+### 8.8 输入坞落地差异（2026-09-01 dock 批实录，host 0.1.1-rc.2）
+- **B 路线全自绘 + 镜像驱动桥实况**：槽通道全零命中（部署源 chunk 扫描无 composer 输入槽）→
+  自绘坞挂 `[data-composer-seat]` 席位插入（官方卡 `closest` 可命中；seat 在 parentElement 链 5 级
+  之外，勿用 parentElement 兜底猜位）；官方卡 `[data-composer-card]` 经 `html[data-mc-dock-on]`
+  `display:none!important` **藏未删**（单输入框红线）。桥通道实测：`composerField`=
+  `[data-composer-card] textarea`（原生 textarea 非 contenteditable），setText 走
+  `HTMLTextAreaElement.prototype` value **native setter + input 事件**（探针 mirrored:true、
+  官方 Send disabled true→false 真翻转）；`composerSend`=`[aria-label="发送消息"]` **程序化
+  click** 为唯一发送通道（官方钮 disabled = 官方拒绝 → 保留草稿不降级）。
+- **挂载时序**：live 实测主题 apply（style 注入 788ms）**早于**宿主 React 渲染官方卡（912ms）
+  → 一次性探测必败且观察器只在挂载成功后注册 → CLOCK 400ms 栅格**晚挂载轮询**候卡（McFlow
+  poll 同款先例）；CLOCK 缺席（装配域不可达）退一次性语义，探针失配 = 静默退场官方照常。
+- **MISS_MAX=3 观察器去抖与桥断退场**：MutationObserver（childList/subtree + attributes 过滤
+  data-phase/disabled/hidden）——瞬时失配（切会话/React keyed 重挂 1-2 批）不桥断，连续 3 拍
+  官方件缺席才判真失配 `bridgeFail`：坞 flashOut 退场 + 摘 `data-mc-dock-on` + 观察器断连；
+  **rootEl 置空前捕获**（flashOut hide 回调异步派发，触发时外层 root 已置空，闭包必须捕 el 才能
+  真移除）；reload 还原被演练破坏的 value 描述符 → 轮询重挂载（verify-dock 断言5 演练 GREEN）。
+- **IME isComposing 守卫**：自绘 textarea keydown 中 `e.isComposing` 早退——组字期 Enter=选字
+  确认不得发送（中文主场景，Task 5 fix 轮补）。
+- **勘不通被滤除清单（全部有定义完整的降级路径）**：数据面 todo/goal/queue/ctx 四件 regex 面
+  勘不通 → `DOCK_DATA` 空表静默（家具零渲染=合法终态）；`composerStop`（busy 态才渲染，idle 无
+  此钮）/`composerPhase`（data-phase=页面态 hero 非忙闲）两键空串降级（改读 Send/Stop
+  disabled/hidden）；composer-bar **左组**（斜杠命令/权限位）与**模型位**勘不通不渲染 → bar 仅
+  `.cb-right`（Send/Stop）；field 简化为纯 textarea（原型 lead 加号位随 Task 5 卡壳简化未移植，
+  与活体一致）。
+- **sprite 勘定结果（Task 8 收尾勘定）**：dock 标记引用六符号——`#i-px-clock/#i-check/#i-tri/
+  #i-sparkle` 在库；`#i-px-send/#i-px-stop` 缺 → 照 workspace FIGMA-ASSETS L952-953 同 id 几何
+  补进 sprite.js（菜单批 #i-px-clock 补缺同款先例），无重映射。
+- **ask 向导出栈**：§0 裁定 5——ask-card 向导不落地本批（数据面同勘不通；自绘坞被问答题卡接管
+  的 swap 动画原型专有，宿主 ask 流为官方渲染）。
+- **Task 8 浅色 QA 修复（计入 docs(mc-dock) 提交）**：① `.btn` 系 scoped 补齐——renderCmp 照原型
+  镜像 `btn sm primary/danger` 类而主题原语名 mc-btn，活体 Send/Stop 自落地起裸奔（浅色实拍坐实
+  浏览器默认钮）；② `[data-mc-dock] .btn[hidden]{display:none}`——author display:inline-flex
+  特异性压过 UA `[hidden]` 会令 idle 双钮同显（修复 .btn 时引入、同批修死）；③ textarea
+  `::placeholder` 染 faint（原型 §2 `.field::placeholder` 同款，初版只覆盖 input）；④
+  todo-acc 开合 **tri 同转**（原型 L2746 瞬切拍 toggle，初版接线漏）+ `svg.tri.open` 旋 90° 规则。
+  kit 输入坞分区（composer 三态+本地 mcDockState 轮播/todo/goal/queue/ctx pct74）随批陈列于检视页。
+
 ---
 
 ## 9 · §6 输入坞

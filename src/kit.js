@@ -159,7 +159,11 @@ html[data-theme="light"] .kit-panel .reasoning.run .r-txt .cover{background:#000
 .kit-panel .icon-btn.sm{width:20px;height:20px}
 .kit-panel .icon-btn.sm svg{width:11px;height:11px}
 /* 菜单分区(Task 7):静态陈列的 .mc-menu 归位到文档流(原语 absolute 供弹出锚定) */
-.kit-panel .kit-menustatic .mc-menu{position:relative;top:auto;left:auto;right:auto;max-width:280px}`,
+.kit-panel .kit-menustatic .mc-menu{position:relative;top:auto;left:auto;right:auto;max-width:280px}
+/* 输入坞分区(Task 8):dock CSS 全部 scoped 到 [data-mc-dock],样本直接包 div[data-mc-dock]
+   复用原语;kit-dockwrap 限宽对齐原型 kit-band 640px 惯例,kit-dockctx 给 ctx-pop 上弹留位 */
+.kit-panel .kit-dockwrap{max-width:640px}
+.kit-panel .kit-dockctx{max-width:640px;min-height:172px;justify-content:flex-end}`,
 
   slots(ctx) {
     // 席位：shell.overlay（additive 列表槽，order 靠后）；默认渲染 null。
@@ -222,6 +226,19 @@ function McKitPage() {
     if (CLOCK && retryDot.current) CLOCK.syncAnim(retryDot.current);
   }, [open]);
 
+  // 输入坞轮播(Task 8):kit 本地 mcDockState 状态机。hook 纪律:ref/effect 全部先于
+  // `if (!open) return null` 早退(React #310,同 runPill 先例);[open] 翻转即停拍,
+  // CLOCK.clear 注销未决 tick(禁裸定时器,audit §2)。
+  const dockCmpRef = React.useRef(null);
+  const dockSt = React.useRef({ on: false, seqIx: 0, timer: null, state: { mode: 'idle', has: false } }).current;
+  React.useEffect(function () {
+    if (!open && dockSt.on) dockStop();
+    return function () { // 卸载兜底(关闭路径由上一行覆盖;时钟已 dispose 时 clear 无害)
+      dockSt.on = false;
+      if (dockSt.timer) { try { CLOCK.clear(dockSt.timer); } catch (e) { /* 无害 no-op */ } dockSt.timer = null; }
+    };
+  }, [open]);
+
   // mcfx 演示靶
   const tgtIn = React.useRef(null);
   const tgtOut = React.useRef(null);
@@ -252,6 +269,155 @@ function McKitPage() {
   // （w.ctxData.sess 缺席即 return）全部静默 no-op，纯演示开合/出场形态。
   const popMenu = (e) => {
     if (typeof MC_MENU_OPEN === 'function') MC_MENU_OPEN('sess', e.currentTarget, null);
+  };
+
+  // —— 输入坞分区(Task 8)——[data-mc-dock] 全形态陈列:composer 三态 / todo-acc / goal-card /
+  // queue-row / ctx-ring。kit 上下文无官方镜像桥 → 不触 MC_DOCK_API/officials(桥空转守卫已保
+  // 安全);轮播由上方 dockSt 本地状态机经 mcDockState 纯函数推进(CLOCK.next 400ms 栅格)。
+  // DOM 照 prototype/macintosh-workspace.html L1243-1320(dock)/L1898-1959(todo-acc)/
+  // L1978-1998(goal-card) 直抄换 --mc-* token;勘定差异:queue 图标 #i-px-clock(T5 勘定,
+  // 非原型 #i-cl-Watch)、ctx dash 39.5 = mcCtxArc(74) 主题纯函数值(原型手写 39.6)。
+  const dockStatic = function (mode, txt) { // 陈列卡 = paint() 终态直出:idle 禁用 Send / ready 可发 / busy Send 隐 Stop 接管
+    const busy = mode === 'busy';
+    return h('div', { className: 'composer' + (busy ? ' busy' : ''), 'data-mc-state': mode, key: mode },
+      h('label', { className: 'mc-field' },
+        h('textarea', { rows: '1', placeholder: 'Message the agent…', readOnly: true, defaultValue: txt })),
+      h('div', { className: 'composer-bar' },
+        h('span', { className: 'cb-right' },
+          h('button', { type: 'button', className: 'btn sm primary', 'data-mc-send': '', hidden: busy, disabled: mode === 'idle' },
+            h('svg', { viewBox: '0 0 24 24', 'aria-hidden': true }, h('use', { href: '#i-px-send' })), 'Send'),
+          h('button', { type: 'button', className: 'btn sm danger', 'data-mc-stop': '', hidden: !busy },
+            h('svg', { viewBox: '0 0 24 24', 'aria-hidden': true }, h('use', { href: '#i-px-stop' })), 'Stop'))));
+  };
+  // 轮播靶卡:React 只出 idle 骨架,dockPaint 接管 attr/类/显隐(ReasoningDemo 命令式同款)
+  const dockDemoCard = h('div', { className: 'composer', 'data-mc-state': 'idle', ref: dockCmpRef },
+    h('label', { className: 'mc-field' },
+      h('textarea', { rows: '1', placeholder: 'Message the agent…' })),
+    h('div', { className: 'composer-bar' },
+      h('span', { className: 'cb-right' },
+        h('button', { type: 'button', className: 'btn sm primary', 'data-mc-send': '' },
+          h('svg', { viewBox: '0 0 24 24', 'aria-hidden': true }, h('use', { href: '#i-px-send' })), 'Send'),
+        h('button', { type: 'button', className: 'btn sm danger', 'data-mc-stop': '', hidden: true },
+          h('svg', { viewBox: '0 0 24 24', 'aria-hidden': true }, h('use', { href: '#i-px-stop' })), 'Stop'))));
+  const dockTodoItems = [ // 原型 L1906-1925 直抄(2 done / 1 now / 2 todo)
+    { done: true, txt: '枚举 DSH 插槽清单并映射到原型分区' },
+    { done: true, txt: '详情列 Info 窗 + 设置弹窗补位' },
+    { now: true, txt: '输入坞五件套 + 上下文注入四型' },
+    { txt: '§7 工具卡按 DSH 目录重列(20 张)' },
+    { txt: '图标库统一(Pixelarticons + 经典点缀)' },
+  ];
+  const dockAccClick = function (e) { // 开合 = accToggle 五拍(dock.js renderFurn 接线同款,含 tri 同转)
+    const head = e.currentTarget;
+    const acc = head.closest('[data-mc-todo]');
+    if (!acc) return;
+    accToggle(acc, function () {
+      acc.classList.toggle('open');
+      const tri = head.querySelector('svg.tri');
+      if (tri) tri.classList.toggle('open');
+    });
+  };
+  const dockTodoCard = function (isOpen, keyAttr) { // 原型 L1898-1927(折叠) / L1930-1959(展开) 直抄
+    return h('div', { className: 'todo-acc' + (isOpen ? ' open' : ''), 'data-mc-todo': '', key: keyAttr },
+      h('button', { type: 'button', className: 'todo-acc-head', onClick: dockAccClick },
+        h('svg', { className: 'tri' + (isOpen ? ' open' : ''), 'aria-hidden': true }, h('use', { href: '#i-tri' })),
+        h('span', { className: 'ta-title' }, 'To-Do List'),
+        h('div', { className: 'todo-bar' },
+          h('i', { className: 'done' }), h('i', { className: 'done' }), h('i', { className: 'now' }),
+          h('i', null), h('i', null)),
+        h('span', { className: 'todo-meta' }, '2/5')),
+      h('div', { className: 'todo-body' },
+        dockTodoItems.map(function (it) {
+          return h('div', {
+            className: 't-item' + (it.done ? ' done' : '') + (it.now ? ' now' : ''),
+            key: it.txt,
+          },
+            h('span', { className: 't-box' },
+              it.done ? h('svg', { viewBox: '0 0 9 8', 'aria-hidden': true }, h('use', { href: '#i-check' })) : null),
+            h('span', { className: 't-txt' }, it.txt));
+        })));
+  };
+  const dockGoalCard = function (phase, obj, acts, keyAttr) { // 原型 L1978-1998 直抄(钮组为陈列态)
+    return h('div', { className: 'goal-card', 'data-phase': phase, key: keyAttr },
+      h('svg', { 'aria-hidden': true }, h('use', { href: '#i-sparkle' })),
+      h('span', { className: 'gc-title' }, 'Goal'),
+      h('span', { className: 'gc-obj' }, obj),
+      h('span', { className: 'gc-acts' },
+        acts.map(function (a) {
+          return h('button', { type: 'button', className: 'btn sm' + (a.d ? ' danger' : ''), key: a.t }, a.t);
+        })));
+  };
+  const dockCtxClick = function (e) { // ctx-pop 硬切显隐(dock.js renderFurn 同款;kit 无全局互斥,再点自收)
+    e.stopPropagation();
+    const pop = e.currentTarget.parentNode.querySelector('[data-mc-ctxpop]');
+    if (pop) pop.classList.toggle('open');
+  };
+  const dockCtx = h('span', { className: 'cb-anchor', 'data-mc-ctx': '' }, // 原型 L1298-1312 直抄(pct 74 静态)
+    h('span', { className: 'ctx-ring', title: '上下文占用 74% · 96.2k / 130k tok', onClick: dockCtxClick },
+      h('svg', { viewBox: '0 0 22 22', 'aria-hidden': true, shapeRendering: 'crispEdges' },
+        h('circle', { className: 'cr-track', cx: '11', cy: '11', r: '8.5', fill: 'none', strokeWidth: '3' }),
+        h('circle', {
+          className: 'cr-arc', cx: '11', cy: '11', r: '8.5', fill: 'none', strokeWidth: '3',
+          strokeDasharray: '39.5 53.4', transform: 'rotate(-90 11 11)',
+        }))),
+    h('div', { className: 'ctx-pop', 'data-mc-ctxpop': '' },
+      h('div', null, h('b', null, '96.2k / 130k tok'), ' · 上下文占用 74%'),
+      h('div', { className: 'ctx-line' },
+        h('i', { style: { background: 'var(--mc-accent)' } }), '对话消息',
+        h('span', { className: 'cl-bar' }, h('i', { style: { width: '52%', background: 'var(--mc-accent)' } })), '52%'),
+      h('div', { className: 'ctx-line' },
+        h('i', { style: { background: 'var(--mc-spark)' } }), '系统提示词',
+        h('span', { className: 'cl-bar' }, h('i', { style: { width: '18%', background: 'var(--mc-spark)' } })), '21%'),
+      h('div', { className: 'ctx-line' },
+        h('i', { style: { background: 'var(--mc-muted)' } }), '工具调用',
+        h('span', { className: 'cl-bar' }, h('i', { style: { width: '8%', background: 'var(--mc-muted)' } })), '17%')));
+
+  // 轮播状态机:idle→ready(模拟打字上屏)→busy(回合跑)→idle(回合完)→清稿复位,循环
+  const dockSeq = [
+    { t: 'input', has: true, text: '轮播演示:模拟已输入的一段话' },
+    { t: 'busy' },
+    { t: 'idle' },
+    { t: 'input', has: false },
+  ];
+  function dockPaint() { // 照 dock.js paint():data-mc-state + busy 类 + Send/Stop 显隐(disabled=idle)
+    const box = dockCmpRef.current;
+    if (!box) return;
+    const busy = dockSt.state.mode === 'busy';
+    box.setAttribute('data-mc-state', dockSt.state.mode);
+    box.classList.toggle('busy', busy);
+    const send = box.querySelector('[data-mc-send]');
+    const stop = box.querySelector('[data-mc-stop]');
+    if (busy) { stop.hidden = false; send.hidden = true; }
+    else { stop.hidden = true; send.hidden = false; send.disabled = dockSt.state.mode === 'idle'; }
+  }
+  function dockStop() { // 停拍 + 复位空稿(陈列回 idle;[open] 翻转/■ 停轮播共用)
+    dockSt.on = false;
+    if (dockSt.timer) { try { CLOCK.clear(dockSt.timer); } catch (e) { /* 时钟已 dispose:无害 */ } dockSt.timer = null; }
+    dockSt.seqIx = 0;
+    dockSt.state = { mode: 'idle', has: false };
+    const box = dockCmpRef.current;
+    if (box) {
+      const ta = box.querySelector('textarea');
+      if (ta) ta.value = '';
+      dockPaint();
+    }
+  }
+  function dockTick() {
+    dockSt.timer = null;
+    if (!dockSt.on || !dockCmpRef.current) return; // 关闭/卸载:旧流不写(ReasoningDemo 同款守卫)
+    const ev = dockSeq[dockSt.seqIx % dockSeq.length];
+    dockSt.seqIx += 1;
+    const ta = dockCmpRef.current.querySelector('textarea');
+    if (ta && ev.text !== undefined) ta.value = ev.text; // 模拟打字上屏
+    if (ta && ev.t === 'input' && !ev.has) ta.value = ''; // 复位拍清稿(dock doSend 同款)
+    dockSt.state = (typeof mcDockState === 'function') ? mcDockState(dockSt.state, ev) : dockSt.state;
+    dockPaint();
+    dockSt.timer = CLOCK.next(dockTick, 400); // 400ms 一拍(dock 挂载轮询同栅格)
+  }
+  const dockCarousel = function () { // ▶/■ 切换;mcDockState/CLOCK 缺席(孤立加载)静默 no-op(popMenu 同款守卫)
+    if (typeof mcDockState !== 'function' || typeof CLOCK === 'undefined' || !CLOCK) return;
+    if (dockSt.on) dockStop();
+    else { dockSt.on = true; dockTick(); }
+    force(function (n) { return n + 1; }); // 钮标 ▶/■ 重渲
   };
 
   const swatches = [
@@ -428,7 +594,50 @@ function McKitPage() {
               h('div', { className: 'kit-frame-body' },
                 h('div', { className: 'kit-demo' },
                   h('button', { className: 'mc-btn', type: 'button', onClick: popMenu }, '▶ 弹出菜单(闪烁出场)'),
-                  h('span', { className: 'kit-note' }, '演示载荷 = sess 菜单；ctxData 为空 → 接线守卫静默 no-op')))))))));
+                  h('span', { className: 'kit-note' }, '演示载荷 = sess 菜单；ctxData 为空 → 接线守卫静默 no-op')))))),
+        // (g) 输入坞分区(Task 8):[data-mc-dock] 全形态陈列。dock CSS 全部 scoped 到 [data-mc-dock],
+        //     样本各包一层 div[data-mc-dock] 复用原语(kit-dockwrap 限宽);composer 三态 + 轮播走
+        //     kit 本地 mcDockState 状态机(无镜像桥,不触 MC_DOCK_API);轮播延时全走 CLOCK.next。
+        h('section', null,
+          h('h3', { className: 'kit-h' }, '输入坞'),
+          h('div', { className: 'kit-frames' },
+            h('div', { className: 'kit-frame' },
+              h('div', { className: 'kit-frame-tag' },
+                h('span', null, 'composer 三态 · idle(禁用 Send)/ ready(可发)/ busy(Stop 接管)· 轮播 = kit 本地 mcDockState 状态机(无镜像桥)'),
+                h('em', null, 'dock·composer')),
+              h('div', { className: 'kit-frame-body kit-stack sm' },
+                h('div', { className: 'kit-dockwrap', 'data-mc-dock': '' },
+                  dockStatic('idle', ''),
+                  dockStatic('ready', '把输入坞的浅色形态也核一遍'),
+                  dockStatic('busy', '回合运行中 — busy 仍可打字,发送权归 Stop'),
+                  dockDemoCard),
+                h('div', { className: 'kit-demo' },
+                  h('button', { className: 'mc-btn', type: 'button', onClick: dockCarousel },
+                    dockSt.on ? '■ 停轮播' : '▶ 三态轮播'),
+                  h('span', { className: 'kit-note' }, '400ms 一拍 · CLOCK.next 栅格 · idle→ready→busy→idle 循环')))),
+            h('div', { className: 'kit-frame' },
+              h('div', { className: 'kit-frame-tag' },
+                h('span', null, '家具 · queue-row / todo-acc 折叠+展开(点头开合)/ goal-card active+blocked —— DOCK_DATA 勘通后形态,活体暂全静默'),
+                h('em', null, 'dock·furn')),
+              h('div', { className: 'kit-frame-body' },
+                h('div', { className: 'kit-dockwrap', 'data-mc-dock': '' },
+                  h('div', { className: 'queue-row' },
+                    h('svg', { 'aria-hidden': true }, h('use', { href: '#i-px-clock' })),
+                    '队列中还有 2 条消息 — 第一条:继续验证 7×6 的拆数过程'),
+                  dockTodoCard(false, 'folded'),
+                  dockTodoCard(true, 'open'),
+                  dockGoalCard('active', '完成 MACINTOSH 主题原型十分区(插槽映射 / 详情列 / 输入坞五件套 / 工具卡目录 / 图标统一 / 响应式)',
+                    [{ t: 'Pause' }, { t: 'Edit' }, { t: 'Delete', d: true }], 'ga'),
+                  dockGoalCard('blocked', '展示用目标:保持 active 供 GUI 查看 — round-limit,等待人工处理',
+                    [{ t: 'Edit' }, { t: 'Delete', d: true }], 'gb')))),
+            h('div', { className: 'kit-frame' },
+              h('div', { className: 'kit-frame-tag' },
+                h('span', null, 'ctx 圆环 + pop · pct 74 静态示意(dash 39.5 53.4 = mcCtxArc(74);>80% 转 data-hot danger;点 ring 展开)'),
+                h('em', null, 'dock·ctx')),
+              h('div', { className: 'kit-frame-body' },
+                h('div', { className: 'kit-dockctx', 'data-mc-dock': '' },
+                  h('div', { className: 'composer-bar' },
+                    h('span', { className: 'cb-right' }, dockCtx))))))))));
 
 // —— ReasoningDemo：推理卡五帧流式演示（§8.2 状态机 kit 化）——
 // 五帧一周期 500ms：帧 B（t+0）追加 span.cover + 标题换字挂 flash → 帧 A（t+100）合并进

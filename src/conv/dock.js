@@ -23,6 +23,7 @@ const MC_DOCK_CSS = [
   '[data-mc-dock] .todo-acc-head .ta-title{flex:none;font:600 12px/1.4 var(--font-display);',
   ' letter-spacing:.02em;color:var(--mc-fg)}',
   '[data-mc-dock] .todo-acc-head svg.tri{width:12px;height:12px;flex:none;color:var(--mc-muted)}',
+  '[data-mc-dock] .todo-acc-head svg.tri.open{transform:rotate(90deg)}', // Task 8 QA 补:原型 L2746 开合瞬切拍同转 tri(落地初版漏)
   '[data-mc-dock] .todo-acc .todo-bar{height:6px;min-width:0}',
   '[data-mc-dock] .todo-acc .todo-meta{flex:none}',
   '[data-mc-dock] .todo-body{overflow:hidden;height:auto}',
@@ -57,6 +58,7 @@ const MC_DOCK_CSS = [
   '[data-mc-dock] .composer.busy .mc-field{background:color-mix(in oklab,var(--mc-fg) 4%,var(--mc-surface))}',
   '[data-mc-dock] .composer textarea{flex:1;background:transparent;border:none;resize:none;outline:none;',
   ' font:inherit;color:inherit;min-height:32px}',
+  '[data-mc-dock] .composer textarea::placeholder{color:var(--mc-faint)}', // Task 8 QA 补:原型 §2 .field::placeholder 同款(落地初版只覆盖了 input)
   '[data-mc-dock] .composer-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap}',
   '[data-mc-dock] .cb-btn{display:inline-flex;align-items:center;gap:6px;height:24px;padding:0 9px;',
   ' background:var(--mc-surface-2);border:1px solid var(--mc-border);border-radius:var(--mc-r-btn);',
@@ -64,6 +66,28 @@ const MC_DOCK_CSS = [
   ' font:500 11px/1 var(--font-ui);color:var(--mc-muted);cursor:pointer;white-space:nowrap}',
   '[data-mc-dock] .cb-btn svg{width:12px;height:12px;flex:none}',
   '[data-mc-dock] .cb-btn.model{font-family:var(--font-mono);font-size:11px}',
+  // Task 8 浅色 QA 补:.btn 系(原型 §2 L205-224 直抄换 token)。renderCmp 照原型 §9.2 镜像
+  // `btn sm primary/danger` 类,而主题原语命名 mc-btn → 落地初版活体 Send/Stop 裸奔(浏览器
+  // 默认钮,浅色实拍坐实),此块补齐双内环/primary/danger/:active 反色/:disabled/.sm 缩尺。
+  '[data-mc-dock] .btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;',
+  ' height:28px;padding:0 16px;min-width:72px;border-radius:var(--mc-r-btn);',
+  ' border:1px solid var(--mc-border);',
+  ' box-shadow:inset 0 0 0 1px var(--mc-surface),inset 0 0 0 2px var(--mc-border);',
+  ' background:var(--mc-surface-2);color:var(--mc-fg);',
+  ' font:600 13px/1 var(--font-display);letter-spacing:.04em;white-space:nowrap;cursor:pointer}',
+  '[data-mc-dock] .btn:active{background:var(--mc-border);color:var(--mc-surface);',
+  ' box-shadow:inset 0 0 0 1px var(--mc-border),inset 0 0 0 2px var(--mc-surface)}',
+  '[data-mc-dock] .btn.primary{background:var(--mc-accent);color:var(--mc-accent-ink);',
+  ' box-shadow:inset 0 0 0 1px var(--mc-accent),inset 0 0 0 2px var(--mc-border)}',
+  '[data-mc-dock] .btn.primary:active{background:var(--mc-border);color:var(--mc-surface);',
+  ' box-shadow:inset 0 0 0 1px var(--mc-border),inset 0 0 0 2px var(--mc-surface)}',
+  '[data-mc-dock] .btn.danger{background:var(--mc-danger);color:var(--mc-danger-ink);',
+  ' box-shadow:inset 0 0 0 1px var(--mc-danger),inset 0 0 0 2px var(--mc-border)}',
+  '[data-mc-dock] .btn:disabled{opacity:.4;cursor:not-allowed;transform:none;',
+  ' box-shadow:inset 0 0 0 1px var(--mc-surface),inset 0 0 0 2px var(--mc-border)}',
+  '[data-mc-dock] .btn.sm{height:22px;padding:0 10px;min-width:0;font-size:12px}',
+  '[data-mc-dock] .btn svg{width:14px;height:14px;flex:none}',
+  '[data-mc-dock] .btn[hidden]{display:none}', // Task 8 QA 补:author display 压过 UA [hidden] 会令 Send/Stop 双显,hidden 必须显式复原
   '[data-mc-dock] .cb-anchor{position:relative;display:inline-flex;flex:none}',
   '[data-mc-dock] .cb-right{margin-left:auto;display:flex;align-items:center;gap:8px;flex:none}',
   '[data-mc-dock] .ctx-ring{position:relative;width:22px;height:22px;flex:none;cursor:pointer}',
@@ -281,7 +305,11 @@ var McDock = {
       var head = furn.querySelector('.todo-acc-head');
       if (head) head.addEventListener('click', function () { // 折叠开合 = accToggle 状态切换
         var acc = furn.querySelector('[data-mc-todo]');
-        accToggle(acc, function () { acc.classList.toggle('open'); });
+        accToggle(acc, function () { // 原型 L2746:瞬切拍 tri 同转(落地初版漏,Task 8 QA 补)
+          acc.classList.toggle('open');
+          var tri = head.querySelector('svg.tri');
+          if (tri) tri.classList.toggle('open');
+        });
       });
       var ring = furn.querySelector('[data-mc-ctx] .ctx-ring');
       if (ring) ring.addEventListener('click', function (e) { // ctx-pop 硬切显隐(原型 §9 无淡入)
