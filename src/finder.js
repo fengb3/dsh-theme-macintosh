@@ -117,13 +117,17 @@ function mcFinderGroups(list, wsState) {
     }
     return raws;
   };
-  if (flat) { // 单列表:全部可见会话并一炉,手动序走 __flat_session_order__ 账号
+  if (flat) { // 单列表:全部可见会话平铺一组(用户语义:不按工作区分组直接全列;不折叠——
+    // 「展开其余」截断在大平铺列表上反直觉);手动序走 __flat_session_order__ 账号
     const all = [];
     for (let i = 0; i < workspaces.length; i++) all.push.apply(all, collect(workspaces[i].sessionIds || []));
     all.push.apply(all, collect(list.ids || [])); // 含未编入工作区的散会话(collect 内 accounted 已含,不重)
     const seen = new Set();
     const uniq = all.filter(function (s) { if (seen.has(s.id)) return false; seen.add(s.id); return true; });
-    groups.push({ id: '__flat__', name: '会话', path: '', sessions: normAll(mcViewSortSessions(uniq, MC_FLAT_KEY, prefs)) });
+    const sorted = mcViewSortSessions(uniq, MC_FLAT_KEY, prefs);
+    const out = [];
+    for (let i = 0; i < sorted.length; i++) out.push(norm(sorted[i], false));
+    groups.push({ id: '__flat__', name: '会话', path: '', sessions: out });
     return groups;
   }
   for (let i = 0; i < workspaces.length; i++) {
