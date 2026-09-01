@@ -79,6 +79,13 @@ const clientOverlays = clientRaw != null ? stripComments(segmentRaw(clientRaw, '
 const srcOverlaysFile = join(ROOT, 'src', 'conv', 'overlays.js');
 const srcOverlaysText = srcText.get(srcOverlaysFile) || null;
 const OVERLAYS_WHITELIST = new Set(['menuPortal', 'menuHostItem']);
+// dock 段照 overlays 段同款机制：段定位 '// src/conv/dock.js' → '// src/conv/overlays.js'，
+// 白名单 DOCK_WHITELIST = composerCard + MC_MAP dock 六键（骨架期零选择器；Task 4+ mount 引用时放行）。
+const distDock = distRaw != null ? stripComments(segmentRaw(distRaw, '// src/conv/dock.js', '// src/conv/overlays.js') || '') : null;
+const clientDock = clientRaw != null ? stripComments(segmentRaw(clientRaw, '// src/conv/dock.js', '// src/conv/overlays.js') || '') : null;
+const srcDockFile = join(ROOT, 'src', 'conv', 'dock.js');
+const srcDockText = srcText.get(srcDockFile) || null;
+const DOCK_WHITELIST = new Set(['composerCard', 'composerSeat', 'composerHide', 'composerField', 'composerSend', 'composerStop', 'composerPhase']);
 
 const failures = [];
 const fail = (msg) => { failures.push(msg); console.log(`FAIL ${msg}`); };
@@ -166,7 +173,7 @@ const rel = (f) => relative(ROOT, f).replace(/\\/g, '/');
   tokens.add('menuPortal'); // menu 段(2026-09-01):宿主菜单 portal 锚字面量,只允许出现在 map 段与 McMenus 段(src/conv/overlays.js + dist/client 对应快照段,Task 4 mount 兜底隐藏引用)
   let bad = [];
   for (const [f, t] of [...srcText, ...(distNoMap ? [[distFile, distNoMap]] : []), ...(clientNoMap ? [[clientFile, clientNoMap]] : [])]) {
-    if (rel(f) === 'src/chrome/map.js' || rel(f) === 'src/conv/overlays.js') continue;
+    if (rel(f) === 'src/chrome/map.js' || rel(f) === 'src/conv/overlays.js' || rel(f) === 'src/conv/dock.js') continue;
     for (const tok of tokens)
       if (t.includes(tok)) bad.push(`${rel(f)} 含宿主选择器片段 ${tok}`);
   }
@@ -176,6 +183,14 @@ const rel = (f) => relative(ROOT, f).replace(/\\/g, '/');
     for (const tok of tokens) {
       if (OVERLAYS_WHITELIST.has(tok)) continue;
       if (seg.includes(tok)) bad.push(`${name} overlays 段含未白名单宿主选择器片段 ${tok}`);
+    }
+  }
+  // dock 段白名单反查(同 M5):只许 DOCK_WHITELIST 六键 + composerCard 出现在 dock 段
+  for (const [name, seg] of [['src/conv/dock.js', srcDockText], ['dist/client-body.js', distDock], ['client.js', clientDock]]) {
+    if (!seg) continue;
+    for (const tok of tokens) {
+      if (DOCK_WHITELIST.has(tok)) continue;
+      if (seg.includes(tok)) bad.push(`${name} dock 段含未白名单宿主选择器片段 ${tok}`);
     }
   }
   bad.length ? fail(`MC_MAP 选择器泄漏到管制文件之外:\n  ` + [...new Set(bad)].join('\n  '))
