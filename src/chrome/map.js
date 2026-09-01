@@ -128,6 +128,7 @@ const MC_MAP = {
   deliverRoot: '.P4kPIW_root',   // DRIFT-RISK: build-hash class(dsh-client-ui-deliverables 产物行;无 data-* 稳定锚,宿主升级先复核)
   deliverFile: '.P4kPIW_file',   // DRIFT-RISK: 同上(文件名 chip 按钮;含 measure 探针 P4kPIW_probe 同类复用)
   deliverMore: '.P4kPIW_more',   // DRIFT-RISK: 同上("+N 个文件"溢出标签)
+  deliverProbe: '.P4kPIW_probe', // DRIFT-RISK: 同上(宿主测宽探针,同类复用 chip 皮肤;轮5 重绘数据面)
   // —— menu 段(弹出菜单;探针 2026-09-01,host 0.1.1-rc.1——附录A)——
   // 宿主原生菜单 = dsh-client-ui-primitives Menu(portal:true):createPortal(list,document.body),
   // list 为 div[role="menu"] 定位浮层(position:fixed 内联 left/top,viewport 内 clamp;

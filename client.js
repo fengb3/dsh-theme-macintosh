@@ -578,6 +578,7 @@ const MC_MAP = {
   deliverRoot: '.P4kPIW_root',   // DRIFT-RISK: build-hash class(dsh-client-ui-deliverables 产物行;无 data-* 稳定锚,宿主升级先复核)
   deliverFile: '.P4kPIW_file',   // DRIFT-RISK: 同上(文件名 chip 按钮;含 measure 探针 P4kPIW_probe 同类复用)
   deliverMore: '.P4kPIW_more',   // DRIFT-RISK: 同上("+N 个文件"溢出标签)
+  deliverProbe: '.P4kPIW_probe', // DRIFT-RISK: 同上(宿主测宽探针,同类复用 chip 皮肤;轮5 重绘数据面)
   // —— menu 段(弹出菜单;探针 2026-09-01,host 0.1.1-rc.1——附录A)——
   // 宿主原生菜单 = dsh-client-ui-primitives Menu(portal:true):createPortal(list,document.body),
   // list 为 div[role="menu"] 定位浮层(position:fixed 内联 left/top,viewport 内 clamp;
@@ -1518,6 +1519,14 @@ var McFlow = {
       MC_MAP.deliverRoot + ' ' + MC_MAP.deliverFile + '{display:inline-flex;align-items:center;height:24px;padding:0 8px;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;border:1px solid var(--mc-border);border-radius:var(--mc-r-btn);background:var(--mc-surface);color:var(--mc-fg);font:500 13px/1.6 var(--font-mono)}',
       MC_MAP.deliverRoot + ' ' + MC_MAP.deliverFile + ':active{background:var(--mc-fg);color:var(--mc-surface);border-color:var(--mc-fg)}',
       MC_MAP.deliverRoot + ' ' + MC_MAP.deliverMore + '{display:inline-flex;align-items:center;height:20px;padding:0 7px;white-space:nowrap;border:1px solid var(--mc-border-soft);border-radius:var(--mc-r-btn);background:var(--mc-surface-2);color:var(--mc-faint);font:500 11px/1.6 var(--font-mono)}',
+      // 验收轮5:产物行抽搐根治——宿主行撤下重绘(McFlow 观察器嫁接,见 mount skinDeliver)。
+      // 根因:宿主测宽-折叠判定反馈环(文件钮↔"+N 个文件"+showFolder 两态 33ms 互切,vanilla 差分
+      // 零事件定责主题)。宿主行保测量摘视觉(absolute+visibility,几何不变测量照常),自绘
+      // .mc-deliver 全量 chip 平铺(flex-wrap,无折叠判定=无环);点击镜像回官方文件钮
+      '.mc-deliver{display:flex;align-items:center;flex-wrap:wrap;gap:6px;max-width:100%}',
+      '.mc-deliver .mc-dl-file{display:inline-flex;align-items:center;height:24px;padding:0 8px;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;border:1px solid var(--mc-border);border-radius:var(--mc-r-btn);background:var(--mc-surface);color:var(--mc-fg);font:500 13px/1.6 var(--font-mono);cursor:pointer}',
+      '.mc-deliver .mc-dl-file:active{background:var(--mc-fg);color:var(--mc-surface);border-color:var(--mc-fg)}',
+      MC_MAP.deliverRoot + '.mc-dl-host{position:absolute;visibility:hidden;pointer-events:none}',
       // 验收⑤(2026-08-31 live 探明):钮组靠左、统计常驻靠右——root[data-time-hover-root] 下
       // 统计 span(.actions 末子 timeEnd)宿主 opacity:0 hover 显隐 → opacity/visibility 反制
       // (裁定:此两属性允许作为对宿主动效反制)+transition:none 压平;DOM 序本就 [copy,extra
@@ -1562,6 +1571,66 @@ var McFlow = {
     // 无 keyed 槽可遮蔽 → 观察器把自有类直接嫁到宿主结构上,吃到与 McUserNodeView 同一套 CSS:
     // 行→.mc-user-row 栈→flex 右对齐 气泡→.mc-user-bubble 图集→.mc-user-attach 引用→.mc-user-ref,
     // 标记 .mc-pending(虚线待定廓,host data-pending-steering 保留作锚)。幂等:已嫁接即跳过
+    // 验收轮5:产物行重绘(抽搐根治)——宿主 .P4kPIW_root 保测量摘视觉(.mc-dl-host),
+    // 同 parent 前插自绘 .mc-deliver 行;数据面=官方文件钮 ∪ 测宽探针(P4kPIW_probe 文本,
+    // 滤 "+N" 溢出项)的并集,单调累积;chip 点击镜像回官方同名文件钮(勘不到即静默)。
+    // 幂等:宿主行标记 data-mc-dl 即跳过;名集未变不重绘(振荡源读值在变,但并集单调→稳态零重绘)
+    var DL_DRAWN = [];
+    function skinDeliver(scope) {
+      try {
+        var list = [];
+        try { if (scope && scope.matches && scope.matches(MC_MAP.deliverRoot)) list.push(scope); } catch (e) {}
+        var roots = (scope && scope.querySelectorAll) ? scope.querySelectorAll(MC_MAP.deliverRoot) : [];
+        for (var qi = 0; qi < roots.length; qi++) list.push(roots[qi]);
+        if (!list.length) return;
+        for (var ri = 0; ri < list.length; ri++) (function (host) {
+          if (host.hasAttribute('data-mc-dl')) { dlPaint(host); return; }
+          host.setAttribute('data-mc-dl', '');
+          host.classList.add('mc-dl-host');
+          host.__mcNames = [];
+          var row = document.createElement('div');
+          row.className = 'mc-deliver';
+          row.setAttribute('data-mc-deliver', '');
+          host.parentNode.insertBefore(row, host);
+          host.__mcRow = row;
+          DL_DRAWN.push(host);
+          if (!REDUCED) flashIn(row, function () {});
+          dlPaint(host);
+        })(list[ri]);
+      } catch (e) { /* 宿主结构漂移即回退官方行,不破版 */ }
+    }
+    function dlNames(host) { // 数据面:官方钮 title/text ∪ 探针 text(滤 "+N" 溢出标签),保序去重
+      var names = [];
+      var put = function (s) { s = String(s || '').trim(); if (s && s.charAt(0) !== '+' && names.indexOf(s) < 0) names.push(s); };
+      try {
+        var btns = host.querySelectorAll(MC_MAP.deliverFile);
+        for (var i = 0; i < btns.length; i++) put(btns[i].getAttribute('title') || btns[i].textContent);
+      } catch (e) {}
+      try {
+        var pr = host.querySelectorAll(MC_MAP.deliverProbe);
+        for (var j = 0; j < pr.length; j++) put(pr[j].textContent);
+      } catch (e) {}
+      return names;
+    }
+    function dlPaint(host) {
+      var row = host.__mcRow; if (!row) return;
+      var names = dlNames(host), old = host.__mcNames;
+      if (names.length === old.length) return; // 并集单调:长度不变=名集不变
+      host.__mcNames = names;
+      while (row.firstChild) row.removeChild(row.firstChild);
+      for (var i = 0; i < names.length; i++) (function (nm) {
+        var b = document.createElement('button');
+        b.type = 'button'; b.className = 'mc-dl-file'; b.textContent = nm;
+        b.addEventListener('click', function () {
+          try {
+            var t = null, qs = document.querySelectorAll(MC_MAP.deliverRoot + ' ' + MC_MAP.deliverFile);
+            for (var k = 0; k < qs.length; k++) if ((qs[k].getAttribute('title') || qs[k].textContent).trim() === nm) { t = qs[k]; break; }
+            if (t) t.click();
+          } catch (e) {}
+        });
+        row.appendChild(b);
+      })(names[i]);
+    }
     function skinPending(el) {
       try {
         if (el.classList.contains('mc-user-row')) return;
@@ -1593,6 +1662,7 @@ var McFlow = {
         var pq = node.querySelectorAll(MC_MAP.pendingSteering);
         for (var pi = 0; pi < pq.length; pi++) skinPending(pq[pi]);
       } catch (e) {}
+      try { skinDeliver(node); } catch (e) {} // 产物行重绘(轮5):新入子树含 .P4kPIW_root 即嫁接
       var items = node.matches(MC_MAP.flowItem) ? [node] : [];
       try { var q = node.querySelectorAll(MC_MAP.flowItem); for (var i = 0; i < q.length; i++) items.push(q[i]); } catch (e) {}
       for (var i = 0; i < items.length; i++) {
@@ -1612,11 +1682,19 @@ var McFlow = {
       try { // 存量行标记不闪（历史加载）
         var q = root.querySelectorAll(MC_MAP.flowItem); for (var i = 0; i < q.length; i++) seen.add(q[i]);
       } catch (e) {}
+      try { skinDeliver(root); } catch (e) {} // 存量产物行(历史加载)即轮重绘
       mo = new MutationObserver(function (muts) {
         try {
           for (var i = 0; i < muts.length; i++) {
             var m = muts[i];
             if (m.type === 'characterData') continue; // 文本变化观察已随 think 重写退役
+            // 产物行重绘(轮5):已嫁接宿主行内部振荡性增删(钮↔标签互切)→ 名集并集复算(稳态零重绘)
+            try {
+              if (m.type === 'childList' && m.target instanceof Element) {
+                var dh = m.target.closest ? m.target.closest(MC_MAP.deliverRoot) : null;
+                if (dh && dh.hasAttribute('data-mc-dl')) dlPaint(dh);
+              }
+            } catch (e) {}
             for (var j = 0; j < m.addedNodes.length; j++) {
               var n = m.addedNodes[j];
               if (n instanceof Element) enter(n);
@@ -1637,6 +1715,13 @@ var McFlow = {
     return function teardown() {
       try { if (mo) mo.disconnect(); } catch (e) {}
       try { if (timer) CLOCK.clear(timer); } catch (e) {}
+      // 产物行重绘回收(轮5):自绘行拆除,宿主行摘标记复明(卸载即恢复官方行)
+      for (var i = 0; i < DL_DRAWN.length; i++) try {
+        var h = DL_DRAWN[i];
+        if (h.__mcRow && h.__mcRow.parentNode) h.__mcRow.parentNode.removeChild(h.__mcRow);
+        h.removeAttribute('data-mc-dl'); h.classList.remove('mc-dl-host');
+      } catch (e) {}
+      DL_DRAWN.length = 0;
     };
   },
 };

@@ -929,3 +929,11 @@ PROBE_DONE
 
 - 输入框上方家具区（queue-row/todo-acc/goal-card）**移下一期**：壳与渲染管线（Task 6）已交付且验收过，但 `DOCK_DATA` 数据面探针全零命中（宿主部署源无 composer/todo/goal 槽）→ 现静默属合法终态。做活需先开独立探针批解决数据来源（宿主 DOM 痕迹 / 降级静态形态均候选），不塞进本期收尾。
 - 本期剩余尾巴照旧：产物行抽搐根因、ledger 4 minors、弹层活体 QA（浅色/IME/键盘导航/模型两段式实链路）。
+
+## 验收轮 5：产物行抽搐根治（2026-09-01，重绘路线）
+
+- **根因勘定**（`tools/probe-deliver-mo.mjs` MutationObserver 取证 + vanilla 差分）：宿主产物行（`.P4kPIW_root`，仅回合进行中渲染）在「文件 chip 全展开」↔「+N 个文件 + showFolder 折叠」两态间以 ~33ms 周期互切，30s 7200 事件；同会话 vanilla 态零事件 → 定责主题皮肤改变了 chip 度量（padding/字体/max-width），令宿主「放不放得下」判定落在边界上成环。用户补充裁定：**"+x 个文件"场景必现**。
+- **修复（用户裁定重绘路线，弃继续探测）**：`src/conv/flow.js` mount 内新增 `skinDeliver/dlNames/dlPaint`——宿主行嫁接标记 `data-mc-dl` + `.mc-dl-host`（absolute+visibility 摘视觉保测量，几何不变宿主测量照常）；同 parent 前插自绘 `.mc-deliver` 行（出场 flashIn）；数据面 = 官方钮 title/text ∪ 测宽探针（`MC_MAP.deliverProbe` 新键）text，滤 "+N" 项，保序去重单调累积（稳态零重绘）；**全量平铺 flex-wrap，无折叠判定 = 无环**；chip 点击镜像回官方同名钮。teardown 拆自绘行复明宿主行。
+- 修复过程缺口补：新增节点恰为 root 本体时 `querySelectorAll` 不含自身 → `skinDeliver` 补 `matches` 自查（React 直插链槽实况）。
+- 验证：npm test 45/45 + audit 全绿；verify-dock GREEN；合成 DOM 注入活体验证（真实会话流内注入三文件 root → drawn=true、host absolute/hidden、chips 三枚全量平铺）。生成期活体复验待用户观察（产物行仅 busy 态渲染，探针无法静止复现）。
+- 顺带发现：产物行**只在回合进行中在场**（回合结束宿主即撤）——此前「idle 会话扫不到 root」非主题问题。
