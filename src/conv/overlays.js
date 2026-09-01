@@ -3,7 +3,7 @@
 // 菜单原语(原型 §9 L789-810 直抄;token 换 --mc-*)
 const MC_MENUS_CSS = [
   '.mc-menu{position:fixed;display:flex;flex-direction:column;min-width:210px;padding:4px;',
-  ' background:var(--mc-surface);border:1px solid var(--mc-border);border-radius:var(--mc-r-card);',
+  ' background:var(--mc-surface);border:1px solid var(--mc-border);border-radius:0;', // 验收轮5:菜单直角化(用户裁定,与弹层皮同规)
   ' box-shadow:var(--mc-shadow-pop);z-index:70;font-family:var(--font-sb)}',
   '.mc-menu .m-group{padding:5px 9px 3px;font:600 10px/1.6 var(--font-display);letter-spacing:.1em;',
   ' color:var(--mc-faint);text-transform:uppercase}',
