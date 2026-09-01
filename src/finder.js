@@ -136,7 +136,7 @@ var MC_FINDER_SWAP = null;
 var MC_FINDER_GHOST = null; // 换场定妆幽灵:自绘侧栏克隆(fixed 原矩形覆盖,不可交互)
 function mcViewSwapRestore(swap) {
   try { document.documentElement.removeAttribute('data-mc-viewswap'); } catch (e) {}
-  try { var tb0 = document.querySelector('.mc-titlebar'); if (tb0 && tb0.parentNode) tb0.parentNode.removeAttribute('data-mc-sbroot'); } catch (e) {}
+  try { var rg = document.querySelector('[data-mc-sbregion]'); if (rg) rg.removeAttribute('data-mc-sbregion'); } catch (e) {}
   try { if (MC_FINDER_GHOST) { MC_FINDER_GHOST.remove(); MC_FINDER_GHOST = null; } } catch (e) {}
   try { swap.mount(); } catch (e) {}
 }
@@ -144,11 +144,18 @@ function mcViewSwapOfficial() {
   if (!MC_FINDER_SWAP || typeof CLOCK === 'undefined' || typeof MutationObserver === 'undefined') return;
   try { if (document.documentElement.hasAttribute('data-mc-viewswap')) return; } catch (e) {} // 防重入
   var swap = MC_FINDER_SWAP;
-  // 运行时自标记:从自绘标题栏反查官方侧栏根(结构无关,任何布局下都命中),标记先于官方
-  // 挂载就位 → CSS 藏匿零闪烁;标题栏缺席(遮蔽失败态)则无标记=不藏,官方照常
+  // 运行时定位槽容器:自绘列表根向上爬到侧栏根的直系子层(=官方槽 regionArea,结构无关),
+  // 标 data-mc-sbregion——藏匿只打这一块(官方 WorkspaceBrowser 挂载处);logoRow/官方新建钮/
+  // footArea 是常驻件,不藏。标题栏缺席(遮蔽失败态)则无标记=不藏,官方照常
   try {
     var tb = document.querySelector('.mc-titlebar');
-    if (tb && tb.parentNode) tb.parentNode.setAttribute('data-mc-sbroot', '');
+    var el0 = document.querySelector('.mc-sb-find');
+    if (tb && tb.parentNode && el0) {
+      var root = tb.parentNode;
+      var reg = el0;
+      while (reg && reg.parentNode !== root) reg = reg.parentNode;
+      if (reg && reg !== root) reg.setAttribute('data-mc-sbregion', '');
+    }
   } catch (e) {}
   // 定妆幽灵:换场期自绘侧栏以克隆态留在原地(视觉零变化;官方在底下挂载全被藏匿,
   // 弹窗 portal 挂 body 逃逸可见)——body 挂载不经 React 管理,卸载即撤
@@ -529,10 +536,10 @@ const McFinder = {
 .mc-mini-btn svg{width:16px;height:16px}
 .mc-mini-new{background:var(--mc-accent);color:var(--mc-accent-ink)}
 .mc-mini-new:active{background:var(--mc-border);color:var(--mc-surface)}
-/* 验收轮5:视图选项瞬时换场窗口——官方侧栏根(运行时从 .mc-titlebar 父节点反查,标 data-mc-sbroot)
-   下全部官方子件 visibility 藏匿(占位不塌;官方菜单 portal 挂 body 逃逸可见;只留自绘标题栏)。
+/* 验收轮5:视图选项瞬时换场窗口——只藏运行时定位的官方槽容器(data-mc-sbregion=自绘列表根
+   上爬到侧栏根直系子层;官方 WorkspaceBrowser 挂载处);logoRow/官方新建钮/footArea 常驻不藏。
    自绘侧栏以 [data-mc-sbghost] 定妆幽灵覆盖原位(克隆挂 body,视觉零变化,不可交互) */
-html[data-mc-viewswap] [data-mc-sbroot] > *:not(.mc-titlebar){visibility:hidden!important}
+html[data-mc-viewswap] [data-mc-sbregion]{visibility:hidden!important}
 [data-mc-sbghost]{pointer-events:none;z-index:60;overflow:hidden}`,
 
   slots(ctx) {
