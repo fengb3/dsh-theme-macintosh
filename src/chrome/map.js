@@ -148,6 +148,6 @@ const MC_MAP = {
   composerCmd:   '[data-composer-card] button[aria-label="命令"]',       // 斜杠命令入口(idle/busy 全程在场)
   composerPerm:  '[data-composer-card] button[aria-label^="访问模式"]',   // 动态后缀=当前模式明文(「访问模式，当前：Full access」)
   composerModel: '[data-composer-card] button[aria-label^="选择模型"]',   // title 属性=当前模型名(精确读值锚)
-  composerCtx:   '[data-composer-card] button[aria-label^="上下文已用"]', // busy 态挂载,aria-label 带实时 %
+  composerCtx:   '[data-composer-card] [title^="上下文已用"], [data-composer-card] button[aria-label^="上下文已用"]', // 全态在场(验收轮3 深扫勘定:idle=SPAN[title] 非交互形态,busy=BUTTON[aria-label];title/aria 均带 %)
 };
 

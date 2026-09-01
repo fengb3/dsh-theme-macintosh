@@ -125,12 +125,12 @@ const MC_DOCK_CSS = [
     var C = 'html[data-mc-pop] ' + MC_MAP.composerHide;
     return [
       C + '{display:block!important;position:fixed!important;left:-32000px;top:0;width:1px;height:1px;overflow:visible;pointer-events:none}',
-      C + ' [role=menu],' + C + ' [role=listbox]{position:fixed;left:var(--mc-pop-l,16px);right:auto;bottom:var(--mc-pop-b,140px);margin:0;min-width:216px;max-height:44vh;overflow-y:auto;pointer-events:auto;z-index:9000;background:var(--mc-surface);border:1px solid var(--mc-border);border-radius:0;box-shadow:var(--mc-shadow-pop);padding:4px;font:500 12px/1.6 var(--font-ui);color:var(--mc-fg)}', // 直角(验收轮3 用户裁定,弃 --mc-r-card)
+      C + ' [role=menu],' + C + ' [role=listbox],' + C + ' [role=dialog]{position:fixed;left:var(--mc-pop-l,16px);right:auto;bottom:var(--mc-pop-b,140px);margin:0;min-width:216px;max-height:44vh;overflow-y:auto;pointer-events:auto;z-index:9000;background:var(--mc-surface);border:1px solid var(--mc-border);border-radius:0;box-shadow:var(--mc-shadow-pop);padding:4px;font:500 12px/1.6 var(--font-ui);color:var(--mc-fg)}', // 直角(验收轮3 用户裁定,弃 --mc-r-card);ctx 弹窗=role=dialog(终验勘定)并入同款定位与皮
       C + ' [role=menuitem],' + C + ' [role=menuitemradio],' + C + ' [role=option]{display:flex;align-items:center;gap:8px;padding:5px 9px;cursor:pointer;font:inherit;line-height:1.6;color:var(--mc-muted);background:none;border:none;white-space:nowrap}',
       C + ' [role=menuitem]:active,' + C + ' [role=menuitemradio]:active,' + C + ' [role=option]:active{background:var(--mc-fg);color:var(--mc-surface)}',
       C + ' [aria-checked=true],' + C + ' [aria-selected=true]{background:var(--mc-accent);color:var(--mc-accent-ink)}',
       C + ' [role=separator],' + C + ' hr{height:1px;margin:4px 5px;background:var(--mc-border-soft)}',
-      C + ' [role=menu] *,' + C + ' [role=listbox] *{font-family:inherit}', // 冒烟视觉勘定:宿主 span 自带字体令 CJK 回退不一致,全继承统一
+      C + ' [role=menu] *,' + C + ' [role=listbox] *,' + C + ' [role=dialog] *{font-family:inherit}', // 冒烟视觉勘定:宿主 span 自带字体令 CJK 回退不一致,全继承统一
     ].join('\n');
   })(),
 ].join('\n');
@@ -287,12 +287,12 @@ var McDock = {
       if (bModel) bModel.addEventListener('click', openOfficialPop(bModel, MC_MAP.composerModel));
       var ringBar = cmp.querySelector('[data-mc-ctx] .ctx-ring');
       if (ringBar) ringBar.addEventListener('click', function (e) {
-        // 验收轮3(用户裁定:busy/idle 同款弹窗):busy 官方 DOM 有锚(上下文已用 N% 钮)→官方弹层门控;
-        // idle 三轮勘定官方卡无圆环锚(busy 卸载)→同款皮本地弹层顶上(直角/同字体/flash 特效一致)
+        // 验收轮3 终版(用户裁定:全态走官方真弹窗):ctx 官方锚 idle/busy 全态在场(深扫勘定 span/button
+        // 双形态)→一律官方弹层门控;锚缺席(i18n 漂移等)才降级本地同款皮 pop
         try {
           e.stopPropagation();
           var pop = cmp.querySelector('[data-mc-ctxpop]');
-          if (state.mode === 'busy' && q(MC_MAP.composerCtx)) {
+          if (q(MC_MAP.composerCtx)) {
             if (pop) pop.classList.remove('open');
             openOfficialPop(ringBar, MC_MAP.composerCtx)();
             return;
@@ -339,11 +339,11 @@ var McDock = {
           var mSpan = model.querySelector('[data-mc-model-txt]');
           if (mSpan && mSpan.textContent !== mTxt) mSpan.textContent = mTxt;
         }
-        // ctx 圆环:pct 自官方 aria-label(/上下文已用\s*(\d+)%/)解析回填,mcCtxArc 出 dash/hot;
+        // ctx 圆环:pct 自官方锚解析回填(idle=span[title]/busy=button[aria-label],验收轮3 勘定;取两属性拼串正则),mcCtxArc 出 dash/hot;
         // pop 一行总量行(无分项数据,不编造分项)
         var offCtx = q(MC_MAP.composerCtx);
         if (offCtx) {
-          var mx = /上下文已用\s*(\d+)%/.exec(offCtx.getAttribute('aria-label') || '');
+          var mx = /上下文已用\s*(\d+)%/.exec((offCtx.getAttribute('aria-label') || '') + ' ' + (offCtx.getAttribute('title') || ''));
           if (mx) lastCtxPct = Number(mx[1]);
         }
         var ring = cmp.querySelector('[data-mc-ctx] .ctx-ring');
