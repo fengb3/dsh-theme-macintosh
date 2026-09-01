@@ -2280,7 +2280,48 @@ var McDock = {
     return function () {};
   },
 };
-if (typeof module !== 'undefined') module.exports = { McDock: McDock };
+// —— 纯函数(Task 3)——
+function mcDockState(state, ev) {
+  var s = state || { mode: 'idle', has: false };
+  if (!ev) return s;
+  if (ev.t === 'busy') return { mode: 'busy', has: s.has };
+  if (ev.t === 'idle') return { mode: 'idle', has: s.has };
+  if (ev.t === 'input') return { mode: s.mode === 'busy' ? 'busy' : (ev.has ? 'ready' : 'idle'), has: !!ev.has };
+  return s; // 未知事件无害返回
+}
+function mcTodoSegments(todos) {
+  var list = Array.isArray(todos) ? todos : [];
+  var nowSet = false;
+  return list.map(function (t) {
+    if (t && t.done) return 'done';
+    if (!nowSet) { nowSet = true; return 'now'; }
+    return 'todo';
+  });
+}
+function mcTodoMeta(todos) {
+  var list = Array.isArray(todos) ? todos : [];
+  var done = 0;
+  for (var i = 0; i < list.length; i++) if (list[i] && list[i].done) done++;
+  return done + '/' + list.length;
+}
+function mcCtxArc(pct) {
+  var C = 53.4; var p = Math.max(0, Math.min(100, Number(pct) || 0));
+  return { dash: (p / 100 * C).toFixed(1) + ' ' + C.toFixed(1), hot: p > 80 };
+}
+// React 受控 textarea 镜像(native setter + input event;spec §3 桥通道 1)
+// Node 桩(无原型描述符)走 desc 缺省 false? 否——桩需镜像语义:true 路径不依赖宿主原型:
+function mcMirrorValue(ta, text) {
+  if (!ta) return false;
+  var desc = (typeof window !== 'undefined' && window.HTMLTextAreaElement)
+    ? Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value') : { set: function (v) { ta.value = v; } };
+  if (!desc || !desc.set) return false;
+  try {
+    desc.set.call(ta, text);
+    ta.dispatchEvent(new (typeof window !== 'undefined' ? window.Event : function (t) { return { type: t }; })('input', { bubbles: true }));
+    return true;
+  } catch (e) { return false; }
+}
+if (typeof module !== 'undefined') module.exports = { McDock: McDock, mcDockState: mcDockState, mcTodoSegments: mcTodoSegments, mcTodoMeta: mcTodoMeta, mcCtxArc: mcCtxArc, mcMirrorValue: mcMirrorValue };
 
 // src/conv/overlays.js —— 弹出菜单体系(spec 2026-09-01 菜单批)
 // 协议 { css, mount(ctx) }。自绘菜单 body 挂载 fixed 定位(宿主官方菜单 portal 先例);无 :hover 无 transition。
