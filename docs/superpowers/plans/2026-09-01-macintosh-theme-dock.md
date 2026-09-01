@@ -955,3 +955,13 @@ PROBE_DONE
 - 新纯函数 `mcViewPrefs/mcViewSortSessions` 入 CJS shim 出口；新测试 `test/finder-view.test.mjs`（6 例：manual 序/updated 序/store 时间戳优先/默认分组/滤除/未分组）。
 - 活体四态实证（官方菜单真点）：单列表↔按工作区分组切换、手动↔最近更新行序实变、store 与视图一致、换场收口正常；51/51 + audit 绿 + verify-dock GREEN。
 - 剩余已知限制：搜索钮仍为本地 prompt 过滤（官方内嵌搜索行未接，另批）；视图设置变更只在换场/重挂载时被读取（无同 tab storage 事件监听——官方 store 无跨 tab 同步诉求，主题侧跟随重挂载节奏足够）。
+
+## 本期未完成 / 明确搁置清单（验收轮 5 收口盘点，2026-09-01）
+
+1. **左侧工作区/会话的上下拖拽与手动排序**——视图菜单「手动排序」态只读官方既有账号序（`sessionOrderByAccount`），自绘树无拖拽交互；做的话需要 HTML5 DnD（宿主 SessionTree 有 `useNativeDragAcceptance` 先例）+ 写回官方 store（经换场代理或直写 `dsh.workspace.view.v5` 待勘）。
+2. **输入框顶部 dock 栏家具**——追加消息条（queue-row）/ goal 卡 / todo list 折叠卡：壳与渲染管线（Task 6）已交付但 `DOCK_DATA` 数据面探针全零命中，现静默；做活需独立探针批解决数据来源（已裁定移下一期，见「家具区排期裁定」节）。
+3. **侧栏搜索钮接官方内嵌搜索行**——现为本地 prompt 标题过滤；官方有内嵌输入行 + 远程历史搜索（`searchSessions`），接通为独立小批。
+4. **产物行（deliverables）显示**——本期终裁整体不显示（`src/conv/flow.js` 一条 CSS 无条件藏匿）；恢复显示或换方案（官方原样/自绘）随时可启，删一条规则即回官方。
+5. **ledger 4 minors**——lastCtxPct 跨会话清零 / autogrow resize 重算 / 断言8 busy 窗挤压 / perm 前缀正则双处字面重复（dock 批遗留）。
+6. **弹层活体 QA 未系统过验**——浅色态 / IME 态 / 菜单键盘导航（Tab/箭头）；模型菜单两段式（23 项 radio）实链路未驱动。
+7. **装饰级 backlog**——官方注入弹层内滚动条/关闭图标像素化；深色底硬投影可见度弱；顶部菜单（menus 批）「藏官方 portal + 自绘转写」向 CSS 注入路线切换的候选评估。
