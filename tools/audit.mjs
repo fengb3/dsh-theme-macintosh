@@ -68,9 +68,9 @@ const clientRaw = existsSync(clientFile) ? readFileSync(clientFile, 'utf8') : nu
 // 预备各 check 用的走查文本
 const distText = scanText(distRaw, []); // dist 全量（check 1/2/3）
 const distNoClock = scanText(distRaw, [segmentRaw(distRaw, '// src/core/clock.js', '// src/core/mcfx.js')]); // check 2
-const distNoMap = scanText(distRaw, [segmentRaw(distRaw, '// src/chrome/map.js', '// src/chrome/chrome.js'), segmentRaw(distRaw, '// src/conv/overlays.js', '// src/kit.js')]); // check 5
+const distNoMap = scanText(distRaw, [segmentRaw(distRaw, '// src/chrome/map.js', '// src/chrome/chrome.js'), segmentRaw(distRaw, '// src/conv/overlays.js', '// src/kit.js'), segmentRaw(distRaw, '// src/conv/dock.js', '// src/conv/overlays.js')]); // check 5
 const clientText = scanText(clientRaw, []); // client.js 全量（check 1/2/3；clock 段无裸定时器，无需豁免）
-const clientNoMap = scanText(clientRaw, [segmentRaw(clientRaw, '// src/chrome/map.js', '// src/chrome/chrome.js'), segmentRaw(clientRaw, '// src/conv/overlays.js', '// src/kit.js')]); // check 5
+const clientNoMap = scanText(clientRaw, [segmentRaw(clientRaw, '// src/chrome/map.js', '// src/chrome/chrome.js'), segmentRaw(clientRaw, '// src/conv/overlays.js', '// src/kit.js'), segmentRaw(clientRaw, '// src/conv/dock.js', '// src/conv/overlays.js')]); // check 5
 // M5（终审修复批）：overlays 段不再整段豁免为盲区 —— 段内白名单反查。
 // 段内仅允许 menuPortal/menuHostItem 两 token 出现（Task 4 mount 兜底隐藏引用 MC_MAP.menuPortal）；
 // 其余任何 MC_MAP 特征片段（[data-…/[role=…/[aria-… 等）在段内出现即 FAIL。
