@@ -852,3 +852,41 @@ PROBE_DONE
 - **占位符**：MC_MAP dock 六键、左组/模型位、DOCK_DATA 均为显式探针依赖（Task 1 附录 A 回填；spec §0 裁定 3/4 已声明该模式）；每处均有定义完整的降级路径（空串跳过/空表静默/桥断退场）。无 TBD。
 - **类型一致**：`mcDockState(state,ev)→{mode,has}`、`mcTodoSegments/mcTodoMeta/mcCtxArc`、`mcMirrorValue(ta,text)→bool`、`MC_DOCK_API={state,onState,setText,send,stop,officials,die}`、MC_MAP dock 六键名、`[data-mc-dock]/[data-mc-dock-furn]/[data-mc-dock-cmp]/html[data-mc-dock-on]` 各任务一致；audit `DOCK_WHITELIST` 七键与 MC_MAP dock 段键集一致。
 - **顺序依赖**：1 先行（go/no-go 门 + 勘定回填）；2→3 顺序链；4 依赖 1+2+3；5 依赖 4；6 依赖 4（与 5 可并行的部分经 furn/cmp 容器隔离）；7 依赖 2-6；8 收尾。
+
+---
+
+## 验收轮 1 状态快照（2026-09-01 下班时点，续作必读）
+
+**分支 `feat/mc-dock`（未合并 main）；实施 8 任务 + 终审 + 验收轮 1 修复全部完成（HEAD `69b3b94`）；`npm test` 45/45 + audit + verify-dock 门禁全绿。**
+
+### 已交付（验收轮 1 修复，commit 69b3b94，审查 Approved）
+
+- busy/Stop 链路接线：MC_MAP 回填 `composerStop`（busy 独占钮，aria=停止生成）；syncBusy 判定改「Stop 在场且 !hidden」（busy 时官方 Send 是卸载非 hidden）；活体验证点击自绘 Stop → 官方中断 → 回 idle
+- composer-bar 四钮补全：命令/权限/模型/ctx 圆环镜像官方钮（值自 aria-label/title 解析实时同步；官方钮缺席→对应钮隐藏降级）
+- textarea 自增高（scrollHeight 瞬切、40vh 封顶、发送复位）
+- ctx 圆环：busy 期官方钮 aria-label「上下文已用 N%」实时解析进环与 pop
+
+### 弹层勘定结论（6 轮活体探针，详见 workspace acceptance1-popover-probe.md）
+
+- **模型**：隐藏态纯合成 click 可真实换值（GLM-5.3-flash⇄GLM-5.3 已验证+复原）→ **自绘菜单转写成立**
+- **权限**：不可驱动——宿主会话策略门吞掉一切升级方向（合成/悬停/键盘/真实点击全试）→ **降级为状态显示**
+- **命令**：role=listbox 7 项（compact/export/feedback/goal/permission/plan/model）仅清点未测驱动
+- 三弹层全挂 display:none 官方卡内（menuInCard:true，零 portal）——镜像点击对用户不可见
+
+### 用户裁定（验收轮 1 反馈 + 后续）
+
+1. bar 按钮壳必须（修订裁定 4 的 bar 适用面）
+2. textarea 自增高为新增需求
+3. **命令钮走「斜杠填稿桥」**：点选命令只把 `/xxx` 文本填入自绘 textarea 草稿，用户审查后 Enter 走官方执行链（零副作用）
+
+### 待办（验收轮 2，按序）
+
+1. **权限钮降级状态显示**（宿主策略门，弹菜单无意义）
+2. **模型钮自绘菜单转写**（点选驱动隐藏官方 menuitemradio，已证可行；两段式：cell click 展开 23 项 radio）
+3. **命令钮斜杠填稿桥**（7 项命令清单已清点）
+4. **产物行抽搐根因续查**（用户报告：turn-tail 产物行文字/元素概率性两种样式或内容来回切换。Phase 1 半程：假设=宿主测宽探针（`.P4kPIW_probe`×3 + `.P4kPIW_measure` 容器，`width:max-content` 绝对定位——已实锤存在）被主题皮肤（`.P4kPIW_root .P4kPIW_file` max-width:220px/24px 高/13px mono）改变度量 → 测量↔渲染反馈振荡。已取证：15s 窗口 0 mutation（概率性未捕获）；待做：流式期间/resize 触发长窗复测、对比探针测量值与 220px 钳制差、查宿主是否 inline width 回写。探针脚本 `tools/probe-deliver-twitch.mjs` 留盘 untracked）
+5. ledger 4 条 minors（lastCtxPct 跨会话清零 / autogrow resize 重算 / 断言8 busy 窗挤压 / perm 前缀正则双处字面重复）
+
+### ⚠️ 环境遗留
+
+- **会话权限卡在 Read Only**（探针真实点击流副作用，服务端持久、程序化无法复原）——须在 GUI 手动 `/permission` 切回 Full access
