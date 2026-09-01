@@ -88,3 +88,19 @@ README.md               工具行补 verify-dock（收尾）
 - 占位符：家具数据面/挂载入口多处「探针定」——显式探针依赖（Task 1 勘定回填，裁定 3），非 TBD；每处均有定义完整的降级路径。
 - 一致性：B 路线与裁定 1/2/4 一致；回退方案 A 与裁定 3 一致；范围边界（ask 向导/排序钮/浮层出栈）与上游文档一致；动画纪律与全项目一致。
 - 范围：单一实现计划可承载（估 7-9 任务：探针/原语与镜像桥/纯函数/卡壳三态/家具/圆环/门禁/kit 收尾）；ask 向导明确出栈。
+
+---
+
+## 附录 A · 探针勘定记录（Task 1 回填）
+
+> 探针 `tools/probe-dock.mjs`（2026-09-01，live @127.0.0.1:3080，宿主 **0.1.1-rc.2** bundle rev aba836a0c42d）；探针输出全文存 plan 附录 A。
+
+| 勘察项 | 结论 |
+|--------|------|
+| ① 镜像桥（裁定 3 go/no-go 门） | **GO**：native value 描述符在场（hasNativeDesc:true），`PROBE_MIRROR_试` 经 native setter + input event 写入官方受控 textarea 读回一致（mirrored:true），官方 Send disabled **true→false 翻转**——React state 真被驱动，程序化 click 通道前提成立 |
+| ② 挂载入口 | **无 composer 槽**（`conversation.input.dock`/`composer.dock`/`conversation.composer.*` 部署源 chunk 全零命中，仅见 archiveSession/startSession 服务成员）→ 走席位插入默认通道：`[data-composer-seat]` 实测在场（官方卡 closest 命中；卡 parentElement 链 5 级内无 seat，seat 在更上层） |
+| ③ 家具数据面 | 本次未勘通（todo/goal/queue/ctx 用量无服务面命中）→ `DOCK_DATA` 空表、家具全静默（裁定 4 合法终态）；Task 6 开工前可补勘回填，不阻塞批次 |
+| MC_MAP dock 六键 | `composerSeat:'[data-composer-seat]'`；`composerHide:'[data-composer-card]'`（一期键复核，卡 attr 实况 `data-composer-card=true`，presence 选择器命中）；`composerField:'[data-composer-card] textarea'`（镜像冒烟同款锚）；`composerSend:'[data-composer-card] [aria-label="发送消息"]'`（实测命中+翻转）；`composerStop:''`（idle 无 Stop 钮，busy 才渲染→不接桥、busy 断言降级 INFO）；`composerPhase:''`（`div[data-phase]` 实测为页面态 settling\|hero\|active 非忙闲、`role=status` idle 缺席→降级读 Send/Stop disabled/hidden） |
+| 勘定余料（Task 5 左组/模型位候选） | 卡内其余钮（均有 aria-label 但带动态「当前值」后缀，锚定须前缀形态）：`[aria-label=命令]`（add）、`访问模式，当前：…`（trigger）、`选择模型，当前 …`（trigger）——按裁定 4 勘不通不渲染 |
+
+**裁定**：go/no-go ①=**GO**，回退方案 A 不触发，本 spec 与 plan 继续有效；②=席位插入（无槽）；③=数据面未勘通走空表静默。镜像目标/藏匿锚/发送钮三通道全部勘通，Stop 与忙闲锚按既定降级路径执行。

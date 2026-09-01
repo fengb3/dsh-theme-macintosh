@@ -757,19 +757,79 @@ function mcMirrorValue(ta, text) {
 
 ## 附录 A · 探针勘定记录（Task 1 回填）
 
-> 探针：`tools/probe-dock.mjs`（live DOM @127.0.0.1:3080 + 部署源 chunk 扫描）；host 版本待勘定（一期实录 0.1.1-rc.1/2）。
+> 探针：`tools/probe-dock.mjs`（live DOM @127.0.0.1:3080 + 部署源 chunk 扫描）；**宿主 0.1.1-rc.2（bundle rev aba836a0c42d），2026-09-01 实测**。
 
 | 勘察项 | 结果 |
 |--------|------|
-| COMPOSER_DUMP（卡内交互件清单） | 待回填 |
-| MIRROR_SMOKE（native setter 镜像 + Send disabled 翻转） | 待回填 |
-| 官方 textarea 锚（composerField） | 待回填 |
-| 官方 Send/Stop 锚（composerSend/composerStop） | 待回填 |
-| 忙闲面貌（composerPhase） | 待回填 |
-| 席位容器（composerSeat） | 待回填（data-composer-seat 复核） |
-| 槽勘定（conversation.input.dock / composer.dock / conversation.composer.*） | 待回填 |
-| 数据面（todo/goal/queue/ctx 用量） | 待回填 |
-| **Go/No-Go 裁定** | 待回填（GO / 回退方案 A） |
+| COMPOSER_DUMP（卡内交互件清单） | 卡内 5 交互件：`TEXTAREA[placeholder=描述你想要构建的内容]`、`BUTTON[aria-label=命令]`（add）、`BUTTON[aria-label=访问模式，当前：Full access]`（trigger）、`BUTTON[aria-label=选择模型，当前 GLM-5.3-flash]`（trigger）、`BUTTON[aria-label=发送消息][disabled]`（primary=Send）；**Stop 钮 idle 不在场**（stopVisible:false）；role=status 缺席（NO_STATUS） |
+| MIRROR_SMOKE（native setter 镜像 + Send disabled 翻转） | `hasNativeDesc:true`；镜像 `PROBE_MIRROR_试` 读回一致（`mirrored:true`）；**Send disabled true→false 翻转**（React state 真被驱动）；setError:null；草稿已还原清空 |
+| 官方 textarea 锚（composerField） | `[data-composer-card] textarea`（镜像冒烟即用此锚命中；TEXTAREA 原生元素非 contenteditable） |
+| 官方 Send/Stop 锚（composerSend/composerStop） | Send=`[data-composer-card] [aria-label="发送消息"]`（实测命中）；**Stop 勘不出**（busy 态才渲染，idle 无此钮）→ `composerStop:''` 降级（busy 断言降级 INFO） |
+| 忙闲面貌（composerPhase） | **勘不出忙闲锚**：`div[data-phase]` 实测值为页面态 `hero`（已知枚举 settling\|hero\|active，非忙闲）；`role=status` idle 缺席 → `composerPhase:''` 降级（读 Send/Stop disabled/hidden） |
+| 席位容器（composerSeat） | `[data-composer-seat]` **实测在场**（官方卡 `closest('[data-composer-seat]')` 命中；注意卡的 parentElement 链 5 级内无 seat 标记——seat 在更上层，勿用 parentElement 兜底猜位） |
+| 槽勘定（conversation.input.dock / composer.dock / conversation.composer.*） | **全零命中**——部署源 chunk 扫描仅见 `archiveSession`（L~9621/9622/10027/10028）与 `startSession`（L~9925）服务成员，无任何 composer 输入槽 → **Task 4 走席位插入（默认通道），无槽渲染通道** |
+| 数据面（todo/goal/queue/ctx 用量） | 本次探针未勘通（regex 面仅 slots/服务名，未见 todo/goal/queue/ctx 用量成员）→ Task 6 `DOCK_DATA` 先空表（家具全静默=合法终态），Task 6 开工前可加勘回填 |
+| **Go/No-Go 裁定** | **GO** —— ① `mirrored:true` 且 Send disabled **true→false 翻转**（native setter + input event 真驱动官方受控 textarea）；② 席位插入通道在场（`[data-composer-seat]`）；③ 家具数据面未勘通但降级路径定义完整（空表静默），不阻塞批次。**回退方案 A 不触发** |
+
+### 探针输出全文（2026-09-01 live @127.0.0.1:3080）
+
+```text
+COMPOSER_DUMP:
+{
+ "cardAttrs": "class=uV2eYG_card data-composer-card=true",
+ "interactive": [
+  "TEXTAREA.uV2eYG_input[placeholder=描述你想要构建的内容]",
+  "BUTTON.uV2eYG_add[aria-label=命令]",
+  "BUTTON.Sh0Q9G_trigger[aria-label=访问模式，当前：Full access]",
+  "BUTTON._7KE1Ra_trigger[aria-label=选择模型，当前 GLM-5.3-flash]",
+  "BUTTON.uV2eYG_primary[aria-label=发送消息][disabled]"
+ ],
+ "seatPresent": true,
+ "seatAttrs": "class,data-composer-seat",
+ "parentChain": [
+  "DIV.uV2eYG_root uV2eYG_hero",
+  "DIV.",
+  "DIV.wSkVaW_composerStack wSkVaW_composerHero",
+  "DIV.",
+  "DIV."
+ ],
+ "phase": "hero",
+ "statusText": "NO_STATUS",
+ "stopVisible": false
+}
+MIRROR_SMOKE:
+{
+ "isTa": true,
+ "hasNativeDesc": true,
+ "before": "",
+ "after": "PROBE_MIRROR_试",
+ "mirrored": true,
+ "sendBtnFound": true,
+ "sendDisabledBefore": true,
+ "sendDisabledAfter": false,
+ "setError": null
+}
+DEPLOY_SOURCE_HITS:
+client.js?rev=aba836a0c42d :: archiveSession @line~9621
+client.js?rev=aba836a0c42d :: archiveSession @line~9622
+client.js?rev=aba836a0c42d :: startSession @line~9925
+client.js?rev=aba836a0c42d :: archiveSession @line~10027
+client.js?rev=aba836a0c42d :: archiveSession @line~10028
+PROBE_DONE
+```
+
+### MC_MAP dock 段回填值（client.js + src/chrome/map.js 镜像同步）
+
+```js
+  composerSeat: '[data-composer-seat]',                          // 探针实测在场
+  composerHide: '[data-composer-card]',                          // 一期键复核通过（卡 attr 实况 data-composer-card=true，presence 选择器命中）
+  composerField: '[data-composer-card] textarea',                // 镜像冒烟同款锚，mirrored:true
+  composerSend: '[data-composer-card] [aria-label="发送消息"]',   // 实测命中；镜像后 disabled 翻转
+  composerStop: '',                                              // 勘不出（busy 态才渲染）→ 降级
+  composerPhase: '',                                             // 勘不出（data-phase=页面态非忙闲）→ 降级
+```
+
+> audit 前缀键登记（Step 6）：**跳过**——四个非空值全部为闭合 bracket 形态，由 map 值自动提取，无前缀形态键。
 
 ## Self-Review 结论
 
