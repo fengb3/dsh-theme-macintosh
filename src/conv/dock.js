@@ -131,6 +131,7 @@ var McDock = {
       seat.appendChild(root); // 官方卡之后(视觉在下方;官方卡被藏后占整个席位)
       document.documentElement.setAttribute('data-mc-dock-on', '');
       renderCmp(); // Task 5:自绘 composer 卡壳(findOfficial 成功后 off 已填充,仅挂载成功路径可达)
+      renderFurn(); // Task 6:家具渲染(勘定分级;DOCK_DATA 空表=全静默)
       flashIn(root, function () {});
       return true;
     }
@@ -217,6 +218,86 @@ var McDock = {
       if (busy) { stop.hidden = false; send.hidden = true; }
       else { stop.hidden = true; send.hidden = false; send.disabled = state.mode === 'idle'; }
     }
+    // DOCK_DATA:Task 1 附录A勘定回填——键 → function():数据|null。全部勘不通 = 空表(家具静默)。
+    // 形态约定(照原型 §9;勘定后按实况调整字段名):
+    //   queue: { text:'队列中还有 2 条消息 — …' }
+    //   todos: [{done:true},{done:false},…]
+    //   goal:  { text:'…', phase:'active'|'blocked' }
+    //   ctx:   { pct: 74, used:'96.2k', total:'130k', parts:[{name:'对话消息',pct:52,color:'accent'},…] }
+    var DOCK_DATA = {}; // Task 1 附录A:四件数据面均勘不通 → 空表静默(Task 6 合法终态)
+    function esc2(s) { return esc(String(s == null ? '' : s)); }
+    function renderFurn() {
+      var html = '';
+      try { var qd = DOCK_DATA.queue && DOCK_DATA.queue();
+        if (qd) html += '<div class="queue-row"><svg aria-hidden="true"><use href="#i-px-clock"/></svg>' + esc2(qd.text) + '</div>';
+      } catch (e) {}
+      try { var td = DOCK_DATA.todos && DOCK_DATA.todos();
+        if (td && td.length) {
+          var segs = mcTodoSegments(td);
+          var bar = '';
+          for (var i = 0; i < segs.length; i++) bar += '<i class="' + segs[i] + '"></i>';
+          var items = '';
+          for (var j = 0; j < td.length; j++) {
+            var cls = td[j].done ? ' done' : (segs[j] === 'now' ? ' now' : '');
+            items += '<div class="t-item' + cls + '"><span class="t-box">' +
+              (td[j].done ? '<svg viewBox="0 0 9 8" aria-hidden="true"><use href="#i-check"/></svg>' : '') +
+              '</span><span class="t-txt">' + esc2(td[j].text) + '</span></div>';
+          }
+          html += '<div class="todo-acc open" data-mc-todo><button type="button" class="todo-acc-head">' +
+            '<svg class="tri" aria-hidden="true"><use href="#i-tri"/></svg>' +
+            '<span class="ta-title">To-Do List</span>' +
+            '<div class="todo-bar">' + bar + '</div>' +
+            '<span class="todo-meta">' + esc2(mcTodoMeta(td)) + '</span></button>' +
+            '<div class="todo-body">' + items + '</div></div>';
+        }
+      } catch (e) {}
+      try { var gd = DOCK_DATA.goal && DOCK_DATA.goal();
+        if (gd) html += '<div class="goal-card" data-phase="' + esc2(gd.phase || 'active') + '">' +
+          '<svg aria-hidden="true"><use href="#i-sparkle"/></svg><span class="gc-title">Goal</span>' +
+          '<span class="gc-obj">' + esc2(gd.text) + '</span></div>';
+      } catch (e) {}
+      try { var cd = DOCK_DATA.ctx && DOCK_DATA.ctx();
+        if (cd) {
+          var arc = mcCtxArc(cd.pct);
+          var lines = '';
+          var colors = { accent: 'var(--mc-accent)', spark: 'var(--mc-spark)', muted: 'var(--mc-muted)' };
+          var parts = Array.isArray(cd.parts) ? cd.parts : [];
+          for (var k = 0; k < parts.length; k++) {
+            lines += '<div class="ctx-line"><i style="background:' + colors[parts[k].color] + '"></i>' +
+              esc2(parts[k].name) + '<span class="cl-bar"><i style="width:' + Number(parts[k].pct) +
+              '%;background:' + colors[parts[k].color] + '"></i></span>' + Number(parts[k].pct) + '%</div>';
+          }
+          html += '<span class="cb-anchor" data-mc-ctx><span class="ctx-ring"' + (arc.hot ? ' data-hot' : '') +
+            ' title="上下文占用 ' + Number(cd.pct) + '% · ' + esc2(cd.used) + ' / ' + esc2(cd.total) + ' tok">' +
+            '<svg viewBox="0 0 22 22" aria-hidden="true" shape-rendering="crispEdges">' +
+            '<circle class="cr-track" cx="11" cy="11" r="8.5" fill="none" stroke-width="3"/>' +
+            '<circle class="cr-arc" cx="11" cy="11" r="8.5" fill="none" stroke-width="3" stroke-dasharray="' +
+            arc.dash + '" transform="rotate(-90 11 11)"/></svg></span>' +
+            '<div class="ctx-pop" data-mc-ctxpop><div><b>' + esc2(cd.used) + ' / ' + esc2(cd.total) +
+            ' tok</b> · 上下文占用 ' + Number(cd.pct) + '%</div>' + lines + '</div></span>';
+        }
+      } catch (e) {}
+      furn.innerHTML = html; // 全动态段经 esc2
+      var head = furn.querySelector('.todo-acc-head');
+      if (head) head.addEventListener('click', function () { // 折叠开合 = accToggle 状态切换
+        var acc = furn.querySelector('[data-mc-todo]');
+        accToggle(acc, function () { acc.classList.toggle('open'); });
+      });
+      var ring = furn.querySelector('[data-mc-ctx] .ctx-ring');
+      if (ring) ring.addEventListener('click', function (e) { // ctx-pop 硬切显隐(原型 §9 无淡入)
+        try {
+          e.stopPropagation();
+          var pop = furn.querySelector('[data-mc-ctxpop]');
+          pop.classList.toggle('open');
+        } catch (er) {}
+      });
+    }
+    function onDocClose(e) { // 点外收 ctx-pop(浮层互斥,原型 §9.4)
+      try { var pop = furn && furn.querySelector('[data-mc-ctxpop]');
+        if (pop && pop.classList.contains('open') && !pop.contains(e.target)) pop.classList.remove('open');
+      } catch (er) {}
+    }
+    document.addEventListener('click', onDocClose, true);
     var api = {
       state: function () { return state; },
       onState: null, // Task 5 注册:状态机 → 三态渲染回调
@@ -258,6 +339,7 @@ var McDock = {
       try { if (timer) CLOCK.clear(timer); } catch (e) {}
       try { document.documentElement.removeAttribute('data-mc-dock-on'); } catch (e) {}
       try { if (rootEl) rootEl.remove(); } catch (e) {} // rootEl 捕获:bridgeFail 置空 root 后 teardown 仍能移除退场元素
+      try { document.removeEventListener('click', onDocClose, true); } catch (e) {} // Task 6:点外收 pop 监听随坞撤除
     };
   },
 };
