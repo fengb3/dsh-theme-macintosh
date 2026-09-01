@@ -1706,7 +1706,7 @@ var McFlow = {
       '.mc-deliver{display:flex;align-items:center;flex-wrap:wrap;gap:6px;max-width:100%}',
       '.mc-deliver .mc-dl-file{display:inline-flex;align-items:center;height:24px;padding:0 8px;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;border:1px solid var(--mc-border);border-radius:var(--mc-r-btn);background:var(--mc-surface);color:var(--mc-fg);font:500 13px/1.6 var(--font-mono);cursor:pointer}',
       '.mc-deliver .mc-dl-file:active{background:var(--mc-fg);color:var(--mc-surface);border-color:var(--mc-fg)}',
-      MC_MAP.deliverRoot + '[data-mc-dl]{position:absolute;visibility:hidden;pointer-events:none}', // 轮5补:藏匿键改属性形态——React 重渲染整写 className 会抹掉类形态的 .mc-dl-host,宿主行回文档流即闪(按钮忽隐忽现+挤压);属性 React 不持有,重渲染不摘
+      MC_MAP.deliverRoot + '{position:absolute;visibility:hidden;pointer-events:none}', // 轮5补2:无条件藏匿——振荡中宿主整建重挂 root(新元素无属性,观察器补挂有空窗=闪;且分消息位好坏系重挂与否之别)。藏匿与 JS 解耦,root 一入 DOM 即隐;visibility 保测量几何
       // 验收⑤(2026-08-31 live 探明):钮组靠左、统计常驻靠右——root[data-time-hover-root] 下
       // 统计 span(.actions 末子 timeEnd)宿主 opacity:0 hover 显隐 → opacity/visibility 反制
       // (裁定:此两属性允许作为对宿主动效反制)+transition:none 压平;DOM 序本就 [copy,extra
@@ -1765,7 +1765,16 @@ var McFlow = {
         if (!list.length) return;
         for (var ri = 0; ri < list.length; ri++) (function (host) {
           if (host.hasAttribute('data-mc-dl')) { dlPaint(host); return; }
-          host.setAttribute('data-mc-dl', ''); // 藏匿键:属性形态(React 重渲染整写 className 不摘属性)
+          host.setAttribute('data-mc-dl', ''); // 嫁接标记(藏匿已改无条件 CSS,与 JS 解耦)
+          // 轮5补2:宿主振荡整建重挂 → 旧 host 移除、新 host 入场;复用旧 host 前插的自绘行防重复
+          var prev = host.previousElementSibling;
+          if (prev && prev.classList && prev.classList.contains('mc-deliver')) {
+            host.__mcRow = prev;
+            host.__mcNames = [];
+            DL_DRAWN.push(host);
+            dlPaint(host);
+            return;
+          }
           host.__mcNames = [];
           var row = document.createElement('div');
           row.className = 'mc-deliver';
