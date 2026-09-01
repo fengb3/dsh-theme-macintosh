@@ -136,12 +136,18 @@ const MC_MAP = {
   // 主题在装时官方树被 McFinder 遮蔽,此组键是遮蔽失败时的兜底隐藏通道(Task 4 自绘兜底藏原生菜单)。
   menuPortal: 'body > div[role="menu"]',            // 宿主菜单 portal 容器(createPortal 直挂 body;类名全哈希,role 语义锚 stable)
   menuHostItem: 'body > div[role="menu"] [role="menuitem"]', // 宿主原生菜单项(button[role=menuitem];自绘兜底藏;stable)
-  // —— dock 段(输入坞;探针 2026-09-01,host 0.1.1-rc.2 rev aba836a0c42d——dock 附录A)——
+  // —— dock 段(输入坞;探针 2026-09-01,host 0.1.1-rc.2 rev aba836a0c42d——dock 附录A;
+  //     验收轮1 回填 2026-09-01:live-runtime 探针 acceptance1-probe 勘定 busy 面貌)——
   composerSeat: '[data-composer-seat]', // composer 席位容器(探针实测在场;官方卡 closest 命中)
   composerHide: '[data-composer-card]', // 官方卡壳=藏匿锚(一期键复核;属性门控 html[data-mc-dock-on] 藏未删)
   composerField: '[data-composer-card] textarea', // 官方 textarea(镜像目标;镜像冒烟 mirrored:true)
   composerSend: '[data-composer-card] [aria-label="发送消息"]', // 官方发送钮(程序化 click;镜像后 disabled true→false 翻转实测)
-  composerStop: '',       // 官方停止钮(busy 态;空=Stop 不接桥,busy 断言降级 INFO)——idle 勘定无 Stop 钮在场
-  composerPhase: '',      // 官方忙闲属性锚(空=降级读 Send/Stop disabled)——div[data-phase] 实测为页面态(settling|hero|active)非忙闲;role=status idle 缺席
+  // 验收轮1 勘定(B 段):busy 时官方 Send 卸载(非 hidden)、「停止生成」同槽挂载——挂载沿=干净忙闲沿
+  composerStop: '[data-composer-card] button[aria-label="停止生成"]',  // busy 才挂载;勿用哈希类(uV2eYG_primary 与 Send 共享,随构建漂移)
+  composerPhase: '',      // 勘定裁定(2026-09-01 验收轮1):data-phase(settling|hero|active)是页面态非忙闲,'running|busy' 值不存在——busy 改由 composerStop 在场判定(syncBusy)
+  composerCmd:   '[data-composer-card] button[aria-label="命令"]',       // 斜杠命令入口(idle/busy 全程在场)
+  composerPerm:  '[data-composer-card] button[aria-label^="访问模式"]',   // 动态后缀=当前模式明文(「访问模式，当前：Full access」)
+  composerModel: '[data-composer-card] button[aria-label^="选择模型"]',   // title 属性=当前模型名(精确读值锚)
+  composerCtx:   '[data-composer-card] button[aria-label^="上下文已用"]', // busy 态挂载,aria-label 带实时 %
 };
 

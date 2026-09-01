@@ -57,7 +57,7 @@ const MC_DOCK_CSS = [
   '[data-mc-dock] .composer .mc-field{height:auto;min-height:44px;padding:6px 8px}',
   '[data-mc-dock] .composer.busy .mc-field{background:color-mix(in oklab,var(--mc-fg) 4%,var(--mc-surface))}',
   '[data-mc-dock] .composer textarea{flex:1;background:transparent;border:none;resize:none;outline:none;',
-  ' font:inherit;color:inherit;min-height:32px}',
+  ' font:inherit;color:inherit;min-height:32px;overflow-y:auto}', // 验收轮1 自增高:超 40vh 封顶后容器内滚动(瞬切,无 transition)
   '[data-mc-dock] .composer textarea::placeholder{color:var(--mc-faint)}', // Task 8 QA 补:原型 §2 .field::placeholder 同款(落地初版只覆盖了 input)
   '[data-mc-dock] .composer-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap}',
   '[data-mc-dock] .cb-btn{display:inline-flex;align-items:center;gap:6px;height:24px;padding:0 9px;',
@@ -66,6 +66,7 @@ const MC_DOCK_CSS = [
   ' font:500 11px/1 var(--font-ui);color:var(--mc-muted);cursor:pointer;white-space:nowrap}',
   '[data-mc-dock] .cb-btn svg{width:12px;height:12px;flex:none}',
   '[data-mc-dock] .cb-btn.model{font-family:var(--font-mono);font-size:11px}',
+  '[data-mc-dock] .cb-btn[hidden]{display:none}', // 验收轮1:author display 压过 UA [hidden],镜像代理降级隐藏须显式复原(同 .btn[hidden] 先例)
   // Task 8 浅色 QA 补:.btn 系(原型 §2 L205-224 直抄换 token)。renderCmp 照原型 §9.2 镜像
   // `btn sm primary/danger` 类,而主题原语命名 mc-btn → 落地初版活体 Send/Stop 裸奔(浏览器
   // 默认钮,浅色实拍坐实),此块补齐双内环/primary/danger/:active 反色/:disabled/.sm 缩尺。
@@ -159,14 +160,16 @@ var McDock = {
       flashIn(root, function () {});
       return true;
     }
-    // 官方属性镜像 → 状态机(忙闲通道;composerPhase 空 = 降级读 Send/Stop disabled)
+    // 官方属性镜像 → 状态机(忙闲通道;验收轮1 勘定 2026-09-01:composerPhase 空=data-phase 是
+    // 页面态非忙闲;busy 改判 composerStop 在场且未隐——busy 时官方 Send 是卸载非 hidden,
+    // 降级式 off.stop&&off.send 恒 false,勿以 hidden 判,探针 B 段机理注记)
     function syncBusy() {
       try {
         if (dead) return;
         var busy = false;
         if (off.phaseEl) busy = off.phaseEl.getAttribute('data-phase') === 'running'
           || off.phaseEl.getAttribute('data-phase') === 'busy';
-        else if (off.stop && off.send) busy = !off.stop.hidden || off.send.hidden;
+        else if (MC_MAP.composerStop) busy = !!(off.stop && !off.stop.hidden); // Stop 挂载=干净忙闲沿(验收轮1)
         if (busy !== (state.mode === 'busy')) {
           state = mcDockState(state, { t: busy ? 'busy' : 'idle' });
           if (api && api.onState) api.onState(state);
@@ -189,14 +192,34 @@ var McDock = {
           if (seat && root && root.parentNode !== seat) seat.appendChild(root);
         }
         syncBusy();
+        syncBar(); // 验收轮1:官方钮 aria-label/title 变异与挂载沿每拍回填(文字/pct 镜像)
       } catch (e) {}
     });
     // —— Task 5:自绘 composer 卡壳 + 三态 + Enter 纪律(定义在 api 前;onState 赋值在 api 后)——
+    // 验收轮1(2026-09-01 用户裁定):bar 壳必须(裁定 4 修订)——左组命令/权限 + 右组模型/ctx 圆环,
+    // 照原型 prototype L1254-1317 语汇;每颗自绘钮 = 官方对应钮的镜像代理(值 syncBar 回填)
     function renderCmp() {
       var bar = '';
-      // —— 左组(斜杠命令/权限位;Task 1 附录A勘定逐钮补,勘不通不渲染;本批默认无)——
+      // —— 左组:命令钮(纯图标,title=斜杠命令)+ 权限钮(lock 图标+值文字+chevd)——
+      bar += '<button type="button" class="cb-btn" data-mc-cmd title="斜杠命令">' +
+        '<svg viewBox="0 0 9 9" aria-hidden="true"><use href="#i-command"/></svg></button>';
+      bar += '<button type="button" class="cb-btn" data-mc-perm>' +
+        '<svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-px-lock"/></svg>' +
+        '<span data-mc-perm-txt></span>' +
+        '<svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-px-chevd"/></svg></button>';
+      // —— 右组:模型钮(mono+值文字+chevd)+ ctx 圆环(常驻,原型形态)+ Send/Stop ——
       bar += '<span class="cb-right">';
-      // —— 模型位(勘定补;勘不通不渲染;本批默认无)——
+      bar += '<button type="button" class="cb-btn model" data-mc-model>' +
+        '<span data-mc-model-txt></span>' +
+        '<svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-px-chevd"/></svg></button>';
+      var arc0 = mcCtxArc(lastCtxPct); // 圆环初始形态(挂载时 pct=最近观测值,通常 0)
+      bar += '<span class="cb-anchor" data-mc-ctx>' +
+        '<span class="ctx-ring"' + (arc0.hot ? ' data-hot' : '') + ' title="上下文已用 ' + Number(lastCtxPct) + '%">' +
+        '<svg viewBox="0 0 22 22" aria-hidden="true" shape-rendering="crispEdges">' +
+        '<circle class="cr-track" cx="11" cy="11" r="8.5" fill="none" stroke-width="3"/>' +
+        '<circle class="cr-arc" cx="11" cy="11" r="8.5" fill="none" stroke-width="3" stroke-dasharray="' +
+        arc0.dash + '" transform="rotate(-90 11 11)"/></svg></span>' +
+        '<div class="ctx-pop" data-mc-ctxpop></div></span>';
       bar += '<button type="button" class="btn sm primary" data-mc-send disabled>' +
         '<svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-px-send"/></svg>Send</button>';
       bar += '<button type="button" class="btn sm danger" data-mc-stop hidden>' +
@@ -208,6 +231,8 @@ var McDock = {
       var ta = cmp.querySelector('textarea');
       ta.addEventListener('input', function () {
         state = mcDockState(state, { t: 'input', has: !!ta.value.trim() });
+        ta.style.height = 'auto'; // 验收轮1 自增高:塌到 auto 取 scrollHeight,40vh 封顶(无 transition 瞬切合规)
+        ta.style.height = Math.min(ta.scrollHeight, Math.round(window.innerHeight * 0.4)) + 'px';
         paint();
       });
       ta.addEventListener('keydown', function (e) { // 原型 §9.2:Enter 无 Shift=发送;busy 早退
@@ -216,8 +241,86 @@ var McDock = {
       });
       cmp.querySelector('[data-mc-send]').addEventListener('click', function () { doSend(); });
       cmp.querySelector('[data-mc-stop]').addEventListener('click', function () {
-        try { api.stop(); } catch (er) {}
+        try { api.stop(); } catch (er) {} // 官方中断(off.stop 每观察批次由 findOfficial 刷新,busy 期必到位)
       });
+      function mirrorClick(sel) { // 镜像代理点击:点击时经管制表选择器实时取官方钮,缺席 no-op(照 api.send 守卫)
+        return function () { try { var b = q(sel); if (b) b.click(); } catch (er) {} };
+      }
+      var bCmd = cmp.querySelector('[data-mc-cmd]');
+      if (bCmd) bCmd.addEventListener('click', mirrorClick(MC_MAP.composerCmd));
+      var bPerm = cmp.querySelector('[data-mc-perm]');
+      if (bPerm) bPerm.addEventListener('click', mirrorClick(MC_MAP.composerPerm));
+      var bModel = cmp.querySelector('[data-mc-model]');
+      if (bModel) bModel.addEventListener('click', mirrorClick(MC_MAP.composerModel));
+      var ringBar = cmp.querySelector('[data-mc-ctx] .ctx-ring');
+      if (ringBar) ringBar.addEventListener('click', function (e) { // ctx-pop 硬切显隐(原型 §9 无淡入;同 furn 交互)
+        try {
+          e.stopPropagation();
+          var pop = cmp.querySelector('[data-mc-ctxpop]');
+          pop.classList.toggle('open');
+        } catch (er) {}
+      });
+      syncBar(); // 挂载路径首回填(观察器回调每拍续填)
+    }
+    // —— 验收轮1:bar 四钮镜像代理(syncBar)——显示文字自官方 aria-label/title 解析(模型取 title
+    // 精确名;权限取 aria-label 去「访问模式，当前：」前缀剩余值;命令钮无文字纯图标);官方钮缺席
+    // (i18n 等)→ 对应自绘钮隐藏,优雅降级(裁定 4 在菜单项层面继续适用)。文字一律 textContent 赋值
+    // 或 esc()(esc 纪律);全部写入先比对后赋值——MO 盯 aria-label/title,同值回写会自激观察器。
+    var lastCtxPct = 0; // 官方 ctx 钮仅 busy 挂载(aria-label 实时 %)——自绘环常驻(原型形态),pct 取最近观测值回填
+    function syncBar() {
+      try {
+        if (dead || !cmp) return;
+        // 命令钮:纯图标镜像
+        var cmd = cmp.querySelector('[data-mc-cmd]');
+        if (cmd) { var cmdOff = !q(MC_MAP.composerCmd); if (cmd.hidden !== cmdOff) cmd.hidden = cmdOff; }
+        // 权限钮:值文字 = 官方 aria-label 去前缀剩余值
+        var perm = cmp.querySelector('[data-mc-perm]');
+        var offPerm = q(MC_MAP.composerPerm);
+        if (perm) {
+          var pTxt = '';
+          if (offPerm) pTxt = (offPerm.getAttribute('aria-label') || '').replace(/^访问模式，当前[:：]\s*/, '');
+          var permOff = !offPerm || !pTxt;
+          if (perm.hidden !== permOff) perm.hidden = permOff;
+          var pSpan = perm.querySelector('[data-mc-perm-txt]');
+          if (pSpan && pSpan.textContent !== pTxt) pSpan.textContent = pTxt;
+        }
+        // 模型钮:值文字 = 官方 title 精确模型名(缺 title 退 aria-label 去前缀;再缺 → 隐藏)
+        var model = cmp.querySelector('[data-mc-model]');
+        var offModel = q(MC_MAP.composerModel);
+        if (model) {
+          var mTxt = '';
+          if (offModel) {
+            mTxt = offModel.getAttribute('title') || '';
+            if (!mTxt) mTxt = (offModel.getAttribute('aria-label') || '').replace(/^选择模型，当前\s*/, '');
+          }
+          var modelOff = !offModel || !mTxt;
+          if (model.hidden !== modelOff) model.hidden = modelOff;
+          var mSpan = model.querySelector('[data-mc-model-txt]');
+          if (mSpan && mSpan.textContent !== mTxt) mSpan.textContent = mTxt;
+        }
+        // ctx 圆环:pct 自官方 aria-label(/上下文已用\s*(\d+)%/)解析回填,mcCtxArc 出 dash/hot;
+        // pop 一行总量行(无分项数据,不编造分项)
+        var offCtx = q(MC_MAP.composerCtx);
+        if (offCtx) {
+          var mx = /上下文已用\s*(\d+)%/.exec(offCtx.getAttribute('aria-label') || '');
+          if (mx) lastCtxPct = Number(mx[1]);
+        }
+        var ring = cmp.querySelector('[data-mc-ctx] .ctx-ring');
+        if (ring) {
+          var arc = mcCtxArc(lastCtxPct);
+          var arcEl = ring.querySelector('.cr-arc');
+          if (arcEl && arcEl.getAttribute('stroke-dasharray') !== arc.dash) arcEl.setAttribute('stroke-dasharray', arc.dash);
+          if (arc.hot && !ring.hasAttribute('data-hot')) ring.setAttribute('data-hot', '');
+          if (!arc.hot && ring.hasAttribute('data-hot')) ring.removeAttribute('data-hot');
+          var ttl = '上下文已用 ' + Number(lastCtxPct) + '%';
+          if (ring.getAttribute('title') !== ttl) ring.setAttribute('title', ttl);
+          var pop = ring.parentNode.querySelector('[data-mc-ctxpop]');
+          if (pop) {
+            var line = '<div><b>上下文已用 ' + esc2(String(Number(lastCtxPct))) + '%</b></div>';
+            if (pop._mcLine !== line) { pop._mcLine = line; pop.innerHTML = line; } // Number+esc2 后比对缓存,防自激
+          }
+        }
+      } catch (e) {}
     }
     function doSend() { // 镜像桥唯一发送路径:本地值 → 官方 textarea → 官方 Send click
       try {
@@ -227,6 +330,7 @@ var McDock = {
         if (!api.setText(text)) { bridgeFail(); return; } // 镜像失败 = 桥断 → 降级
         if (!api.send()) return; // 官方钮 disabled = 官方拒绝,保留草稿不降级
         ta.value = '';
+        ta.style.height = ''; // 验收轮1:清稿后自增高复位(回 rows=1 基线)
         state = mcDockState(state, { t: 'input', has: false });
         paint();
       } catch (er) {}
@@ -320,9 +424,13 @@ var McDock = {
         } catch (er) {}
       });
     }
-    function onDocClose(e) { // 点外收 ctx-pop(浮层互斥,原型 §9.4)
-      try { var pop = furn && furn.querySelector('[data-mc-ctxpop]');
-        if (pop && pop.classList.contains('open') && !pop.contains(e.target)) pop.classList.remove('open');
+    function onDocClose(e) { // 点外收 ctx-pop(浮层互斥,原型 §9.4;验收轮1:cmp bar 圆环同款收口)
+      try {
+        var scopes = [furn, cmp];
+        for (var i = 0; i < scopes.length; i++) {
+          var pop = scopes[i] && scopes[i].querySelector('[data-mc-ctxpop]');
+          if (pop && pop.classList.contains('open') && !pop.contains(e.target)) pop.classList.remove('open');
+        }
       } catch (er) {}
     }
     document.addEventListener('click', onDocClose); // bubble 相:capture 会抢在 ring toggle 前收 pop,再点 ring 即自锁(toggle 重开)
@@ -344,7 +452,8 @@ var McDock = {
     api.onState = paint; // Task 4 syncBusy → 状态机 → 本渲染
     // 挂载成功后置:观察器守护注册 + 忙闲首同步(轮询路径挂载成功时同样要走)
     function activate() {
-      mo.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['data-phase', 'disabled', 'hidden'] });
+      // aria-label/title 入 filter:官方 ctx % 与权限/模型当前值是 aria-label 原地变异,须触发重查(验收轮1)
+      mo.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['data-phase', 'disabled', 'hidden', 'aria-label', 'title'] });
       syncBusy();
     }
     function poll4Dock() { // 400ms 栅格候卡:在场即挂;不在场续候(teardown 兜底撤轮询)

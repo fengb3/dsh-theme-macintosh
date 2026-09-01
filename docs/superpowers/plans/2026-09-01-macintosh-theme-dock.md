@@ -831,6 +831,21 @@ PROBE_DONE
 
 > audit 前缀键登记（Step 6）：**跳过**——四个非空值全部为闭合 bracket 形态，由 map 值自动提取，无前缀形态键。
 
+### 验收轮1 回填（2026-09-01 live-runtime 探针 `tools/probe-dock-live.mjs`，acceptance1-probe）
+
+> 探针：`tools/probe-dock-live.mjs`（live @127.0.0.1:3080，宿主 0.1.1-rc.2 bundle rev aba836a0c42d，2026-09-01T07:39:44Z 起，SAW_BUSY=true，exit 0）；原始输出 `tools/probe-dock-live.out.txt`（运行产物不入库）；全文结论见 `.superpowers/sdd/2026-09-01-macintosh-theme-dock/acceptance1-probe.md`。
+
+| 勘察项 | 结果 |
+|--------|------|
+| busy 面貌（B 段） | busy 时官方 Send **卸载**（非 hidden）、「停止生成」同槽挂载（t=9ms）；`停止生成` aria-label 全 busy 窗恒定 → **干净忙闲沿**；`uV2eYG_primary` 与 Send 共享哈希类（不可用锚） |
+| composerStop 回填 | `'[data-composer-card] button[aria-label="停止生成"]'`（busy 才挂载；勿用哈希类） |
+| composerPhase 裁定 | **维持空**：`div[data-phase]`（settling\|hero\|active）是页面生命周期非忙闲，`running\|busy` 值不存在；`[role=status]` 是 busy-only 元素面非属性锚；busy 改由 composerStop 在场判定（syncBusy 判定改 `off.stop 在场且 !hidden`——旧降级式 `off.stop && off.send` 因 Send 卸载恒 false） |
+| bar 钮锚回填（A 段 idle 全清单） | `composerCmd: '[data-composer-card] button[aria-label="命令"]'`；`composerPerm: '[data-composer-card] button[aria-label^="访问模式"]'`（动态后缀=当前模式明文「访问模式，当前：Full access」）；`composerModel: '[data-composer-card] button[aria-label^="选择模型"]'`（**title 属性=精确模型名**）；`composerCtx: '[data-composer-card] button[aria-label^="上下文已用"]'`（busy 态挂载、aria-label 实时自增 1→2→4→5） |
+| ctx 用量数据面（C/D 段） | **FOUND（仅一处）**：宿主 ctx 用量面=官方卡钮 aria-label（上文 composerCtx）；模块级数据面零命中，bar 控件「当前值」只活在 DOM aria-label/title |
+| 用户裁定（bar 壳） | 裁定 4 修订：bar 按钮**壳必须**（镜像官方实有钮，值自 aria-label/title 解析）；菜单项仍只官方实有动作 |
+| MutationObserver | attributeFilter 追加 `aria-label`/`title`（官方 ctx % 与权限/模型值是 aria-label 原地变异，须触发重查）；childList（Stop↔Send 换槽/ctx 钮挂载）照旧 |
+| 自增高（新增裁定） | 自绘 textarea input 自增高（`height:auto→scrollHeight`，40vh 封顶，无 transition）；发送清稿后复位 |
+
 ## Self-Review 结论
 
 - **Spec 覆盖**：§0 裁定 1（B 路线=Task 4/5 全自绘）、裁定 2（镜像桥四通道=Task 4 Step 1 四通道代码）、裁定 3（go/no-go=Task 1 Step 5 + Global Constraints 回退条款）、裁定 4（勘不通不渲染=Task 5 左组/模型位 + Task 6 DOCK_DATA 空表静默）、裁定 5（范围四件=Task 2-6；ask 向导出栈）；§1 架构（Task 2 装配 + Task 4 挂载双通道/失配退场）；§2 组件（Task 2 CSS 全集 + Task 5/6 DOM）；§3 数据流（Task 3 纯函数 + Task 4/5 桥）；§4 动画纪律（Global Constraints + Task 6 accToggle）；§5 测试/门禁/拔桥/kit/验收（Task 3/7/8）。无缺口。

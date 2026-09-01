@@ -14,7 +14,10 @@
 //   - 家具:DOCK_DATA 空表(Task 1 附录A 勘定,四件数据面均勘不通)→ 全静默合法终态。
 //   - 会话流锚:div[data-conversation-scroll](MC_MAP.flowScroll;活体探针在场,与
 //     composer 席互为兄弟 → 文本命中即用户气泡真入场,不受自绘坞/官方 textarea 残文干扰)。
-//   - Stop/busy:composerStop/composerPhase 键为空(Task 1 裁定)→ 仅 INFO(断言 8)。
+//   - 验收轮1(2026-09-01)扩容:① bar 四件套断言(命令/权限/模型/ctx 圆环在场,模型钮文字 ===
+//     官方 title、权限钮文字 === 官方 aria-label 去前缀);② busy/Stop 实链路(发送后 8s 内轮询
+//     自绘 [data-mc-stop] 可见 → 点击 → 官方中断 → 自绘回 Send;错过 busy 窗口=INFO deferred
+//     不 FAIL);③ textarea 自增高(三行文本高 > 基线;发送后复位)。
 import { chromium } from 'playwright';
 import { mkdirSync } from 'node:fs';
 import path from 'node:path';
@@ -86,23 +89,45 @@ async function dockProbe() {
     const box = dock && dock.querySelector('.composer');
     const ta = dock && dock.querySelector('.composer textarea');
     const send = dock && dock.querySelector('[data-mc-send]');
+    const stop = dock && dock.querySelector('[data-mc-stop]');
     const off = document.querySelector('[data-composer-card]');
     const furn = dock && dock.querySelector('[data-mc-dock-furn]');
+    const cmd = dock && dock.querySelector('[data-mc-cmd]');
+    const perm = dock && dock.querySelector('[data-mc-perm]');
+    const model = dock && dock.querySelector('[data-mc-model]');
+    const ring = dock && dock.querySelector('[data-mc-dock-cmp] .ctx-ring');
+    const arc = ring && ring.querySelector('.cr-arc');
+    const offPerm = document.querySelector('[data-composer-card] button[aria-label^="访问模式"]');
+    const offModel = document.querySelector('[data-composer-card] button[aria-label^="选择模型"]');
+    const permSpan = perm && perm.querySelector('[data-mc-perm-txt]');
+    const modelSpan = model && model.querySelector('[data-mc-model-txt]');
     return {
       dock: !!dock,
       on: document.documentElement.hasAttribute('data-mc-dock-on'),
       ta: !!ta, taVal: ta ? ta.value : null,
+      taH: ta ? Math.round(ta.getBoundingClientRect().height) : -1,
       state: box ? box.getAttribute('data-mc-state') : null,
       busy: !!box && box.classList.contains('busy'),
       sendDisabled: send ? send.disabled : null,
+      stopVisible: !!stop && !stop.hidden && !!(stop.offsetParent || stop.getClientRects().length),
+      sendVisible: !!send && !send.hidden && !!(send.offsetParent || send.getClientRects().length),
+      cmdPresent: !!cmd,
+      permTxt: permSpan ? permSpan.textContent : null,
+      modelTxt: modelSpan ? modelSpan.textContent : null,
+      modelHidden: model ? !!model.hidden : null,
+      ringBar: !!ring,
+      arcDash: arc ? arc.getAttribute('stroke-dasharray') : null,
+      ringTitle: ring ? ring.getAttribute('title') : null,
       offPresent: !!off,
       offDisplay: off ? getComputedStyle(off).display : null,
+      offPermLabel: offPerm ? offPerm.getAttribute('aria-label') : null,
+      offModelTitle: offModel ? offModel.getAttribute('title') : null,
       cmpBg: box ? getComputedStyle(box).backgroundColor : null,
       furnKids: furn ? furn.childElementCount : -1,
       queue: dock ? dock.querySelectorAll('.queue-row').length : -1,
       todo: dock ? dock.querySelectorAll('.todo-acc').length : -1,
       goal: dock ? dock.querySelectorAll('.goal-card').length : -1,
-      ctx: dock ? dock.querySelectorAll('.ctx-ring').length : -1,
+      furnCtx: furn ? furn.querySelectorAll('.ctx-ring').length : -1, // 家具 ctx 改 scope 到 furn(bar 圆环验收轮1 起常驻)
     };
   });
 }
@@ -138,23 +163,60 @@ check('断言1: 官方卡藏未删(在场且 display=none)', p.offPresent && p.o
 check('断言1: html[data-mc-dock-on] 属性在场', p.on);
 const sendIdleDisabled = p.sendDisabled;
 const idleBusy = p.busy;
+const taHIdle = p.taH; // autogrow 基线(空稿 rows=1)
 
-// 2) 断言 2+3:三态 + e2e 镜像发送(一次填文,激活断言后即发送;全门禁仅此一条消息)
-const MSG = 'dock 门禁镜像自检 ' + new Date().toISOString().replace('T', ' ').slice(0, 19);
+// 1.5) 断言1b(bar 四件套,验收轮1):左组两钮+模型钮+ctx 圆环在场;模型/权限文字与官方值同步
+check('断言1b: bar 左组命令钮在场([data-mc-cmd])', p.cmdPresent);
+check('断言1b: bar 左组权限钮在场且有值文字', typeof p.permTxt === 'string' && p.permTxt.length > 0);
+check('断言1b: bar 模型钮在场([data-mc-model] 未隐藏)', !!p.modelTxt && p.modelHidden === false);
+check('断言1b: bar ctx 圆环在场(常驻)', p.ringBar);
+check('断言1b: 模型钮文字 === 官方 title', p.offModelTitle != null && p.modelTxt === p.offModelTitle);
+const permWant = p.offPermLabel ? p.offPermLabel.replace(/^访问模式，当前[:：]\s*/, '') : null;
+check('断言1b: 权限钮文字 === 官方 aria-label 去前缀', permWant != null && p.permTxt === permWant);
+info('断言1b: 官方锚实测值', { offPermLabel: p.offPermLabel, offModelTitle: p.offModelTitle, permTxt: p.permTxt, modelTxt: p.modelTxt, arcDash: p.arcDash, ringTitle: p.ringTitle });
+
+// 2) 断言 2+3:三态 + e2e 镜像发送(三行文本兼作 autogrow 素材;全门禁仅此一条消息)
+const MSG = 'dock 门禁镜像自检(验收轮1 三行自增高素材)\n第二行:bar 四钮镜像/busy-Stop 链路勘验\n第三行:' + new Date().toISOString().replace('T', ' ').slice(0, 19);
 await page.fill('[data-mc-dock] .composer textarea', MSG);
 p = await dockProbe();
 check('断言2: 初始 Send disabled', sendIdleDisabled === true);
 check('断言2: 打字后 Send enabled 且 data-mc-state=ready', p.sendDisabled === false && p.state === 'ready');
 check('断言2: 非忙态无 .busy 类(idle→ready 全程)', !idleBusy && !p.busy);
+check('断言2b(autogrow): 三行文本 textarea 高 > 初始基线且 >44px', p.taH > taHIdle && p.taH > 44);
+info('断言2b: autogrow 实测', { idleH: taHIdle, grownH: p.taH });
 await page.click('[data-mc-dock] [data-mc-send]');
 const seen = await poll((m) => {
   const sc = document.querySelector('[data-conversation-scroll]');
-  return !!sc && sc.textContent.indexOf(m) !== -1;
-}, MSG, 4000);
+  return !!sc && sc.textContent.replace(/\s+/g, ' ').indexOf(m) !== -1;
+}, MSG.replace(/\s+/g, ' '), 4000);
 check('断言3: 镜像发送 → 会话流出现该消息(4s 轮询)', seen);
 p = await dockProbe();
 check('断言3: 发送后自绘 textarea 复位为空', p.ta && p.taVal === '');
+check('断言2b(autogrow): 发送后 textarea 高复位基线', p.taH <= taHIdle + 2);
 info('断言3: 单消息裁定 — 门禁全程仅此一条(落入当前会话,Tasks 5/6 冒烟同款)', MSG);
+
+// 2.5) 断言8(验收轮1 实装):busy/Stop 实链路 — 发送后 8s 内轮询自绘 [data-mc-stop] 可见(busy 窗口);
+//      捕获后点击自绘 Stop → 官方中断 → 自绘回 Send;turn 太快错过 busy 窗口 → INFO deferred 不 FAIL
+const stopSeen = await poll(() => {
+  const s = document.querySelector('[data-mc-dock] [data-mc-stop]');
+  return !!s && !s.hidden && !!(s.offsetParent || s.getClientRects().length);
+}, null, 8000, 250);
+if (stopSeen) {
+  const busyP = await dockProbe();
+  info('断言8: busy 捕获(自绘坞进 busy,ctx 圆环含最近观测 pct)', { state: busyP.state, busy: busyP.busy, arcDash: busyP.arcDash, ringTitle: busyP.ringTitle });
+  await page.click('[data-mc-dock] [data-mc-stop]');
+  const back = await poll(() => {
+    const sd = document.querySelector('[data-mc-dock] [data-mc-send]');
+    const st = document.querySelector('[data-mc-dock] [data-mc-stop]');
+    const offSend = document.querySelector('[data-composer-card] button[aria-label="发送消息"]');
+    return !!sd && !sd.hidden && (!st || st.hidden) && !!offSend;
+  }, null, 8000, 250);
+  check('断言8: 点击自绘 Stop → 官方中断 → 自绘回 Send(官方 Send 复挂)', back);
+  const idleP = await dockProbe();
+  info('断言8: 中断后坞状态', { state: idleP.state, stopVisible: idleP.stopVisible, sendVisible: idleP.sendVisible });
+} else {
+  info('断言8: busy/Stop deferred — 8s 未捕获 busy 窗口(turn 太快错过;不 FAIL)', null);
+}
 
 // 3) 断言 4:观察器守护 — 坞被 remove → 4s 内重插(brief:守护在场才演拔桥)
 await page.evaluate(() => { const d = document.querySelector('[data-mc-dock]'); if (d) d.remove(); });
@@ -202,7 +264,7 @@ p = await dockProbe();
 check('断言6: 家具静默 — .queue-row 零匹配', p.queue === 0);
 check('断言6: 家具静默 — .todo-acc 零匹配', p.todo === 0);
 check('断言6: 家具静默 — .goal-card 零匹配', p.goal === 0);
-check('断言6: 家具静默 — .ctx-ring 零匹配', p.ctx === 0);
+check('断言6: 家具静默 — furn 内 .ctx-ring 零匹配(bar 圆环常驻,scope 到 furn)', p.furnCtx === 0);
 check('断言6: [data-mc-dock-furn] 零子节点', p.furnKids === 0);
 
 // 6) 断言 7:深浅两轮(computed background 反转 + 双截图)
@@ -220,8 +282,7 @@ const back = await setTheme('深色');
 check('测毕还原深色', back.flipped && back.theme === 'dark');
 await page.keyboard.press('Escape').catch(() => {});
 
-// 7) 断言 8:Stop/busy — 仅 INFO(真实 busy 态需活体运行,用户验收窗口覆盖)
-info('断言8: Stop/busy 断言 deferred — composerStop/composerPhase 键为空(Task 1 裁定),busy 三态需真实运行态', null);
+// 7) 断言8 已于发送后实时实装(见 2.5:busy/Stop 实链路,验收轮1)——此处无遗留项
 
 console.log('--- [mcx] console lines (tail 10) ---');
 for (const l of logs.slice(-10)) console.log(l);

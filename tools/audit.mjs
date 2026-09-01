@@ -80,12 +80,14 @@ const srcOverlaysFile = join(ROOT, 'src', 'conv', 'overlays.js');
 const srcOverlaysText = srcText.get(srcOverlaysFile) || null;
 const OVERLAYS_WHITELIST = new Set(['menuPortal', 'menuHostItem']);
 // dock 段照 overlays 段同款机制：段定位 '// src/conv/dock.js' → '// src/conv/overlays.js'，
-// 白名单 DOCK_WHITELIST = composerCard + MC_MAP dock 六键（骨架期零选择器；Task 4+ mount 引用时放行）。
+// 白名单 DOCK_WHITELIST = composerCard + MC_MAP dock 键（骨架期零选择器；Task 4+ mount 引用时放行；
+// 验收轮1 2026-09-01 增四新键 composerCmd/composerPerm/composerModel/composerCtx——新值全为闭合
+// bracket 形态，由 map 值自动提取，无需前缀登记）。
 const distDock = distRaw != null ? stripComments(segmentRaw(distRaw, '// src/conv/dock.js', '// src/conv/overlays.js') || '') : null;
 const clientDock = clientRaw != null ? stripComments(segmentRaw(clientRaw, '// src/conv/dock.js', '// src/conv/overlays.js') || '') : null;
 const srcDockFile = join(ROOT, 'src', 'conv', 'dock.js');
 const srcDockText = srcText.get(srcDockFile) || null;
-const DOCK_WHITELIST = new Set(['composerCard', 'composerSeat', 'composerHide', 'composerField', 'composerSend', 'composerStop', 'composerPhase']);
+const DOCK_WHITELIST = new Set(['composerCard', 'composerSeat', 'composerHide', 'composerField', 'composerSend', 'composerStop', 'composerPhase', 'composerCmd', 'composerPerm', 'composerModel', 'composerCtx']);
 
 const failures = [];
 const fail = (msg) => { failures.push(msg); console.log(`FAIL ${msg}`); };
