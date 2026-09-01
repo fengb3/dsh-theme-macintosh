@@ -105,7 +105,7 @@ var McFlow = {
       '.mc-deliver{display:flex;align-items:center;flex-wrap:wrap;gap:6px;max-width:100%}',
       '.mc-deliver .mc-dl-file{display:inline-flex;align-items:center;height:24px;padding:0 8px;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;border:1px solid var(--mc-border);border-radius:var(--mc-r-btn);background:var(--mc-surface);color:var(--mc-fg);font:500 13px/1.6 var(--font-mono);cursor:pointer}',
       '.mc-deliver .mc-dl-file:active{background:var(--mc-fg);color:var(--mc-surface);border-color:var(--mc-fg)}',
-      MC_MAP.deliverRoot + '.mc-dl-host{position:absolute;visibility:hidden;pointer-events:none}',
+      MC_MAP.deliverRoot + '[data-mc-dl]{position:absolute;visibility:hidden;pointer-events:none}', // 轮5补:藏匿键改属性形态——React 重渲染整写 className 会抹掉类形态的 .mc-dl-host,宿主行回文档流即闪(按钮忽隐忽现+挤压);属性 React 不持有,重渲染不摘
       // 验收⑤(2026-08-31 live 探明):钮组靠左、统计常驻靠右——root[data-time-hover-root] 下
       // 统计 span(.actions 末子 timeEnd)宿主 opacity:0 hover 显隐 → opacity/visibility 反制
       // (裁定:此两属性允许作为对宿主动效反制)+transition:none 压平;DOM 序本就 [copy,extra
@@ -164,8 +164,7 @@ var McFlow = {
         if (!list.length) return;
         for (var ri = 0; ri < list.length; ri++) (function (host) {
           if (host.hasAttribute('data-mc-dl')) { dlPaint(host); return; }
-          host.setAttribute('data-mc-dl', '');
-          host.classList.add('mc-dl-host');
+          host.setAttribute('data-mc-dl', ''); // 藏匿键:属性形态(React 重渲染整写 className 不摘属性)
           host.__mcNames = [];
           var row = document.createElement('div');
           row.className = 'mc-deliver';
@@ -298,7 +297,7 @@ var McFlow = {
       for (var i = 0; i < DL_DRAWN.length; i++) try {
         var h = DL_DRAWN[i];
         if (h.__mcRow && h.__mcRow.parentNode) h.__mcRow.parentNode.removeChild(h.__mcRow);
-        h.removeAttribute('data-mc-dl'); h.classList.remove('mc-dl-host');
+        h.removeAttribute('data-mc-dl');
       } catch (e) {}
       DL_DRAWN.length = 0;
     };
