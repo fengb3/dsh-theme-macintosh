@@ -392,6 +392,15 @@ state = { view, mode, current, sessions, busy:{}, fallback:{}, queue:{}, stats:{
 - **门禁语义翻转**：verify-dock 断言6 由「全静默零匹配」改为「在场=结构断言（queue 文案正则/
   todo bar+meta+行/goal 相位枚举）/缺席=静默合法 INFO」；真实数据呈现归用户活体验收
   （需含 todo/goal 实数据的会话，门禁会话无数据）。
+- **busy 回车入队修复（2026-09-02 用户报障：busy 态回车无效）**：dock 批把原型 §9.2「有队列时
+  入队不直发」简化成了 busy 早退 → agent 运行中打字回车什么都不发生。修复：busy 态 Enter =
+  镜像官方 textarea + 派发**合成 keydown Enter**（`keyCode:13` 冒泡）驱动官方 onKeyDown 入队
+  （勘定 probe-busy-enter B：官方收讫即 `defaultPrevented`+受控清稿，消息即时入流为转向行）——
+  官方件唯一通道纪律保持，不直调 `prompt('queue')` 服务面。收讫信号用 `kd.defaultPrevented`
+  （同步、免轮询），另置 600ms 幽灵稿清扫拍（慢 flush 角落撤镜像）；官方未收（宿主改版）则撤
+  镜像留本地稿可重试。门禁断言8b 固化（稿清空/无幽灵稿/消息入流）。idle 回车与 IME 组字守卫
+  勘定无恙（probe-enter-send：纯键序回车发送正常，isComposing 跳过语义正确）。
+
 
 
 ---

@@ -193,7 +193,7 @@ check('断言3: 镜像发送 → 会话流出现该消息(4s 轮询)', seen);
 p = await dockProbe();
 check('断言3: 发送后自绘 textarea 复位为空', p.ta && p.taVal === '');
 check('断言2b(autogrow): 发送后 textarea 高复位基线', p.taH <= taHIdle + 2);
-info('断言3: 单消息裁定 — 门禁全程仅此一条(落入当前会话,Tasks 5/6 冒烟同款)', MSG);
+info('断言3: 单消息裁定 — 直发仅此一条(另断言8b busy 窗内入队一条转向消息;均落入当前会话)', MSG);
 
 // 2.5) 断言8(验收轮1 实装):busy/Stop 实链路 — 发送后 8s 内轮询自绘 [data-mc-stop] 可见(busy 窗口);
 //      捕获后点击自绘 Stop → 官方中断 → 自绘回 Send;turn 太快错过 busy 窗口 → INFO deferred 不 FAIL
@@ -204,6 +204,21 @@ const stopSeen = await poll(() => {
 if (stopSeen) {
   const busyP = await dockProbe();
   info('断言8: busy 捕获(自绘坞进 busy,ctx 圆环含最近观测 pct)', { state: busyP.state, busy: busyP.busy, arcDash: busyP.arcDash, ringTitle: busyP.ringTitle });
+  // 断言8b(2026-09-02 busy 回车入队修复):busy 中自绘 textarea 打字+Enter → 官方入队
+  // (本地稿清空 + 消息入流为转向行 + 官方域无幽灵稿;官方件唯一通道=合成 keydown 驱动官方 onKeyDown)
+  const QMSG = 'dock 门禁 busy 入队自检 ' + Date.now();
+  await page.click('[data-mc-dock] .composer textarea');
+  await page.keyboard.type(QMSG, { delay: 10 });
+  await page.keyboard.press('Enter');
+  await page.waitForTimeout(1500);
+  const q = await page.evaluate((m) => ({
+    selfTa: document.querySelector('[data-mc-dock] .composer textarea').value,
+    offTa: document.querySelector('[data-composer-card] textarea').value,
+    inFlow: (document.querySelector('[data-conversation-scroll]') || { textContent: '' }).textContent.includes(m),
+  }), QMSG);
+  check('断言8b: busy 回车入队 — 本地稿清空', q.selfTa === '');
+  check('断言8b: busy 回车入队 — 官方域无幽灵稿', q.offTa === '');
+  check('断言8b: busy 回车入队 — 消息入流(转向行)', q.inFlow);
   await page.click('[data-mc-dock] [data-mc-stop]');
   const back = await poll(() => {
     const sd = document.querySelector('[data-mc-dock] [data-mc-send]');

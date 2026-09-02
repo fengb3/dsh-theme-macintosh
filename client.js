@@ -2528,6 +2528,7 @@ var McDock = {
     var state = { mode: 'idle', has: false };
     var root = null, rootEl = null, furn = null, cmp = null; // rootEl 持元素引用:置空 root 后退场/teardown 仍能 remove
     var mo = null, dead = false;
+    var qTimer = null; // busy 入队收讫后置幽灵稿清扫拍(bug修复 2026-09-02:busy 回车入队)
     var off = { card: null, field: null, send: null, stop: null, phaseEl: null, phaseVal: '' };
     var MC_DOCK_API = null; // 模块级桥(Task 5/6/kit 消费)
     function q(sel) { try { return sel ? document.querySelector(sel) : null; } catch (e) { return null; } }
@@ -2644,7 +2645,7 @@ var McDock = {
         ta.style.height = Math.min(ta.scrollHeight, Math.round(window.innerHeight * 0.4)) + 'px';
         paint();
       });
-      ta.addEventListener('keydown', function (e) { // 原型 §9.2:Enter 无 Shift=发送;busy 早退
+      ta.addEventListener('keydown', function (e) { // 原型 §9.2:Enter 无 Shift=发送(idle=官方钮/busy=官方入队)
         if (e.isComposing) return; // 裁定:IME 组字期 Enter=选字确认,不得发送(中文交互主场景;Task 5 fix-1)
         try { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); doSend(); } } catch (er) {}
       });
@@ -2815,13 +2816,38 @@ var McDock = {
       try {
         var ta = cmp.querySelector('textarea');
         var text = ta ? ta.value : '';
-        if (state.mode === 'busy' || !text.trim()) return; // busy 早退(原型 §9.2)
+        if (!text.trim()) return;
+        if (state.mode === 'busy') { doQueue(text); return; } // busy:官方入队(原型 §9.2「有队列时入队不直发」;2026-09-02 修复——原「busy 早退」致回车无效)
         if (!api.setText(text)) { bridgeFail(); return; } // 镜像失败 = 桥断 → 降级
         if (!api.send()) return; // 官方钮 disabled = 官方拒绝,保留草稿不降级
         ta.value = '';
         ta.style.height = ''; // 验收轮1:清稿后自增高复位(回 rows=1 基线)
         state = mcDockState(state, { t: 'input', has: false });
         paint();
+      } catch (er) {}
+    }
+    function doQueue(text) { // busy 态回车:镜像官方 textarea + 合成 keydown Enter → 官方 onKeyDown 入队
+      // 勘定(probe-busy-enter B,2026-09-02):官方收讫即 preventDefault+受控清稿,消息即时入流为转向行;
+      // 官方件唯一通道纪律保持——驱动官方输入件自身 Enter 处理器,不直调 prompt('queue') 服务面。
+      try {
+        if (!off.field) return;
+        if (!api.setText(text)) { bridgeFail(); return; } // 镜像失败 = 桥断 → 降级
+        var kd = new window.KeyboardEvent('keydown',
+          { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true, cancelable: true });
+        off.field.dispatchEvent(kd);
+        if (kd.defaultPrevented) { // 官方收讫信号(B 勘定)→ 清本地稿
+          var ta = cmp.querySelector('textarea');
+          if (ta) { ta.value = ''; ta.style.height = ''; }
+          state = mcDockState(state, { t: 'input', has: false });
+          paint();
+          try { if (qTimer) CLOCK.clear(qTimer); } catch (e) {}
+          qTimer = CLOCK.next(function ghostSweep() { // 收讫但官方受控清稿未落(慢 flush 角落)→ 撤镜像防幽灵稿
+            qTimer = null;
+            try { if (!dead && off.field && off.field.value !== '') mcMirrorValue(off.field, ''); } catch (e) {}
+          }, 600);
+          return;
+        }
+        mcMirrorValue(off.field, ''); // 官方未收(宿主改版等):撤镜像防幽灵稿,本地草稿保留可重试
       } catch (er) {}
     }
     function paint() { // 三态渲染(原型 §9.2;accToggle 状态切换)
@@ -3001,6 +3027,7 @@ var McDock = {
       try { if (MC_DOCK_API === api) MC_DOCK_API = null; } catch (e) {}
       try { if (mo) mo.disconnect(); } catch (e) {}
       try { if (timer) CLOCK.clear(timer); } catch (e) {}
+      try { if (qTimer) CLOCK.clear(qTimer); } catch (e) {} // busy 入队幽灵稿清扫拍随退场撤
       try { furnUnsub('unList'); furnUnsub('unSess'); furnUnsub('unTodos'); furnUnsub('unGoal'); } catch (e) {} // furn 批:四订阅全退订
       try { document.documentElement.removeAttribute('data-mc-dock-on'); } catch (e) {}
       try { document.documentElement.removeAttribute('data-mc-pop'); } catch (e) {} // 验收轮2:弹层门控随 teardown 摘除
