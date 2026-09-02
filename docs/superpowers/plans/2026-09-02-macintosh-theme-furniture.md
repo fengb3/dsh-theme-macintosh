@@ -59,11 +59,11 @@ dist/client-body.js + client.js   重建产物(不手改)
 
 **Files:** `src/kit.js`、`dist/*`、`client.js`（重建产物）
 
-- [ ] Step 1: `node tools/assemble.mjs && node tools/make-persistent-client.mjs`；git diff 核对
+- [x] Step 1: `node tools/assemble.mjs && node tools/make-persistent-client.mjs`；git diff 核对
       client.js 变更仅为 dock/kit 段。
-- [ ] Step 2: src/kit.js 家具 kit 注记更新（「活体暂全静默」→「数据面活装(纯只读)」）。
-- [ ] Step 3: 刷新宿主冒烟：dock 在场、无页面错误、无数据会话家具静默（预期态）。
-- [ ] Step 4: `npm test` 全绿 → Commit `feat(mc-furn): 装配重建+kit 注记(静默→活)`
+- [x] Step 2: src/kit.js 家具 kit 注记更新（「活体暂全静默」→「数据面活装(纯只读)」）。
+- [x] Step 3: 刷新宿主冒烟：dock 在场、无页面错误、无数据会话家具静默（预期态）。
+- [x] Step 4: `npm test` 全绿 → Commit `feat(mc-furn): 装配重建+kit 注记(静默→活)`
 
 ### Task 4: verify-dock 家具断言 + 注记回写 + 终验
 
