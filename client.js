@@ -3997,7 +3997,7 @@ var McMenus = {
     try { heroRoot = document.querySelector(MC_MAP.heroRoot); } catch (e) {}
     function heroSync() {
       var act = mcHeroAction(heroRoot ? heroRoot.getAttribute('data-phase') : null);
-      if (act === 'mount' && !heroEl) {
+      if (act === 'mount' && (!heroEl || !heroEl.isConnected)) { // isConnected:宿主重建子树后滞留 detached 引用自愈(审查修复轮1)
         var host = heroRoot ? (heroRoot.querySelector(MC_MAP.flowScroll) || heroRoot) : null;
         if (!host) return;
         heroEl = document.createElement('div');
