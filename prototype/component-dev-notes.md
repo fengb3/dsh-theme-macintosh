@@ -472,6 +472,9 @@ state = { view, mode, current, sessions, busy:{}, fallback:{}, queue:{}, stats:{
   `.mc-t-ic svg{shape-rendering:crispEdges}`。sprite 六只新图标保留（kit/他处备用）。
   委托命中面三轮补：JsonBlock IN 钮是裸 button（无 aria/data 钩子，方向读 ▸/▾ 文案前缀），
   委托选择器扩 `button` 并加 mcPanelOpen 方向判定。
+- **四轮修订**：IN 裸钮本身不闪，flash 只打在展开收起的内容部分（JsonBlock = head 下一兄弟
+  pre.body；收起时捕获期先存 preContent）；方向判定不变，调用即现成 flashIn/flashOut。
+  坑：`CLOCK.next(fn)` 缺省 ms → `Date.now()+undefined` = NaN 调度永不触发，必须显式传 0。
 
 - **参数摘要**：按工具名优先键表（grep→pattern 非 path；web_search 实际键是 `queries`
   数组，取首两个 ' / ' 连接），白名单兜底；非法 JSON → argsRaw 单行化；空形参 → callId。

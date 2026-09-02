@@ -155,3 +155,10 @@ dist/client-body.js + client.js 重建产物（不手改）
    像素渲染 = `.mc-t-ic svg{shape-rendering:crispEdges}`。
 - 验证：npm test 61/61 + audit 绿（variant 测试改写）；verify-toolcard GREEN 25 断言
   （新增：图标 svg+crispedges、IN 钮点击 flash 闪类轮询命中）。commit 后 push。
+## 用户裁定补丁（2026-09-02 四轮：IN 闪打内容不打钮）
+
+- 闪类从 JsonBlock 根容器改为「内容部分」= head 下一兄弟（pre.body）——IN 裸钮本身不再闪；
+  收起方向在捕获期先存 preContent 再调度；展开方向 click 后取 head.nextElementSibling。
+- 调用维持现成 flashIn/flashOut（出现/消失语义）。
+- 坑实录：`CLOCK.next(fn)` 缺省 ms → NaN 调度（`Date.now()+undefined`）回调永不触发——
+  显式传 0。verify-toolcard GREEN（新增断言：闪类命中元素非 BUTTON 且为 button 兄弟）。

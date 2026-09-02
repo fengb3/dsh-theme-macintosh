@@ -144,16 +144,22 @@ if (!kit.NO) {
     const btn = sec && sec.querySelector('.mc-tool.open .mc-tool-body button');
     if (btn) btn.click();
   });
-  let flashed = false;
+  let flashed = false; let flashTarget = '';
   for (let i = 0; i < 12 && !flashed; i++) {
-    flashed = await pg.evaluate(() => {
+    const hit = await pg.evaluate(() => {
       const sec = [...document.querySelectorAll('section')].find((x) => x.querySelector('.kit-h') && x.querySelector('.kit-h').textContent === '工具卡');
-      if (!sec) return false;
-      return !!sec.querySelector('.mc-tool.open .mc-tool-body .mc-ghost, .mc-tool.open .mc-tool-body .mc-flash, .mc-tool.open .mc-tool-body .mcfx');
+      if (!sec) return null;
+      const body = sec.querySelector('.mc-tool.open .mc-tool-body');
+      if (!body) return null;
+      const el = body.querySelector('.mc-ghost, .mc-flash, .mcfx');
+      if (!el) return null;
+      return el.tagName + '|' + (el.previousElementSibling && el.previousElementSibling.tagName === 'BUTTON' ? 'sibling-of-button' : el.parentElement ? el.parentElement.tagName : '?');
     });
-    if (!flashed) await pg.waitForTimeout(80);
+    if (hit) { flashed = true; flashTarget = hit; }
+    else await pg.waitForTimeout(80);
   }
-  ok(flashed, '裁定: IN 按钮(JsonBlock)点击触发 flash 闪类');
+  ok(flashed, '裁定: IN 按钮点击触发 flash 闪类');
+  ok(flashed && flashTarget.indexOf('BUTTON') < 0, '裁定: 闪打在内容部分而非按钮 (' + flashTarget + ')');
 } else { ok(false, 'kit: 工具卡分区缺失'); }
 await pg.evaluate(() => { window.__MC_KIT_OPEN__ = false; });
 

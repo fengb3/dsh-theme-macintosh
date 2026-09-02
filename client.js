@@ -2681,10 +2681,10 @@ const McTool = {
       function toggle() {
         mcFold(cardRef.current, function () { setOpen(function (o) { return !o; }); });
       }
-      // 展开体内折叠面板点击 → 方向判定 + 库 flash：展开 flashIn / 收起 flashOut（用户裁定⑤）。
-      // 宿主自身 handler 照常切换（不拦截），我们只在切换后补白块闪烁；REDUCED 不挂。
-      // 命中面：DisclosureRow 系（[data-expandable]/[aria-expanded]）+ JsonBlock IN 裸钮
-      // （button，方向读 ▸/▾ 文案前缀——二轮补：该钮无 aria/data 钩子，首轮委托漏网）。
+      // 展开体内折叠面板点击 → 库 flashIn/flashOut 打在「展开收起的内容部分」上（用户裁定
+      // 2026-09-02 四轮：IN 裸钮本身不闪；出现=flashIn、消失=flashOut 现成函数语义）。
+      // 宿主自身 handler 照常切换（不拦截）；方向判定（捕获阶段读 pre-click 态）：
+      // DisclosureRow 系 [aria-expanded]/data-state，JsonBlock 裸钮读 ▸/▾ 文案前缀；REDUCED 不挂。
       function mcPanelOpen(head) {
         var a = head.getAttribute('aria-expanded');
         if (a === 'true') return true;
@@ -2703,16 +2703,20 @@ const McTool = {
         var head = null;
         try { head = t.closest('[data-expandable],[aria-expanded],button'); } catch (e) { return; }
         if (!head || !bodyRef.current || !bodyRef.current.contains(head)) return;
-        var wasOpen = mcPanelOpen(head);
-        var panel = head.closest('[data-expandable]') || head.parentElement || head;
+        var closing = mcPanelOpen(head); // true=将收起(内容现存) / false=将展开(内容 click 后才挂载)
+        var preContent = closing ? head.nextElementSibling : null;
         if (REDUCED || !CLOCK || typeof CLOCK.next !== 'function') return;
         CLOCK.next(function () {
           try {
-            if (!panel.isConnected) return;
-            if (wasOpen) { if (typeof flashOut === 'function') flashOut(panel, function () {}); }
-            else { if (typeof flashIn === 'function') flashIn(panel, function () {}); }
+            // 内容元素：JsonBlock 系 = head 下一兄弟(pre.body)；收起时捕获期已存 preContent；
+            // 兜底退回父容器（DisclosureRow 内容内嵌形）。裁定：钮本身不闪，只闪内容部分。
+            var content = closing && preContent ? preContent : head.nextElementSibling;
+            if (!content || !content.isConnected) content = head.parentElement;
+            if (!content || !content.isConnected) return;
+            if (closing) { if (typeof flashOut === 'function') flashOut(content, function () {}); }
+            else { if (typeof flashIn === 'function') flashIn(content, function () {}); }
           } catch (e) {}
-        }, 100);
+        }, 0); // 缺省 ms 会 NaN 化调度(永不触发)——必须显式 0
       }
       var variant = mcToolVariant(name);
       // leading：官方 leadingFor 照抄——error→StateDot(error)/stopped→StateDot(warning)，其余变体图标
