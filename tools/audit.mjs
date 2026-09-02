@@ -68,9 +68,9 @@ const clientRaw = existsSync(clientFile) ? readFileSync(clientFile, 'utf8') : nu
 // 预备各 check 用的走查文本
 const distText = scanText(distRaw, []); // dist 全量（check 1/2/3）
 const distNoClock = scanText(distRaw, [segmentRaw(distRaw, '// src/core/clock.js', '// src/core/mcfx.js')]); // check 2
-const distNoMap = scanText(distRaw, [segmentRaw(distRaw, '// src/chrome/map.js', '// src/chrome/chrome.js'), segmentRaw(distRaw, '// src/conv/overlays.js', '// src/kit.js'), segmentRaw(distRaw, '// src/conv/dock.js', '// src/conv/overlays.js'), segmentRaw(distRaw, '// src/finder.js', '// src/conv/think.js')]); // check 5
+const distNoMap = scanText(distRaw, [segmentRaw(distRaw, '// src/chrome/map.js', '// src/chrome/chrome.js'), segmentRaw(distRaw, '// src/conv/overlays.js', '// src/kit.js'), segmentRaw(distRaw, '// src/conv/dock.js', '// src/conv/overlays.js'), segmentRaw(distRaw, '// src/finder.js', '// src/conv/think.js'), segmentRaw(distRaw, '// src/conv/tool.js', '// src/conv/dock.js')]); // check 5
 const clientText = scanText(clientRaw, []); // client.js 全量（check 1/2/3；clock 段无裸定时器，无需豁免）
-const clientNoMap = scanText(clientRaw, [segmentRaw(clientRaw, '// src/chrome/map.js', '// src/chrome/chrome.js'), segmentRaw(clientRaw, '// src/conv/overlays.js', '// src/kit.js'), segmentRaw(clientRaw, '// src/conv/dock.js', '// src/conv/overlays.js'), segmentRaw(clientRaw, '// src/finder.js', '// src/conv/think.js')]); // check 5
+const clientNoMap = scanText(clientRaw, [segmentRaw(clientRaw, '// src/chrome/map.js', '// src/chrome/chrome.js'), segmentRaw(clientRaw, '// src/conv/overlays.js', '// src/kit.js'), segmentRaw(clientRaw, '// src/conv/dock.js', '// src/conv/overlays.js'), segmentRaw(clientRaw, '// src/finder.js', '// src/conv/think.js'), segmentRaw(clientRaw, '// src/conv/tool.js', '// src/conv/dock.js')]); // check 5
 // M5（终审修复批）：overlays 段不再整段豁免为盲区 —— 段内白名单反查。
 // 段内仅允许 menuPortal/menuHostItem 两 token 出现（Task 4 mount 兜底隐藏引用 MC_MAP.menuPortal）；
 // 其余任何 MC_MAP 特征片段（[data-…/[role=…/[aria-… 等）在段内出现即 FAIL。
@@ -96,6 +96,15 @@ const clientFinder = clientRaw != null ? stripComments(segmentRaw(clientRaw, '//
 const srcFinderFile = join(ROOT, 'src', 'finder.js');
 const srcFinderText = srcText.get(srcFinderFile) || null;
 const FINDER_WHITELIST = new Set(['menuPortal', 'sidebarRegion', 'sidebarViewOpts', 'sidebarNewSess']);
+// tool 段照 overlays/dock/finder 同款机制（toolcard 批补账 2026-09-02）：段定位 '// src/conv/tool.js'
+// → '// src/conv/dock.js'，白名单 = [aria-expanded]（用户裁定二轮:展开体折叠面板 flash 的卡体
+// onClickCapture 委托 closest 命中宿主 DisclosureRow 系折叠钮——纯读态行为钩子，非样式选择器；
+// 样式仍全走 .mc-* 自有类，data-state 三态已裁改类驱动）。
+const distTool = distRaw != null ? stripComments(segmentRaw(distRaw, '// src/conv/tool.js', '// src/conv/dock.js') || '') : null;
+const clientTool = clientRaw != null ? stripComments(segmentRaw(clientRaw, '// src/conv/tool.js', '// src/conv/dock.js') || '') : null;
+const srcToolFile = join(ROOT, 'src', 'conv', 'tool.js');
+const srcToolText = srcText.get(srcToolFile) || null;
+const TOOL_WHITELIST = new Set(['[aria-expanded]']);
 
 const failures = [];
 const fail = (msg) => { failures.push(msg); console.log(`FAIL ${msg}`); };
@@ -183,7 +192,7 @@ const rel = (f) => relative(ROOT, f).replace(/\\/g, '/');
   tokens.add('menuPortal'); // menu 段(2026-09-01):宿主菜单 portal 锚字面量,只允许出现在 map 段与 McMenus 段(src/conv/overlays.js + dist/client 对应快照段,Task 4 mount 兜底隐藏引用)
   let bad = [];
   for (const [f, t] of [...srcText, ...(distNoMap ? [[distFile, distNoMap]] : []), ...(clientNoMap ? [[clientFile, clientNoMap]] : [])]) {
-    if (rel(f) === 'src/chrome/map.js' || rel(f) === 'src/conv/overlays.js' || rel(f) === 'src/conv/dock.js' || rel(f) === 'src/finder.js') continue;
+    if (rel(f) === 'src/chrome/map.js' || rel(f) === 'src/conv/overlays.js' || rel(f) === 'src/conv/dock.js' || rel(f) === 'src/finder.js' || rel(f) === 'src/conv/tool.js') continue;
     for (const tok of tokens)
       if (t.includes(tok)) bad.push(`${rel(f)} 含宿主选择器片段 ${tok}`);
   }
@@ -211,8 +220,16 @@ const rel = (f) => relative(ROOT, f).replace(/\\/g, '/');
       if (seg.includes(tok)) bad.push(`${name} finder 段含未白名单宿主选择器片段 ${tok}`);
     }
   }
+  // tool 段白名单反查(toolcard 批补账):只许 [aria-expanded] 读态钩子出现在 tool 段
+  for (const [name, seg] of [['src/conv/tool.js', srcToolText], ['dist/client-body.js', distTool], ['client.js', clientTool]]) {
+    if (!seg) continue;
+    for (const tok of tokens) {
+      if (TOOL_WHITELIST.has(tok)) continue;
+      if (seg.includes(tok)) bad.push(`${name} tool 段含未白名单宿主选择器片段 ${tok}`);
+    }
+  }
   bad.length ? fail(`MC_MAP 选择器泄漏到管制文件之外:\n  ` + [...new Set(bad)].join('\n  '))
-              : pass(`宿主选择器仅存在于 map 段（src/chrome/map.js + dist/client.js 对应快照段豁免；overlays 段白名单反查 menuPortal/menuHostItem；${tokens.size} 个特征片段核验）`);
+              : pass(`宿主选择器仅存在于 map 段（src/chrome/map.js + dist/client.js 对应快照段豁免；overlays 段白名单反查 menuPortal/menuHostItem；tool 段白名单反查 [aria-expanded] 读态钩子；${tokens.size} 个特征片段核验）`);
 }
 
 const joined = [distText ? 'dist/client-body.js' : null, clientText ? 'client.js' : null].filter(Boolean);

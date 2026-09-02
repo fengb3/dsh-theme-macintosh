@@ -162,3 +162,13 @@ dist/client-body.js + client.js 重建产物（不手改）
 - 调用维持现成 flashIn/flashOut（出现/消失语义）。
 - 坑实录：`CLOCK.next(fn)` 缺省 ms → NaN 调度（`Date.now()+undefined`）回调永不触发——
   显式传 0。verify-toolcard GREEN（新增断言：闪类命中元素非 BUTTON 且为 button 兄弟）。
+## audit 补账（2026-09-02，收尾后复跑发现）
+
+- npm test 复跑曝出 audit FAIL：二轮裁定的 `closest('[data-expandable],[aria-expanded],button')`
+  读态钩子含 MC_MAP 特征片段 `[aria-expanded]`（map.js 会话树行选择器自动提取），且产物 tool 段
+  同步命中（distNoMap/clientNoMap 无 tool 跨度豁免）。
+- 根因：计划 Task 2 Step 3 的「audit.mjs tool 段特征入白名单反查」实际未落地——toolcard 批
+  零次改 audit.mjs，收尾记录「audit 绿」只对四轮之前的代码成立。
+- 补：照 dock/finder 段先例加 tool 段白名单反查（`TOOL_WHITELIST={'[aria-expanded]'}`——纯读态
+  行为钩子非样式选择器；样式仍全走 .mc-* 自有类，data-state 三态早已裁改类驱动）+ 主循环豁免
+  tool.js + distNoMap/clientNoMap 补 tool 跨度。npm test 全绿（53 片段核验）。
