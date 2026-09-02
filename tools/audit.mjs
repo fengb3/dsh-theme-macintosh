@@ -87,7 +87,7 @@ const distDock = distRaw != null ? stripComments(segmentRaw(distRaw, '// src/con
 const clientDock = clientRaw != null ? stripComments(segmentRaw(clientRaw, '// src/conv/dock.js', '// src/conv/overlays.js') || '') : null;
 const srcDockFile = join(ROOT, 'src', 'conv', 'dock.js');
 const srcDockText = srcText.get(srcDockFile) || null;
-const DOCK_WHITELIST = new Set(['composerCard', 'composerSeat', 'composerHide', 'composerField', 'composerSend', 'composerStop', 'composerPhase', 'composerCmd', 'composerPerm', 'composerModel', 'composerCtx', 'composerDockSlot']); // dock2 批:官方 input dock 槽藏匿键(闭合 bracket,自动提取)
+const DOCK_WHITELIST = new Set(['composerCard', 'composerSeat', 'composerHide', 'composerField', 'composerSend', 'composerStop', 'composerPhase', 'composerCmd', 'composerPerm', 'composerModel', 'composerCtx', 'composerDockSlot', 'goalPause', 'goalResume', 'goalEditBtn', 'goalClear', 'goalInput', 'goalSave', 'goalCancel']); // dock2 批:官方 input dock 槽藏匿键 + GoalBar 动作镜像七键(闭合 bracket,自动提取)
 // finder 段照 overlays/dock 同款机制（验收轮5）：段定位 '// src/finder.js' → '// src/conv/think.js'，
 // 白名单 = menuPortal（视图选项瞬时换场的菜单在场探测引用 MC_MAP.menuPortal）+
 // sidebar 三键名（sidebarRegion/sidebarViewOpts/sidebarNewSess——官方代理与换场藏匿引用）。

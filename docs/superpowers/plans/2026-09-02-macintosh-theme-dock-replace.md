@@ -26,12 +26,12 @@ prototype/component-dev-notes.md §8.10 注记
 
 ### Task 2: goal 动作镜像 + 内联编辑 + todo 闪烁 + 间距 + 家具注册表
 
-- [ ] Step 1: MC_DOCK_FURN 注册表（内置三件迁入；api.slot 注册接口；renderFurn 按 order 排序渲染）。
-- [ ] Step 2: goal-card 动作钮（按相位条件渲染）+ 镜像驱动（pause/resume/clear 直 click；
+- [x] Step 1: MC_DOCK_FURN 注册表（内置三件迁入；api.slot 注册接口；renderFurn 按 order 排序渲染）。
+- [x] Step 2: goal-card 动作钮（按相位条件渲染）+ 镜像驱动（pause/resume/clear 直 click；
        edit 四步：官方编辑态开启→自绘内联输入→镜像保存→官方收讫；取消点官方取消钮）。
-- [ ] Step 3: todo 闪烁（重建差分 text→cls，类变行 flashIn）+ 间距 CSS（.todo-acc + .goal-card
+- [x] Step 3: todo 闪烁（重建差分 text→cls，类变行 flashIn）+ 间距 CSS（.todo-acc + .goal-card
        margin-top:8px）。
-- [ ] Step 4: `npm test` 全绿 → Commit `feat(mc-dock2): goal 动作镜像/编辑态/todo 闪烁/间距/家具注册表`
+- [x] Step 4: `npm test` 全绿 → Commit `feat(mc-dock2): goal 动作镜像/编辑态/todo 闪烁/间距/家具注册表`
 
 ### Task 3: 重建 + 活体勘验 + 门禁 + 注记收尾
 

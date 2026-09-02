@@ -607,6 +607,15 @@ const MC_MAP = {
   // 三注入(todo=conversation包 order0/goal=[data-goal-bar] order10/queue=QueueDock order20)
   // 渲染于 composerStack 官方卡之外——藏卡不藏它,故整槽藏匿(自绘坞完全替代;藏未删,goal 镜像钮在内)。
   composerDockSlot: '[data-slot="conversation.input.dock"]',
+  // —— dock2 段:官方 GoalBar 动作镜像锚(dsh-client-ui-goal lib/client.js 直读 2026-09-02;aria=i18n zh,DRIFT-RISK 同 composerSend)——
+  // 常驻条钮(按相位条件渲染):暂停目标/恢复目标/编辑目标/清除目标;编辑态:目标内容 input + 保存目标/取消编辑。
+  goalPause:   '[data-goal-bar] button[aria-label="暂停目标"]',
+  goalResume:  '[data-goal-bar] button[aria-label="恢复目标"]',
+  goalEditBtn: '[data-goal-bar] button[aria-label="编辑目标"]',
+  goalClear:   '[data-goal-bar] button[aria-label="清除目标"]',
+  goalInput:   '[data-goal-bar] input[aria-label="目标内容"]',
+  goalSave:    '[data-goal-bar] button[aria-label="保存目标"]',
+  goalCancel:  '[data-goal-bar] button[aria-label="取消编辑"]',
 };
 
 
@@ -2443,6 +2452,9 @@ const MC_DOCK_CSS = [
   '[data-mc-dock] .goal-card[data-phase="paused"]{border-color:var(--mc-muted)}', // furn 批:paused 降灰(数据驱动徽标同挂)
   '[data-mc-dock] .gc-badge{flex:none;font:500 10px/1.6 var(--font-mono);color:var(--mc-fg);',
   ' background:var(--mc-surface-2);border:1px solid var(--mc-border);border-radius:var(--mc-r-tag);padding:0 5px}', // furn 批:paused/blocked 文字徽标
+  '[data-mc-dock] .todo-acc + .goal-card{margin-top:8px}', // dock2 批:todo 与 goal 卡间隔(叠 .dock flex gap:8 ⇒ 视觉 16px)
+  '[data-mc-dock] .goal-card .gc-input{flex:1;min-width:0;height:24px;padding:0 7px;background:var(--mc-surface-2);',
+  ' border:1px solid var(--mc-border);color:var(--mc-fg);font:400 12px/1.6 var(--font-ui);outline:none}', // dock2 批:goal 内联编辑输入
   '[data-mc-dock] .composer{display:flex;flex-direction:column;gap:8px;background:var(--mc-surface);',
   ' border:1px solid var(--mc-border);border-radius:var(--mc-r-card);',
   ' box-shadow:var(--mc-shadow-panel);padding:8px}',
@@ -2871,19 +2883,102 @@ var McDock = {
       if (busy) { stop.hidden = false; send.hidden = true; }
       else { stop.hidden = true; send.hidden = false; send.disabled = !state.has; }
     }
-    // DOCK_DATA:furn batch (2026-09-02) live wiring — getters read the snapshot variables maintained by furnSync
-    // (purely read-only, adjudication 2). Data planes and shapes see the recon record (recon doc):
-    //   queue: ConversationSnapshot.queue (authoritative transient inbox; only placement=queued counted)
-    //   todos: projection 'todos' = TodoItem{content,status} → normalized {done,now,text}
-    //   goal:  projection 'goal' = GoalProjection → mcGoalCard → {text,phase,badge,rounds} (complete→null)
-    //   ctx:   retired — the ctx ring is delivered by the official anchor in the dock batch renderCmp (composerCtx)
-    var furnLive = { queueText: null, todos: null, goal: null, sig: '', cur: undefined,
+    // 家具数据面(furn 批活装 → dock2 批注册表化):快照变量由 furnSync 维护,内置三件经 MC_DOCK_FURN
+    // 条目消费(纯只读;goal 动作除外=镜像官方钮)。数据面与形态见 recon 记录:
+    //   queue: ConversationSnapshot.queue(authoritative 瞬态收件箱;仅 placement=queued 计数)
+    //   todos: projection todos = TodoItem{content,status} → 归一 {done,now,text}
+    //   goal:  projection goal = GoalProjection → mcGoalCard → {text,phase,badge,rounds,why}(complete→null)
+    //   ctx:   退役——ctx 圆环走 dock 批官方锚(renderCmp/composerCtx)
+    var furnLive = { queueText: null, todos: null, goal: null, sig: '', cur: undefined, goalKey: '',
       unList: null, unSess: null, unTodos: null, unGoal: null };
-    var DOCK_DATA = {
-      queue: function () { return furnLive.queueText ? { text: furnLive.queueText } : null; },
-      todos: function () { return (furnLive.todos && furnLive.todos.length) ? furnLive.todos : null; },
-      goal: function () { return furnLive.goal; },
-    };
+    // dock2 批:goal 内联编辑态(draft 随输入事件维护;goal 变更重置——官方 goalId 变化同款)
+    var goalEdit = { on: false, draft: '' };
+    var eTimer = null; // goal 编辑态候官方 input 的轮询拍
+    function goalClick(sel) { // 官方 GoalBar 钮镜像(display:none 内 click 先例=官方卡四钮桥)
+      try { var b = q(sel); if (b) { b.click(); return true; } } catch (e) {}
+      return false;
+    }
+    function goalEditStart() { // 编辑四步之一:官方编辑态开启 + 自绘内联输入
+      if (!goalClick(MC_MAP.goalEditBtn)) return; // 官方编辑钮缺席(相位不符/改版)→不开
+      goalEdit.on = true;
+      goalEdit.draft = furnLive.goal ? furnLive.goal.text : '';
+      renderFurn();
+      try { if (eTimer) CLOCK.clear(eTimer); } catch (e) {}
+      var n = 0;
+      var waitInput = function () { // 候官方编辑 input(React 切态渲染;≤5 拍 200ms,未现则确认时再试)
+        eTimer = null;
+        if (dead || !goalEdit.on) return;
+        if (q(MC_MAP.goalInput) || ++n >= 5) return;
+        eTimer = CLOCK.next(waitInput, 200);
+      };
+      eTimer = CLOCK.next(waitInput, 200);
+    }
+    function goalEditConfirm() { // 镜像草稿进官方编辑 input → click 官方保存
+      try {
+        var inp = q(MC_MAP.goalInput);
+        if (inp && goalEdit.draft.trim() && mcMirrorAny(inp, goalEdit.draft)) goalClick(MC_MAP.goalSave);
+      } catch (e) {}
+      goalEdit.on = false;
+      renderFurn();
+    }
+    function goalEditCancel() { // 点官方取消(官方编辑态在场才点)+ 撤自绘编辑
+      try { if (q(MC_MAP.goalInput)) goalClick(MC_MAP.goalCancel); } catch (e) {}
+      goalEdit.on = false;
+      renderFurn();
+    }
+    // dock2 批:家具 slot 注册表——自绘坞完全替代官方 input dock(官方槽已整槽藏匿),支持插入新元素。
+    // MC_DOCK_API.slot(id, order, get) 注册/替换(id 同名);内置三件亦为条目,get() 返回 html 片段(空=不渲染),
+    // 渲染后接线在 bindFurn(data-* 锚)。单件 get 异常不拖垮其余(勘定分级先例)。
+    var MC_DOCK_FURN = [
+      { id: 'queue', order: 0, get: function () {
+          if (!furnLive.queueText) return '';
+          return '<div class="queue-row"><svg aria-hidden="true"><use href="#i-px-clock"/></svg>' + esc2(furnLive.queueText) + '</div>';
+      } },
+      { id: 'todos', order: 10, get: function () {
+          var td = furnLive.todos;
+          if (!td || !td.length) return '';
+          var prevAcc = furn ? furn.querySelector('[data-mc-todo]') : null; // 开合态跨重绘保持(裁定 7)
+          var furnOpen = prevAcc ? prevAcc.classList.contains('open') : true;
+          var segs = mcTodoSegments(td);
+          var bar = '';
+          for (var i = 0; i < segs.length; i++) bar += '<i class="' + segs[i] + '"></i>';
+          var items = '';
+          for (var j = 0; j < td.length; j++) {
+            var cls = td[j].done ? ' done' : (segs[j] === 'now' ? ' now' : '');
+            items += '<div class="t-item' + cls + '"><span class="t-box">' +
+              (td[j].done ? '<svg viewBox="0 0 9 8" aria-hidden="true"><use href="#i-check"/></svg>' : '') +
+              '</span><span class="t-txt">' + esc2(td[j].text) + '</span></div>';
+          }
+          return '<div class="todo-acc' + (furnOpen ? ' open' : '') + '" data-mc-todo><button type="button" class="todo-acc-head">' +
+            '<svg class="tri' + (furnOpen ? ' open' : '') + '" aria-hidden="true"><use href="#i-tri"/></svg>' +
+            '<span class="ta-title">To-Do List</span>' +
+            '<div class="todo-bar">' + bar + '</div>' +
+            '<span class="todo-meta">' + esc2(mcTodoMeta(td)) + '</span></button>' +
+            '<div class="todo-body">' + items + '</div></div>';
+      } },
+      { id: 'goal', order: 20, get: function () {
+          var gd = furnLive.goal;
+          if (!gd) return '';
+          if (goalEdit.on) { // 内联编辑态(镜像官方编辑表单;Enter=存/Esc=撤)
+            return '<div class="goal-card" data-phase="' + esc2(gd.phase || 'active') + '">' +
+              '<svg aria-hidden="true"><use href="#i-sparkle"/></svg><span class="gc-title">Goal</span>' +
+              '<input type="text" class="gc-input" data-mc-goal-input value="' + esc2(goalEdit.draft) + '" aria-label="编辑目标">' +
+              '<span class="gc-acts"><button type="button" class="btn sm" data-mc-goal-ok>Save</button>' +
+              '<button type="button" class="btn sm" data-mc-goal-no>Cancel</button></span></div>';
+          }
+          var acts = ''; // dock2 批:动作四钮(按相位条件;镜像官方 GoalBar,不直调服务面)
+          if (gd.phase === 'active') acts += '<button type="button" class="btn sm" data-mc-goal-pause>Pause</button>';
+          if (gd.phase === 'paused') acts += '<button type="button" class="btn sm" data-mc-goal-resume>Resume</button>';
+          acts += '<button type="button" class="btn sm" data-mc-goal-edit>Edit</button>' +
+            '<button type="button" class="btn sm danger" data-mc-goal-clear>Delete</button>';
+          return '<div class="goal-card" data-phase="' + esc2(gd.phase || 'active') + '"' +
+            ' title="' + esc2(gd.text) + (gd.rounds ? ' · ' + esc2(gd.rounds) : '') + (gd.why ? ' · ' + esc2(gd.why) : '') + '">' +
+            '<svg aria-hidden="true"><use href="#i-sparkle"/></svg><span class="gc-title">Goal</span>' +
+            (gd.badge ? '<span class="gc-badge">' + esc2(gd.badge) + '</span>' : '') +
+            '<span class="gc-obj">' + esc2(gd.text) + '</span>' +
+            '<span class="gc-acts">' + acts + '</span></div>';
+      } },
+    ];
     function furnUnsub(one) { try { if (furnLive[one]) furnLive[one](); } catch (e) {} furnLive[one] = null; }
     function furnBindSession(sess) { // Session-level subscriptions (queue + todos/goal faceOf), unsubscribe old ones first
       furnUnsub('unSess'); furnUnsub('unTodos'); furnUnsub('unGoal');
@@ -2928,6 +3023,9 @@ var McDock = {
           } catch (e) {}
         }
         var sig = JSON.stringify([furnLive.queueText, furnLive.todos, furnLive.goal]);
+        var gk = furnLive.goal ? (furnLive.goal.text + '|' + furnLive.goal.phase) : '';
+        if (goalEdit.on && gk !== furnLive.goalKey) goalEdit.on = false; // dock2 批:goal 变更→编辑态重置(官方 goalId 变化同款)
+        furnLive.goalKey = gk;
         if (sig === furnLive.sig) return;
         furnLive.sig = sig;
         renderFurn();
@@ -2942,50 +3040,63 @@ var McDock = {
       } catch (e) {}
     }
     function esc2(s) { return esc(String(s == null ? '' : s)); }
+    function furnRowCls(r) { return /done/.test(r.className) ? 'done' : (/now/.test(r.className) ? 'now' : 'todo'); }
+    function furnRowKey(r) { var t = r.querySelector('.t-txt'); return (t && t.textContent) || ''; }
     function renderFurn() {
+      if (!furn) return;
+      var prevRows = {}; // dock2 批:todo 变换闪烁差分基线(text→done/now/todo)
+      try { [].forEach.call(furn.querySelectorAll('.t-item'), function (r) { prevRows[furnRowKey(r)] = furnRowCls(r); }); } catch (e) {}
       var html = '';
-      var prevAcc = furn ? furn.querySelector('[data-mc-todo]') : null; // open/close state persists across re-renders (adjudication 7)
-      var furnOpen = prevAcc ? prevAcc.classList.contains('open') : true;
-      try { var qd = DOCK_DATA.queue && DOCK_DATA.queue();
-        if (qd) html += '<div class="queue-row"><svg aria-hidden="true"><use href="#i-px-clock"/></svg>' + esc2(qd.text) + '</div>';
-      } catch (e) {}
-      try { var td = DOCK_DATA.todos && DOCK_DATA.todos();
-        if (td && td.length) {
-          var segs = mcTodoSegments(td);
-          var bar = '';
-          for (var i = 0; i < segs.length; i++) bar += '<i class="' + segs[i] + '"></i>';
-          var items = '';
-          for (var j = 0; j < td.length; j++) {
-            var cls = td[j].done ? ' done' : (segs[j] === 'now' ? ' now' : '');
-            items += '<div class="t-item' + cls + '"><span class="t-box">' +
-              (td[j].done ? '<svg viewBox="0 0 9 8" aria-hidden="true"><use href="#i-check"/></svg>' : '') +
-              '</span><span class="t-txt">' + esc2(td[j].text) + '</span></div>';
-          }
-          html += '<div class="todo-acc' + (furnOpen ? ' open' : '') + '" data-mc-todo><button type="button" class="todo-acc-head">' +
-            '<svg class="tri' + (furnOpen ? ' open' : '') + '" aria-hidden="true"><use href="#i-tri"/></svg>' +
-            '<span class="ta-title">To-Do List</span>' +
-            '<div class="todo-bar">' + bar + '</div>' +
-            '<span class="todo-meta">' + esc2(mcTodoMeta(td)) + '</span></button>' +
-            '<div class="todo-body">' + items + '</div></div>';
+      try {
+        var list = MC_DOCK_FURN.slice().sort(function (a, b) { return a.order - b.order; });
+        for (var i = 0; i < list.length; i++) {
+          try { html += list[i].get() || ''; } catch (e) {}
         }
       } catch (e) {}
-      try { var gd = DOCK_DATA.goal && DOCK_DATA.goal();
-        if (gd) html += '<div class="goal-card" data-phase="' + esc2(gd.phase || 'active') + '"' +
-          ' title="' + esc2(gd.text) + (gd.rounds ? ' · ' + esc2(gd.rounds) : '') + '">' +
-          '<svg aria-hidden="true"><use href="#i-sparkle"/></svg><span class="gc-title">Goal</span>' +
-          (gd.badge ? '<span class="gc-badge">' + esc2(gd.badge) + '</span>' : '') +
-          '<span class="gc-obj">' + esc2(gd.text) + '</span></div>';
-      } catch (e) {}
-      furn.innerHTML = html; // all dynamic segments go through esc2
+      furn.innerHTML = html; // 全动态段经 esc2
+      bindFurn(prevRows);
+    }
+    function bindFurn(prevRows) { // 渲染后统一接线:todo 开合/todo 变换闪烁/goal 动作/内联编辑
+      if (!furn) return;
       var head = furn.querySelector('.todo-acc-head');
-      if (head) head.addEventListener('click', function () { // toggle open/close = accToggle state switch
+      if (head) head.addEventListener('click', function () { // 折叠开合 = accToggle 状态切换
         var acc = furn.querySelector('[data-mc-todo]');
-        accToggle(acc, function () { // prototype L2746: instant toggle beat, tri rotates in sync (missed in initial landed version, added in Task 8 QA)
+        accToggle(acc, function () { // 原型 L2746:瞬切拍 tri 同转(落地初版漏,Task 8 QA 补)
           acc.classList.toggle('open');
           var tri = head.querySelector('svg.tri');
           if (tri) tri.classList.toggle('open');
         });
       });
+      try { // dock2 批:todo 变换闪烁——类变行/新行 flashIn 三拍(出场闪烁同款;消失行无靶自然不闪)
+        [].forEach.call(furn.querySelectorAll('.t-item'), function (r) {
+          var k = furnRowKey(r);
+          if (!(k in prevRows) || prevRows[k] !== furnRowCls(r)) flashIn(r, function () {});
+        });
+      } catch (e) {}
+      var gp = furn.querySelector('[data-mc-goal-pause]');
+      if (gp) gp.addEventListener('click', function () { goalClick(MC_MAP.goalPause); });
+      var gr = furn.querySelector('[data-mc-goal-resume]');
+      if (gr) gr.addEventListener('click', function () { goalClick(MC_MAP.goalResume); });
+      var gcl = furn.querySelector('[data-mc-goal-clear]');
+      if (gcl) gcl.addEventListener('click', function () { goalClick(MC_MAP.goalClear); });
+      var ge = furn.querySelector('[data-mc-goal-edit]');
+      if (ge) ge.addEventListener('click', goalEditStart);
+      var gi = furn.querySelector('[data-mc-goal-input]');
+      if (gi) {
+        gi.addEventListener('input', function () { goalEdit.draft = gi.value; });
+        gi.addEventListener('keydown', function (e) { // Enter=存/Esc=撤;IME 组字期早退
+          try {
+            if (e.isComposing) return;
+            if (e.key === 'Enter') { e.preventDefault(); goalEditConfirm(); }
+            else if (e.key === 'Escape') { e.preventDefault(); goalEditCancel(); }
+          } catch (er) {}
+        });
+        try { gi.focus(); gi.setSelectionRange(gi.value.length, gi.value.length); } catch (e) {}
+      }
+      var gok = furn.querySelector('[data-mc-goal-ok]');
+      if (gok) gok.addEventListener('click', goalEditConfirm);
+      var gno = furn.querySelector('[data-mc-goal-no]');
+      if (gno) gno.addEventListener('click', goalEditCancel);
     }
     function onDocClose(e) { // 点外收 ctx-pop(浮层互斥,原型 §9.4;验收轮3:收口同样走 flashOut 闪退)
       try {
@@ -3010,6 +3121,21 @@ var McDock = {
         try { off.stop.click(); return true; } catch (e) { return false; }
       },
       officials: function () { return off; },
+      slot: function (id, order, get) { // dock2 批:家具 slot 注册(自绘坞插入新元素);返回注销函数
+        var nul = function () {};
+        try {
+          if (dead || typeof id !== 'string' || typeof get !== 'function') return nul;
+          MC_DOCK_FURN = MC_DOCK_FURN.filter(function (en) { return en.id !== id; });
+          MC_DOCK_FURN.push({ id: id, order: Number(order) || 0, get: get });
+          renderFurn();
+          return function () {
+            try {
+              MC_DOCK_FURN = MC_DOCK_FURN.filter(function (en) { return en.id !== id; });
+              renderFurn();
+            } catch (e) {}
+          };
+        } catch (e) { return nul; }
+      },
       die: bridgeFail,
     };
     api.onState = paint; // Task 4 syncBusy → 状态机 → 本渲染
@@ -3038,6 +3164,7 @@ var McDock = {
       try { if (mo) mo.disconnect(); } catch (e) {}
       try { if (timer) CLOCK.clear(timer); } catch (e) {}
       try { if (qTimer) CLOCK.clear(qTimer); } catch (e) {} // busy 入队幽灵稿清扫拍随退场撤
+      try { if (eTimer) CLOCK.clear(eTimer); } catch (e) {} // goal 编辑态候 input 轮询拍随退场撤
       try { furnUnsub('unList'); furnUnsub('unSess'); furnUnsub('unTodos'); furnUnsub('unGoal'); } catch (e) {} // furn 批:四订阅全退订
       try { document.documentElement.removeAttribute('data-mc-dock-on'); } catch (e) {}
       try { document.documentElement.removeAttribute('data-mc-pop'); } catch (e) {} // 验收轮2:弹层门控随 teardown 摘除
@@ -3099,7 +3226,22 @@ function mcGoalCard(p) {
   var badge = g.phase === 'paused' ? '已暂停' : (g.phase === 'blocked' ? '受阻' : '');
   var rounds = (p.roundsStarted > 0 && g.maxGoalRounds > 0)
     ? '第 ' + p.roundsStarted + '/' + g.maxGoalRounds + ' 轮' : '';
-  return { text: String(g.objective || ''), phase: g.phase, badge: badge, rounds: rounds };
+  var why = (g.phase === 'blocked' && g.blockedReason && g.blockedReason.message) ? String(g.blockedReason.message) : '';
+  return { text: String(g.objective || ''), phase: g.phase, badge: badge, rounds: rounds, why: why };
+}
+// dock2 批:通用受控镜像(textarea/input 按原型选描述符;goal 编辑 input 为 HTMLInputElement)
+function mcMirrorAny(el, text) {
+  if (!el) return false;
+  try {
+    var proto = el.tagName === 'TEXTAREA' ? window.HTMLTextAreaElement.prototype
+      : (el.tagName === 'INPUT' ? window.HTMLInputElement.prototype : null);
+    if (!proto) return false;
+    var desc = Object.getOwnPropertyDescriptor(proto, 'value');
+    if (!desc || !desc.set) return false;
+    desc.set.call(el, text);
+    el.dispatchEvent(new window.Event('input', { bubbles: true }));
+    return true;
+  } catch (e) { return false; }
 }
 function mcCtxArc(pct) {
   var C = 53.4; var p = Math.max(0, Math.min(100, Number(pct) || 0));

@@ -89,19 +89,20 @@ test('mcQueueText: 仅计 queued;preview||text;空安全', () => {
 });
 
 test('mcGoalCard: complete/缺席→null;徽标与轮次', () => {
-  const G = (phase, roundsStarted, maxGoalRounds) => ({
-    goal: { id: 'g', revision: 1, objective: '完成主题', phase, maxGoalRounds },
+  const G = (phase, roundsStarted, maxGoalRounds, blockedReason) => ({
+    goal: { id: 'g', revision: 1, objective: '完成主题', phase, maxGoalRounds, blockedReason },
     roundsStarted, createdAt: 0, updatedAt: 0,
   });
   assert.equal(mcGoalCard(null), null);
   assert.equal(mcGoalCard(undefined), null);
   assert.equal(mcGoalCard(G('complete', 3, 5)), null); // complete 不渲染(官方 GoalBar 同款)
   assert.deepEqual(mcGoalCard(G('active', 2, 5)),
-    { text: '完成主题', phase: 'active', badge: '', rounds: '第 2/5 轮' });
+    { text: '完成主题', phase: 'active', badge: '', rounds: '第 2/5 轮', why: '' });
   assert.deepEqual(mcGoalCard(G('paused', 1, 4)),
-    { text: '完成主题', phase: 'paused', badge: '已暂停', rounds: '第 1/4 轮' });
+    { text: '完成主题', phase: 'paused', badge: '已暂停', rounds: '第 1/4 轮', why: '' });
   assert.deepEqual(mcGoalCard(G('blocked', 7, 7)),
-    { text: '完成主题', phase: 'blocked', badge: '受阻', rounds: '第 7/7 轮' });
+    { text: '完成主题', phase: 'blocked', badge: '受阻', rounds: '第 7/7 轮', why: '' });
+  assert.equal(mcGoalCard(G('blocked', 7, 7, { code: 'round-limit', message: '轮上限受阻' })).why, '轮上限受阻');
   assert.equal(mcGoalCard(G('active', 0, 5)).rounds, ''); // 未开跑无轮次
   assert.equal(mcGoalCard(G('active', 2, 0)).rounds, ''); // M 缺席无轮次
 });

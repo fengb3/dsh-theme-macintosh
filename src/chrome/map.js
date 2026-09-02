@@ -157,5 +157,14 @@ const MC_MAP = {
   // 三注入(todo=conversation包 order0/goal=[data-goal-bar] order10/queue=QueueDock order20)
   // 渲染于 composerStack 官方卡之外——藏卡不藏它,故整槽藏匿(自绘坞完全替代;藏未删,goal 镜像钮在内)。
   composerDockSlot: '[data-slot="conversation.input.dock"]',
+  // —— dock2 段:官方 GoalBar 动作镜像锚(dsh-client-ui-goal lib/client.js 直读 2026-09-02;aria=i18n zh,DRIFT-RISK 同 composerSend)——
+  // 常驻条钮(按相位条件渲染):暂停目标/恢复目标/编辑目标/清除目标;编辑态:目标内容 input + 保存目标/取消编辑。
+  goalPause:   '[data-goal-bar] button[aria-label="暂停目标"]',
+  goalResume:  '[data-goal-bar] button[aria-label="恢复目标"]',
+  goalEditBtn: '[data-goal-bar] button[aria-label="编辑目标"]',
+  goalClear:   '[data-goal-bar] button[aria-label="清除目标"]',
+  goalInput:   '[data-goal-bar] input[aria-label="目标内容"]',
+  goalSave:    '[data-goal-bar] button[aria-label="保存目标"]',
+  goalCancel:  '[data-goal-bar] button[aria-label="取消编辑"]',
 };
 
