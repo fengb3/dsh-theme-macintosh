@@ -29,14 +29,14 @@ dist/client-body.js + client.js   重建产物(不手改)
 
 **Files:** `test/dock.test.mjs`（先写失败测试）、`src/conv/dock.js`（实现 + shim 出口）
 
-- [ ] Step 1: 失败测试——status 形 segments（completed→done、in_progress→now 全标、pending→todo、
+- [x] Step 1: 失败测试——status 形 segments（completed→done、in_progress→now 全标、pending→todo、
       零 in_progress 首未完成兜底 now、{done} 旧形兼容）；mcQueueText（N 计数仅 queued、
       steering 排除、preview||text、0/空/非数组→null）；mcGoalCard（null/undefined/complete→null、
       active→无徽标、paused→已暂停、blocked→受阻、rounds 轮次串、M=0 或 N=0 无轮次）。
-- [ ] Step 2: `node --test test/dock.test.mjs` 确认 FAIL（无 export）。
-- [ ] Step 3: 实现（src/conv/dock.js 纯函数区；shim 出口加三函数——mcTodoSegments 原地改）：
+- [x] Step 2: `node --test test/dock.test.mjs` 确认 FAIL（无 export）。
+- [x] Step 3: 实现（src/conv/dock.js 纯函数区；shim 出口加三函数——mcTodoSegments 原地改）：
       归一 `it.status ? {done:status==='completed',now:status==='in_progress'} : {done:!!it.done,now:false}`。
-- [ ] Step 4: `npm test` 全绿 → Commit `feat(mc-furn): 家具纯函数(status形segments/queueText/goalCard)`
+- [x] Step 4: `npm test` 全绿 → Commit `feat(mc-furn): 家具纯函数(status形segments/queueText/goalCard)`
 
 ### Task 2: DOCK_DATA 活装——四订阅 + furnSync 差分 + renderFurn 适配 + teardown 退订
 

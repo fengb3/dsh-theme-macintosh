@@ -591,20 +591,51 @@ function mcDockState(state, ev) {
   if (ev.t === 'input') return { mode: s.mode === 'busy' ? 'busy' : (ev.has ? 'ready' : 'idle'), has: !!ev.has };
   return s; // 未知事件无害返回
 }
+// furn 批(2026-09-02):宿主 TodoItem{content,status:'pending'|'in_progress'|'completed'} 归一;
+// {done,text} 原型旧形仍兼容(kit 样本/既有测试)。spec 裁定 3:in_progress 全标 now。
+function mcTodoNorm(t) {
+  if (!t) return { done: false, now: false };
+  if (t.status) return { done: t.status === 'completed', now: t.status === 'in_progress' };
+  return { done: !!t.done, now: !!t.now };
+}
 function mcTodoSegments(todos) {
   var list = Array.isArray(todos) ? todos : [];
-  var nowSet = false;
-  return list.map(function (t) {
-    if (t && t.done) return 'done';
-    if (!nowSet) { nowSet = true; return 'now'; }
-    return 'todo';
+  var segs = list.map(function (t) {
+    var n = mcTodoNorm(t);
+    return n.done ? 'done' : (n.now ? 'now' : 'todo');
   });
+  if (segs.indexOf('now') < 0) { // 零 in_progress:首未完成兜底 now(原型语义)
+    for (var i = 0; i < segs.length; i++) if (segs[i] === 'todo') { segs[i] = 'now'; break; }
+  }
+  return segs;
 }
 function mcTodoMeta(todos) {
   var list = Array.isArray(todos) ? todos : [];
   var done = 0;
-  for (var i = 0; i < list.length; i++) if (list[i] && list[i].done) done++;
+  for (var i = 0; i < list.length; i++) if (mcTodoNorm(list[i]).done) done++;
   return done + '/' + list.length;
+}
+// furn 批:排队追加消息文案(仅 placement==='queued',steering/context 不混入;spec 裁定 5)
+function mcQueueText(queue) {
+  var list = Array.isArray(queue) ? queue : [];
+  var rows = [];
+  for (var i = 0; i < list.length; i++) {
+    if (list[i] && list[i].placement === 'queued') rows.push(list[i]);
+  }
+  if (!rows.length) return null;
+  var first = rows[0];
+  var prev = String(first.preview || first.text || '');
+  return '队列中还有 ' + rows.length + ' 条消息 — 第一条:' + prev;
+}
+// furn 批:GoalProjection → 卡片形(complete/缺席→null,官方 GoalBar 同款;spec 裁定 4)
+function mcGoalCard(p) {
+  if (!p || !p.goal) return null;
+  var g = p.goal;
+  if (g.phase === 'complete') return null;
+  var badge = g.phase === 'paused' ? '已暂停' : (g.phase === 'blocked' ? '受阻' : '');
+  var rounds = (p.roundsStarted > 0 && g.maxGoalRounds > 0)
+    ? '第 ' + p.roundsStarted + '/' + g.maxGoalRounds + ' 轮' : '';
+  return { text: String(g.objective || ''), phase: g.phase, badge: badge, rounds: rounds };
 }
 function mcCtxArc(pct) {
   var C = 53.4; var p = Math.max(0, Math.min(100, Number(pct) || 0));
@@ -623,4 +654,4 @@ function mcMirrorValue(ta, text) {
     return true;
   } catch (e) { return false; }
 }
-if (typeof module !== 'undefined') module.exports = { McDock: McDock, mcDockState: mcDockState, mcTodoSegments: mcTodoSegments, mcTodoMeta: mcTodoMeta, mcCtxArc: mcCtxArc, mcMirrorValue: mcMirrorValue };
+if (typeof module !== 'undefined') module.exports = { McDock: McDock, mcDockState: mcDockState, mcTodoSegments: mcTodoSegments, mcTodoMeta: mcTodoMeta, mcCtxArc: mcCtxArc, mcMirrorValue: mcMirrorValue, mcQueueText: mcQueueText, mcGoalCard: mcGoalCard };
