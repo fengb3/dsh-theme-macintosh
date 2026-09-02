@@ -633,6 +633,43 @@ subcalls：左 2px 软线缩进 + sc-row（ok=绿 i-check / run=琥珀 clock）�
   门控差异注记行）；verify 门禁 `tools/verify-overlays.mjs`（A 相变/B 换皮/C 条件/D 深浅两遍，
   34 断言 GREEN）随批落库。
 
+- **验收裁定轮实录（2026-09-03，hero 简化+窗框+渐变勘定+dialog 顶栏）**：用户五条裁定落地——
+  - **构图简化**：badge（「MACINTOSH · System 7 复古主题」）与 sub（「经典麦金塔工作区…」）两行
+    整体退役，hero = mark+title 两件；`.mh-badge/.mh-sub` CSS 与 kit 样本同步裁除。
+  - **标题 i18n**：`MC_HERO_COPY` 改 `{zh:'探索未知之境', en:'Think Classic'}` + `mcHeroTitle(lang)`
+    纯函数（`documentElement.lang || navigator.language` 前缀 `zh` 判定；测试域零 DOM）。zh 文案为
+    用户裁定字面；en = 主题初代 hero slogan「Think Classic」——用户口谕「原版的那个 slogan」的
+    转译（Classic Mac 语汇+本主题 v1 标题），若用户另有所指改 `MC_HERO_COPY.en` 一处即全链生效。
+  - **hero 窗框**：chrome 批 `div[data-phase="hero"]::before` 伪元素版（data-URI 双色方块）装不进
+    `<use>` → 让位给真 DOM `.mc-hero-tb`（heroSync 随相挂 heroRoot 首子，sidebar `.mc-titlebar`
+    同款 pinstripe 语汇；方块 = Kit Sprite 墙前两枚 `#i-close`/`#i-zoom` 三色位，深浅自动反色）。
+    伪元素经 `html[data-mc-hero] heroRoot::before{display:none}` 让位（gate 撤即回返，双批互不锁）。
+  - **「椭圆形渐变」勘定实录**：CSS 三路全零命中——元素+伪元素 `background-image`
+    （大小写不敏感扫全文档）、大 blur `box-shadow`、内联 `<svg>` `radialGradient`。真身是官方
+    **hero 晕 SVG**（`svg[class*="heroGlow"]`：`<ellipse rx=425.5 ry=134 fill=#6187D8
+    fill-opacity=.08>` + `feGaussianBlur 50`，absolute z:-1 1100×490）——挂 composerStack 的
+    composerHero 变体内，**不在 `heroOfficial` 藏匿域**（官方空态藏了晕还在）。新 map 键
+    `heroGlow`（hashed-substring 同 `sessionRowArrow` 纪律）+ gate 藏匿。教训：**SVG 内部图形
+    自绘的渐变不走 CSS background 通道，扫渐变须连 `<defs>/<filter>` 一起查**。
+  - **composer 钉底**：`html[data-mc-hero] composerSeat{margin-top:auto}` + `.mc-hero` 上下 auto
+    margin——flex 滚动口剩余空间三分（标题栏/构图/输入坞间距均等），composer 席贴窗口底
+    （实测 seat bottom 887 vs 窗底 888，差 1px 边框；距视口底 13px = chrome 批 12px 桌面缝隙）。
+    active 相不受影响（gate 随 hero 摘除归零）。
+  - **dialog Mac 顶栏注入**：官方 settings 面板无 titlebar DOM → 家具级注入。同一 body observer
+    兼职 `dlgSync()`（开卡=childList 突变），`.mc-dlg-tb` 插卡首子；幂等 =「bar 在场且父为卡」
+    短路，React 重建卡走 `isConnected` 重建（heroEl 自愈同款）。布局：官方卡 `display:flex row`
+    （nav|content）→ 顶栏 **absolute 横贯卡顶**零打断 flex，占位走
+    `dlgCard:has(.mc-dlg-tb){padding-top:20px;box-sizing:border-box}`（自有类 `:has` 门控零官方
+    锚，20px 吃进官方原高不增高）。顶栏标题读 `aria-labelledby` 指题元素（动态文本经 esc）。
+  - **dialog 关闭语义（用户裁定「像 Mac 窗口一样点掉」）**：官方面板实有「关闭」钮
+    （`VOzbGW_close`，content>header 右上 28×28，全面板 button 普查唯一 `.close` 后缀）→ 新
+    map 键 `dlgClose`（hashed-substring），关闭方块镜像其程序化 **click**（活体实证关净，保官方
+    行为）；锚漂移兜底 = 向卡派发 `Esc` keydown（**document 级派发无效**——传播路径不经 React
+    根；必须派发在卡元素上冒泡至 React 根委托，live 实证同效）。缩放方块装饰（tabindex -1）。
+    皮冲突修正：dlg 按钮皮 `D button{…!important}` 会压过方块裸规则 → 逐臂收域
+    `:not(.mc-tbx)`。verify 门禁 42→58 断言（badge/sub 退役/locale 标题/窗框双方块/晕藏/
+    composer 钉底/顶栏注入+关闭方块关窗/演练②含窗框自愈）。
+
 ---
 
 ## 12 · §10 响应式

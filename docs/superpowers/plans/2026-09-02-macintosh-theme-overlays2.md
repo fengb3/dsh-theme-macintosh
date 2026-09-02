@@ -347,3 +347,47 @@ E. pageerror 零异常;截图 shots/overlays2-{dark,light}-{hero,dlg}.png。
   各任务一致；shim 出口清单 Task 2 定义、Task 4 消费对齐。
 - **顺序依赖**：Task 1 先行（键组被 2/3/4 消费）；Task 2 依赖 1；Task 3 依赖 1（与 2 独立可并行，
   同文件追加区不冲突）；Task 4 收尾依赖 2/3。
+
+---
+
+## 收尾实录 · 验收裁定轮（2026-09-03，branch feat/mc-overlays2）
+
+用户活体验收后五条裁定（R1-R5）+门禁/kit/注记收尾（R6-R7），三提交落地：
+
+1. **`aea13a8` hero 重构（R1-R4）**
+   - R1：badge/sub 两行整体退役，hero = mark+title 两件；`MC_HERO_COPY` 改 `{zh:'探索未知之境',
+     en:'Think Classic'}` + `mcHeroTitle(lang)` 纯函数（`documentElement.lang || navigator.language`
+     前缀 zh 判定；en=「原版的那个 slogan」转译为主题初代 slogan Think Classic，注记在案，改一处
+     即全链生效）。TDD：test/overlays.test.mjs 先行改版（3 测：action/COPY 字段退役/mcHeroTitle
+     九例），RED→GREEN。
+   - R2：hero 窗框——chrome 批 `div[data-phase="hero"]::before` 伪元素版装不进 `<use>`，让位给真
+     DOM `.mc-hero-tb`（heroSync 随相挂 heroRoot 首子；pinstripe 语汇+Kit Sprite 墙前两枚
+     `#i-close`/`#i-zoom`；gate 门控 `heroRoot::before{display:none}` 让位，gate 撤即回返）。
+   - R3：composer 钉底——`html[data-mc-hero] composerSeat{margin-top:auto}` + `.mc-hero` 上下
+     auto margin 三分剩余空间；实测 seat bottom 887 vs 窗底 888（距视口底 13px=12px 桌面缝隙）。
+   - R4：渐变勘定——CSS background（大小写不敏感+伪元素）/大 blur box-shadow/内联 svg
+     radialGradient 三路全零命中；真身=官方 hero 晕 SVG `svg[class*="heroGlow"]`（ellipse
+     #6187D8 opacity .08 + feGaussianBlur 50，absolute z:-1，挂 composerHero 变体不在
+     heroOfficial 藏匿域）。新 map 键 `heroGlow`（DRIFT-RISK hashed-substring）+ gate 藏匿；
+     audit OVERLAYS_WHITELIST 防御性登记。
+   - kit hero 样本同步改窗框+mark+title 三件；live 冒烟全项确认后入库。
+2. **`3f552e9` dialog Mac 顶栏注入（R5）**
+   - 官方 settings 面板无 titlebar DOM → 同一 body observer 兼职 `dlgSync()`：卡出现插
+     `.mc-dlg-tb` 首子（幂等+isConnected 自愈+teardown 摘净）；absolute 横贯卡顶零打断 flex row，
+     占位走 `dlgCard:has(.mc-dlg-tb){padding-top:20px;box-sizing:border-box}`（20px 吃进原高）。
+     顶栏标题读 aria-labelledby（动态文本经 esc）。
+   - 关闭语义：新 map 键 `dlgClose`（`button[class*="close"]`，勘定 VOzbGW_close 全面板唯一）——
+     关闭方块镜像官方「关闭」钮 click（live 实证关净）；兜底=向**卡元素**派发 Esc keydown
+     （document 级派发不经 React 根，无效——live 实证卡上派发同效）。按钮皮逐臂 `:not(.mc-tbx)`
+     收域防 13px 方块吃 4px 12px padding。
+3. **本提交 门禁/kit/注记（R6-R7）**
+   - verify-overlays.mjs：hero 断言改裁定版（badge/sub 退役/标题 locale 期望/窗框 20px+sprite
+     双方块/pinstripe/chrome ::before 让位/heroGlow 藏/composer 钉窗口底≤8px）；dialog 加顶栏三断
+     （20px absolute/sprite 双方块/标题读 aria-labelledby）+ 关闭方块 click 关窗（深色；浅色保留
+     Esc 路径——双关闭路径各验一遍）；演练② 摘窗框+自愈复挂含 tb 计数；kit 样本断言裁定版构图。
+     **58 PASS GREEN**（裁定前 42）。
+   - 注记 §11.3 追加裁定轮实录（构图简化/i18n 转译说明/窗框伪元素让位/渐变勘定教训「SVG 内部
+     图形自绘渐变不走 CSS background 通道」/composer 钉底/顶栏注入布局/关闭双路+Esc 派发域）。
+   - `node tools/assemble.mjs && node tools/make-persistent-client.mjs` 重建链；
+     `git diff client.js` 仅 overlays/map/kit 快照段（139/114 行级）；`npm test` 64/64 全绿+
+     audit all green（两提交各自入库前均验）。

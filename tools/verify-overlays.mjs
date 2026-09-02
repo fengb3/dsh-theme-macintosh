@@ -1,21 +1,28 @@
-// tools/verify-overlays.mjs — overlays2 批活体门禁(2026-09-02)
+// tools/verify-overlays.mjs — overlays2 批活体门禁(2026-09-02;验收裁定轮改版 2026-09-03)
 // 用法: node tools/verify-overlays.mjs   (宿主须运行于 127.0.0.1:3080)
-// 断言(照 brief Step 2 清单;switch 断言无——Task 3 勘定实证 settings 面板 0 switch,控制器裁定 1):
+// 断言(照 brief Step 2 清单+裁定轮五条;switch 断言无——Task 3 勘定实证 settings 面板 0 switch,
+// 控制器裁定 1):
 //   A hero: boot 相值(info)/.mc-hero 在场+own gate/官方空态容器 computed display=none(heroOfficial
-//           在场时)/构图(.mh-mark 48px+use#i-cl-HappyMac/.mh-title 像素字/.mh-badge 直角)/
-//           切实有会话 → 退场 → 新建会话钮镜像 click → 复挂;
+//           在场时)/构图裁定版(mark 48px+use#i-cl-HappyMac+标题随 locale zh「探索未知之境」en
+//           「Think Classic」+badge/sub 退役)/窗框标题栏(.mc-hero-tb 20px pinstripe+sprite
+//           #i-close/#i-zoom 双方块+chrome ::before 让位)/heroGlow 官方晕 SVG 藏(椭圆渐变勘定)/
+//           composer 席位钉窗口底(gate 门控 margin-top:auto)/切实有会话 → 退场(含窗框) →
+//           新建会话钮镜像 click → 复挂;
 //   B dialog: MC_MAP.dlgTriggerSettings 点开 → dlgCard 壳(直角/1px 实线/像素字/硬投影 3px)/
-//           scrim 点阵幕 radial-gradient(z 仅 info 记录不 assert 官方值)/Esc 关净;
+//           scrim 点阵幕 radial-gradient(z 仅 info 记录不 assert 官方值)/顶栏注入(.mc-dlg-tb
+//           20px+sprite 双方块+标题读 aria-labelledby)/关闭方块 click → dlgCard 退场(镜像官方
+//           关闭钮,Mac 关窗语义——用户裁定);
 //   C 确认框(遇则断): 删除确认小卡在场时同款壳断言;不可达合法 INFO(Task 3 实证官方树被
 //           McFinder 遮蔽,删除确认非破坏路径不可达——预期走 INFO 分支);
-//   D 深浅两遍: html[data-theme] 切换后 A/B 核心断言复跑(verify-toolcard 直改 dataset 先例);
+//   D 深浅两遍: html[data-theme] 切换后 A/B 核心断言复跑(dialog 闭路走 Esc,双关闭路径各验一遍);
 //   G 失配演练(spec §5 活体门禁硬项「破坏锚 → 官方原样 → 还原」;深色,顺序双演练,置于 kit 分区
 //           之前——kit 的 addInitScript 持久注入,reload 会重开检视页且其 hero 样本直用 .mc-hero
 //           真类,会污染演练② heroCount):①摘 style[data-mc-dlgskin] → 点设置 → 官方渲染回返
-//           (dlgCard 圆角非 0)→ Esc → reload 主题重挂皮(单例 1 还原);②摘 .mc-hero+own gate →
-//           官方空态回返 → 良性突变拨一拍 body observer → 自愈复挂+gate 复位(官方空态复藏);
+//           (dlgCard 圆角非 0)→ Esc → reload 主题重挂皮(单例 1 还原);②摘 .mc-hero+.mc-hero-tb
+//           +own gate → 官方空态回返 → 良性突变拨一拍 body observer → 自愈复挂(构图+窗框+gate);
 //   E 零页面错误 + 截图 shots/overlays2-{dark,light}-{hero,dlg}.png;
-//   F kit 浮层分区(verify-toolcard「kit 分区」先例补账): hero 样本构图/控件样本(无 switch)/注记行。
+//   F kit 浮层分区(verify-toolcard「kit 分区」先例补账): hero 样本裁定版构图(窗框+mark+title,
+//           无 badge/sub)/控件样本(无 switch)/注记行。
 // 只读纪律: 不发消息不删数据;新建会话镜像 click 为复挂验证所需(留一个空会话,不产生模型调用)。
 import { chromium } from 'playwright';
 import { mkdirSync } from 'node:fs';
@@ -33,12 +40,17 @@ const info = (label, val) => console.log('INFO ' + label + ' = ' + JSON.stringif
 const SEL = {
   phase: 'div[data-phase]',                                     // MC_MAP.heroRoot(同 mainColumn 同源)
   heroOfficial: '.pXSMma_root',                                 // MC_MAP.heroOfficial(build-hash,漂移则 info 降级)
+  heroGlow: 'svg[class*="heroGlow"]',                           // MC_MAP.heroGlow(hashed-substring,漂移则 info 降级)
   trigger: '#root > div > div > div:first-child button[aria-haspopup="dialog"]', // MC_MAP.dlgTriggerSettings
   dlgCard: '[role="dialog"][aria-labelledby]',                  // MC_MAP.dlgCard
   dlgMask: '[role="presentation"]:has([role="dialog"][aria-labelledby]) > div[aria-hidden="true"]', // MC_MAP.dlgMask
   mirror: 'button[data-mc-finder][aria-label="新建会话"]',        // 自绘新建钮(finder.js ghBtn/mini 同款 aria)
   officialNew: '#root > div > div > div:first-child > div > div > button:nth-child(3)', // MC_MAP.sidebarNewSession(+1 标题栏占位)
 };
+
+// 标题 locale 期望 = overlays.js mcHeroTitle 同规(lang 前缀 zh → zh 否则 en;裁定轮:zh=用户裁定
+// 文案,en=主题初代 slogan——「原版的那个 slogan」的转译,见注记 §11.3)
+const wantTitle = (lang) => String(lang || '').toLowerCase().indexOf('zh') === 0 ? '探索未知之境' : 'Think Classic';
 
 const b = await chromium.launch();
 const pg = await (await b.newContext({ viewport: { width: 1440, height: 900 } })).newPage();
@@ -51,28 +63,48 @@ await pg.waitForTimeout(8000); // 主题注入 + 会话恢复(verify 全家同�
 const heroProbe = () => pg.evaluate((sel) => {
   const root = document.querySelector(sel.phase);
   const hero = document.querySelector('.mc-hero');
+  const tb = document.querySelector('.mc-hero-tb');
   const official = document.querySelector(sel.heroOfficial);
+  const glow = document.querySelector(sel.heroGlow);
+  const seat = document.querySelector('[data-composer-seat]');
   const r = {
     phase: root ? root.getAttribute('data-phase') : null,
     gate: document.documentElement.hasAttribute('data-mc-hero'),
     heroCount: document.querySelectorAll('.mc-hero').length,
+    tbCount: document.querySelectorAll('.mc-hero-tb').length,
     officialPresent: !!official,
     officialDisplay: official ? getComputedStyle(official).display : null,
+    glowPresent: !!glow,
+    glowDisplay: glow ? getComputedStyle(glow).display : null,
+    beforeDisplay: root ? getComputedStyle(root, '::before').display : null, // chrome ::before 伪元素版让位断言
+    lang: (document.documentElement && document.documentElement.lang) || navigator.language,
+    seatBottom: seat ? Math.round(seat.getBoundingClientRect().bottom) : null,
+    rootBottom: root ? Math.round(root.getBoundingClientRect().bottom) : null,
+    vh: innerHeight,
   };
   if (hero) {
     const mark = hero.querySelector('.mh-mark');
     const title = hero.querySelector('.mh-title');
-    const badge = hero.querySelector('.mh-badge');
     const use = mark ? mark.querySelector('use') : null;
     r.markW = mark ? getComputedStyle(mark).width : null;
     r.markUse = use ? (use.getAttribute('href') || use.getAttribute('xlink:href') || '') : null;
     r.titleFont = title ? getComputedStyle(title).fontFamily : '';
-    r.badgeRadius = badge ? getComputedStyle(badge).borderRadius : null;
+    r.titleText = title ? title.textContent : null;
+    r.badge = !!hero.querySelector('.mh-badge');
+    r.sub = !!hero.querySelector('.mh-sub');
+  }
+  if (tb) {
+    const cl = tb.querySelector('.mc-tbx.cl use');
+    const zm = tb.querySelector('.mc-tbx.zm use');
+    r.tbH = getComputedStyle(tb).height;
+    r.tbBg = getComputedStyle(tb).backgroundImage;
+    r.tbClose = cl ? (cl.getAttribute('href') || '') : null;
+    r.tbZoom = zm ? (zm.getAttribute('href') || '') : null;
   }
   return r;
 }, SEL);
 
-// —— dialog 快照探针(dlgCard 壳 + scrim;须开窗态调用) ——
+// —— dialog 快照探针(dlgCard 壳 + 顶栏 + scrim;须开窗态调用) ——
 const dlgProbe = () => pg.evaluate((sel) => {
   const card = document.querySelector(sel.dlgCard);
   const mask = document.querySelector(sel.dlgMask);
@@ -83,6 +115,22 @@ const dlgProbe = () => pg.evaluate((sel) => {
     r.btop = cs.borderTopWidth + ' ' + cs.borderTopStyle;
     r.font = cs.fontFamily;
     r.shadow = cs.boxShadow;
+    const bar = card.querySelector('.mc-dlg-tb'); // 裁定轮 5:注入顶栏
+    if (bar) {
+      const bcs = getComputedStyle(bar);
+      const cl = bar.querySelector('.mc-tbx.cl use');
+      const zm = bar.querySelector('.mc-tbx.zm use');
+      r.bar = {
+        h: bcs.height,
+        pos: bcs.position,
+        title: (bar.querySelector('.mc-tb-title') || { textContent: '' }).textContent,
+        closeHref: cl ? (cl.getAttribute('href') || '') : null,
+        zoomHref: zm ? (zm.getAttribute('href') || '') : null,
+      };
+      const lab = card.getAttribute('aria-labelledby');
+      const labEl = lab ? document.getElementById(lab) : null;
+      r.cardTitle = labEl ? String(labEl.textContent || '').trim() : null; // 顶栏标题应读它
+    }
   }
   if (mask) {
     const ms = getComputedStyle(mask);
@@ -113,6 +161,20 @@ const escClosed = async () => {
   return await pg.evaluate((s) => !document.querySelector(s), SEL.dlgCard);
 };
 
+// —— 顶栏关闭方块 click 关净轮询(裁定轮 5:镜像官方关闭钮,Mac 关窗语义) ——
+const closeBoxClosed = async () => {
+  await pg.evaluate(() => {
+    const bar = document.querySelector('[role="dialog"][aria-labelledby] .mc-dlg-tb');
+    const cl = bar && bar.querySelector('.mc-tbx.cl');
+    if (cl) cl.click();
+  });
+  for (let i = 0; i < 10; i++) {
+    if (await pg.evaluate((s) => !document.querySelector(s), SEL.dlgCard)) return true;
+    await pg.waitForTimeout(300);
+  }
+  return await pg.evaluate((s) => !document.querySelector(s), SEL.dlgCard);
+};
+
 // ═══ 起点归一:深色(theme0 存档,测毕还原) ═══
 const theme0 = await pg.evaluate(() => document.documentElement.getAttribute('data-theme'));
 info('起点 data-theme', theme0);
@@ -131,10 +193,20 @@ ok(hp.heroCount === 1 && hp.gate, '深色 hero: .mc-hero 在场且 own gate html
 ok(hp.phase === 'hero', '深色 hero: data-phase=hero (实值 ' + hp.phase + ')');
 if (hp.officialPresent) ok(hp.officialDisplay === 'none', '深色 hero: 官方空态容器 computed display=none (' + hp.officialDisplay + ')');
 else info('深色 hero: 官方空态容器不在场(heroOfficial 锚漂移或宿主未渲染;藏匿断言降级)', hp.officialPresent);
+ok(!hp.badge && !hp.sub, '深色 hero: 构图裁定 — badge/sub 双双退役 (badge=' + hp.badge + ' sub=' + hp.sub + ')');
+ok(hp.titleText === wantTitle(hp.lang), '深色 hero: 标题随 locale (lang=' + hp.lang + ' 实值「' + hp.titleText + '」期「' + wantTitle(hp.lang) + '」)');
 ok(hp.markW === '48px', '深色 hero: 构图 .mh-mark 宽 48px (' + hp.markW + ')');
 ok(hp.markUse === '#i-cl-HappyMac', '深色 hero: 构图 svg use #i-cl-HappyMac (' + hp.markUse + ')');
 ok(hp.titleFont.indexOf('ChiKareGo') >= 0, '深色 hero: 构图 .mh-title 像素字 ChiKareGo (' + hp.titleFont.slice(0, 40) + ')');
-ok(hp.badgeRadius === '0px', '深色 hero: 构图 .mh-badge 直角 (' + hp.badgeRadius + ')');
+ok(hp.tbCount === 1 && hp.tbH === '20px', '深色 hero: 窗框标题栏在场 20px (count=' + hp.tbCount + ' h=' + hp.tbH + ')');
+ok(hp.tbClose === '#i-close' && hp.tbZoom === '#i-zoom', '深色 hero: 窗框 sprite 双方块 (cl=' + hp.tbClose + ' zm=' + hp.tbZoom + ')');
+ok(String(hp.tbBg).indexOf('repeating-linear-gradient') >= 0, '深色 hero: 窗框 pinstripe 条纹面');
+ok(hp.beforeDisplay === 'none', '深色 hero: chrome ::before 伪元素版让位 (display=' + hp.beforeDisplay + ')');
+if (hp.glowPresent) ok(hp.glowDisplay === 'none', '深色 hero: 官方 hero 晕 SVG 藏(椭圆渐变勘定) (' + hp.glowDisplay + ')');
+else info('深色 hero: heroGlow 锚未命中(宿主未渲染晕或哈希漂移;渐变断言降级)', hp.glowPresent);
+info('深色 hero: composer 钉底记录', { seatBottom: hp.seatBottom, rootBottom: hp.rootBottom, vh: hp.vh });
+ok(hp.seatBottom != null && hp.rootBottom != null && hp.rootBottom - hp.seatBottom <= 8,
+  '深色 hero: composer 席位钉窗口底 (seat=' + hp.seatBottom + ' vs 窗底=' + hp.rootBottom + '; 距视口底 ' + (hp.vh - hp.seatBottom) + 'px=桌面缝隙 12px 语汇)');
 await pg.screenshot({ path: join(SHOTS, 'overlays2-dark-hero.png') });
 
 // 切进任一会话 → 相变退场 → 新建镜像复挂
@@ -150,13 +222,13 @@ if (picked == null) {
   await pg.waitForTimeout(2500);
   const hp2 = await heroProbe();
   info('A: 切进会话「' + picked + '」后 data-phase', hp2.phase);
-  ok(hp2.phase !== 'hero' && hp2.heroCount === 0 && !hp2.gate, '深色 hero: 切实有会话 → 相变+.mc-hero 退场+gate 撤 (phase=' + hp2.phase + ' count=' + hp2.heroCount + ')');
+  ok(hp2.phase !== 'hero' && hp2.heroCount === 0 && hp2.tbCount === 0 && !hp2.gate, '深色 hero: 切实有会话 → 相变+.mc-hero/窗框退场+gate 撤 (phase=' + hp2.phase + ' count=' + hp2.heroCount + ' tb=' + hp2.tbCount + ')');
   const used = await newSessionMirror();
   ok(!!used, '深色 hero: 新建会话镜像 click 有靶(自绘优先/官方代理兜底)');
   info('A: 镜像 click 使用目标', used);
   let hp3 = await heroProbe();
   for (let i = 0; i < 20 && hp3.heroCount === 0; i++) { await pg.waitForTimeout(400); hp3 = await heroProbe(); }
-  ok(hp3.heroCount === 1 && hp3.gate && hp3.phase === 'hero', '深色 hero: 切回空会话(新建镜像) → 复挂 (count=' + hp3.heroCount + ' phase=' + hp3.phase + ')');
+  ok(hp3.heroCount === 1 && hp3.tbCount === 1 && hp3.gate && hp3.phase === 'hero', '深色 hero: 切回空会话(新建镜像) → 复挂(构图+窗框) (count=' + hp3.heroCount + ' tb=' + hp3.tbCount + ' phase=' + hp3.phase + ')');
 }
 
 // ═══ B. dialog(深色) ═══
@@ -172,12 +244,17 @@ if (dg.card) {
   ok(/ChiKareGo|Fusion Pixel/.test(dg.font), '深色 dlg: 像素字 (' + dg.font.slice(0, 44) + ')');
   ok(String(dg.shadow).indexOf('3px') >= 0, '深色 dlg: 硬投影含 3px 偏移');
 }
+if (dg.bar) {
+  ok(dg.bar.h === '20px' && dg.bar.pos === 'absolute', '深色 dlg: 顶栏注入 20px absolute 卡顶 (h=' + dg.bar.h + ' pos=' + dg.bar.pos + ')');
+  ok(dg.bar.closeHref === '#i-close' && dg.bar.zoomHref === '#i-zoom', '深色 dlg: 顶栏 sprite 双方块 (cl=' + dg.bar.closeHref + ' zm=' + dg.bar.zoomHref + ')');
+  ok(dg.bar.title === dg.cardTitle, '深色 dlg: 顶栏标题读 aria-labelledby (「' + dg.bar.title + '」)');
+} else ok(false, '深色 dlg: 顶栏 .mc-dlg-tb 未注入');
 if (dg.mask) {
   ok(dg.maskBgImage.indexOf('radial-gradient') >= 0, '深色 scrim: 点阵幕 radial-gradient 在场');
   info('深色 scrim: zIndex 记录(mask=' + dg.maskZ + ' / overlay=' + dg.overlayZ + ',官方原值不 assert)', { maskZ: dg.maskZ, overlayZ: dg.overlayZ });
 } else { ok(false, '深色 scrim: dlgMask 未命中(:has 域定失配?)'); }
 await pg.screenshot({ path: join(SHOTS, 'overlays2-dark-dlg.png') });
-ok(await escClosed(), '深色 dlg: Esc 关闭 → dlgCard 退场');
+ok(await closeBoxClosed(), '深色 dlg: 关闭方块 click → dlgCard 退场(镜像官方关闭钮,Mac 关窗语义)');
 
 // ═══ C. 确认框(遇则断;Task 3 实证不可达 → 预期 INFO) ═══
 const cf = await pg.evaluate(() => {
@@ -195,8 +272,12 @@ await pg.evaluate(() => { document.documentElement.dataset.theme = 'light'; });
 await pg.waitForTimeout(600);
 const hl = await heroProbe();
 ok(hl.heroCount === 1 && hl.gate, '浅色 hero: .mc-hero 仍在场+gate 保持 (count=' + hl.heroCount + ')');
+ok(hl.titleText === wantTitle(hl.lang), '浅色 hero: 标题 locale 复跑 (「' + hl.titleText + '」)');
 ok(/ChiKareGo/.test(hl.titleFont), '浅色 hero: 标题像素字复跑 (' + hl.titleFont.slice(0, 40) + ')');
-ok(hl.badgeRadius === '0px' && hl.markW === '48px', '浅色 hero: 构图复跑(徽标直角+mark 48px)');
+ok(!hl.badge && !hl.sub && hl.markW === '48px', '浅色 hero: 构图复跑(badge/sub 退役+mark 48px)');
+ok(hl.tbCount === 1 && hl.tbClose === '#i-close' && hl.tbZoom === '#i-zoom', '浅色 hero: 窗框复跑 (cl=' + hl.tbClose + ' zm=' + hl.tbZoom + ')');
+if (hl.glowPresent) ok(hl.glowDisplay === 'none', '浅色 hero: hero 晕 SVG 仍藏 (' + hl.glowDisplay + ')');
+ok(hl.seatBottom != null && hl.rootBottom != null && hl.rootBottom - hl.seatBottom <= 8, '浅色 hero: composer 钉底复跑 (seat=' + hl.seatBottom + ' vs 窗底=' + hl.rootBottom + ')');
 if (hl.officialPresent) ok(hl.officialDisplay === 'none', '浅色 hero: 官方空态仍藏 (' + hl.officialDisplay + ')');
 await pg.screenshot({ path: join(SHOTS, 'overlays2-light-hero.png') });
 
@@ -208,13 +289,14 @@ if (dl.card) {
   ok(dl.radius === '0px' && dl.btop === '1px solid', '浅色 dlg: 卡壳复跑(直角+' + dl.btop + ')');
   ok(/ChiKareGo|Fusion Pixel/.test(dl.font), '浅色 dlg: 像素字复跑 (' + dl.font.slice(0, 44) + ')');
   ok(String(dl.shadow).indexOf('3px') >= 0, '浅色 dlg: 硬投影复跑');
+  ok(dl.bar && dl.bar.h === '20px' && dl.bar.closeHref === '#i-close', '浅色 dlg: 顶栏复跑 (h=' + (dl.bar ? dl.bar.h : null) + ')');
 }
 if (dl.mask) {
   ok(dl.maskBgImage.indexOf('radial-gradient') >= 0, '浅色 scrim: 点阵幕复跑');
   info('浅色 scrim: zIndex 记录(mask=' + dl.maskZ + ' / overlay=' + dl.overlayZ + ')', { maskZ: dl.maskZ, overlayZ: dl.overlayZ });
 } else { ok(false, '浅色 scrim: dlgMask 未命中'); }
 await pg.screenshot({ path: join(SHOTS, 'overlays2-light-dlg.png') });
-ok(await escClosed(), '浅色 dlg: Esc 关闭 → dlgCard 退场');
+ok(await escClosed(), '浅色 dlg: Esc 关闭 → dlgCard 退场(Esc 路径复跑;深色已验关闭方块路径)');
 await pg.evaluate((t) => { document.documentElement.dataset.theme = t || 'dark'; }, theme0); // 测毕还原起点相
 
 // ═══ G. 失配演练(spec §5 活体门禁硬项:破坏锚 → 官方原样 → 还原;深色,顺序双演练) ═══
@@ -238,7 +320,7 @@ await pg.waitForTimeout(9000); // 主题重挂节律(kit 分区 reload 同款)
 const skinN = await pg.evaluate(() => document.querySelectorAll('style[data-mc-dlgskin]').length);
 ok(skinN === 1, '失配演练① 还原: reload → 主题重挂 → style[data-mc-dlgskin] 单例回返 (count=' + skinN + ')');
 
-// —— ② hero:摘 .mc-hero+own gate → 官方空态回返 → 良性突变拨一拍 body observer → 自愈复挂 ——
+// —— ② hero:摘 .mc-hero+.mc-hero-tb+own gate → 官方空态回返 → 良性突变拨一拍 body observer → 自愈复挂 ——
 // 破坏与官方回返断言须同一 evaluate 内同步取:remount 走 observer 微任务,一旦跨 await 中间态就
 // 可能已被自愈抹掉;computed style 读取强制同步重排,摘 gate 后立即读值可信。
 let hq = await heroProbe();
@@ -247,25 +329,28 @@ if (hq.heroCount === 0) { // reload 恢复态未落空会话 → 镜像新建归
   ok(!!usedM, '失配演练② 归一: 新建会话镜像 click 有靶');
   for (let i = 0; i < 20 && hq.heroCount === 0; i++) { await pg.waitForTimeout(400); hq = await heroProbe(); }
 }
-ok(hq.heroCount === 1 && hq.gate, '失配演练② hero: 基线 — .mc-hero 在场+gate 置位 (count=' + hq.heroCount + ' gate=' + hq.gate + ')');
+ok(hq.heroCount === 1 && hq.tbCount === 1 && hq.gate, '失配演练② hero: 基线 — .mc-hero+窗框在场+gate 置位 (count=' + hq.heroCount + ' tb=' + hq.tbCount + ' gate=' + hq.gate + ')');
 const hM = await pg.evaluate((sel) => {
   const h = document.querySelector('.mc-hero');
   if (h) h.remove();
+  const tb = document.querySelector('.mc-hero-tb');
+  if (tb) tb.remove();
   document.documentElement.removeAttribute('data-mc-hero');
   const official = document.querySelector(sel.heroOfficial);
   return {
     heroCount: document.querySelectorAll('.mc-hero').length,
+    tbCount: document.querySelectorAll('.mc-hero-tb').length,
     gate: document.documentElement.hasAttribute('data-mc-hero'),
     officialPresent: !!official,
     officialDisplay: official ? getComputedStyle(official).display : null,
   };
 }, SEL);
-ok(hM.heroCount === 0 && !hM.gate, '失配演练② hero: 破坏生效 — .mc-hero 摘+gate 撤 (count=' + hM.heroCount + ')');
+ok(hM.heroCount === 0 && hM.tbCount === 0 && !hM.gate, '失配演练② hero: 破坏生效 — .mc-hero+窗框摘+gate 撤 (count=' + hM.heroCount + ' tb=' + hM.tbCount + ')');
 ok(hM.officialPresent && hM.officialDisplay !== 'none', '失配演练② hero: gate 撤 → 官方空态回返 (present=' + hM.officialPresent + ' display=' + hM.officialDisplay + ')');
 await pg.evaluate(() => { const poke = document.createElement('div'); poke.style.display = 'none'; document.body.appendChild(poke); poke.remove(); }); // 良性突变 → observer 一拍
 let hH = await heroProbe();
-for (let i = 0; i < 10 && (hH.heroCount === 0 || !hH.gate); i++) { await pg.waitForTimeout(400); hH = await heroProbe(); }
-ok(hH.heroCount === 1 && hH.gate, '失配演练② 还原: observer 自愈 → .mc-hero 复挂+gate 置回 (count=' + hH.heroCount + ' gate=' + hH.gate + ')');
+for (let i = 0; i < 10 && (hH.heroCount === 0 || hH.tbCount === 0 || !hH.gate); i++) { await pg.waitForTimeout(400); hH = await heroProbe(); }
+ok(hH.heroCount === 1 && hH.tbCount === 1 && hH.gate, '失配演练② 还原: observer 自愈 → 构图+窗框复挂+gate 置回 (count=' + hH.heroCount + ' tb=' + hH.tbCount + ' gate=' + hH.gate + ')');
 if (hH.officialPresent) ok(hH.officialDisplay === 'none', '失配演练② 还原: gate 复位 → 官方空态复藏 (' + hH.officialDisplay + ')');
 
 // ═══ F. kit 浮层分区(verify-toolcard「kit 分区」先例;裁定 1:无 switch 样本) ═══
@@ -279,13 +364,21 @@ const kit = await pg.evaluate(() => {
   });
   if (!sec) return { NO: 1 };
   const mark = sec.querySelector('.mh-mark');
-  const badge = sec.querySelector('.mh-badge');
   const use = sec.querySelector('.mh-mark use');
+  const tb = sec.querySelector('.mc-hero-tb');
+  const cl = tb ? tb.querySelector('.mc-tbx.cl use') : null;
+  const zm = tb ? tb.querySelector('.mc-tbx.zm use') : null;
+  const title = sec.querySelector('.mh-title');
+  const lang = (document.documentElement && document.documentElement.lang) || navigator.language;
   return {
     hero: !!mark && !!use && (use.getAttribute('href') || '') === '#i-cl-HappyMac',
     markW: mark ? getComputedStyle(mark).width : null,
-    badgeRadius: badge ? getComputedStyle(badge).borderRadius : null,
-    titleText: (sec.querySelector('.mh-title') || { textContent: '' }).textContent,
+    tb: !!tb,
+    tbClose: cl ? (cl.getAttribute('href') || '') : null,
+    tbZoom: zm ? (zm.getAttribute('href') || '') : null,
+    badgeAbsent: !sec.querySelector('.mh-badge') && !sec.querySelector('.mh-sub'),
+    titleText: title ? title.textContent : '',
+    lang,
     btns: sec.querySelectorAll('.mc-dlg-demo button').length,
     input: !!sec.querySelector('.mc-dlg-demo input'),
     sep: !!sec.querySelector('.mc-dlg-demo .dd-sep'),
@@ -294,8 +387,9 @@ const kit = await pg.evaluate(() => {
   };
 });
 if (!kit.NO) {
-  ok(kit.hero && kit.markW === '48px' && kit.badgeRadius === '0px', 'kit: hero 样本构图(48px HappyMac mark+直角徽标)');
-  ok(kit.titleText.indexOf('Think') === 0 && kit.titleText.indexOf('Classic') > 0, 'kit: hero 文案读 MC_HERO_COPY (Think Classic…:「' + kit.titleText.slice(0, 24) + '」)');
+  ok(kit.hero && kit.markW === '48px' && kit.tb && kit.tbClose === '#i-close' && kit.tbZoom === '#i-zoom', 'kit: hero 样本构图(窗框 sprite 双方块+48px HappyMac mark)');
+  ok(kit.badgeAbsent, 'kit: hero 样本裁定 — 无 badge/sub');
+  ok(kit.titleText === wantTitle(kit.lang), 'kit: hero 文案读 MC_HERO_COPY 按 locale (lang=' + kit.lang + ' 「' + kit.titleText + '」)');
   ok(kit.btns >= 2 && kit.input && kit.sep, 'kit: dialog 控件样本(方角钮×' + kit.btns + '+input+分隔线)');
   ok(kit.note, 'kit: 注记行(toast 不做裁定+存在门控说明)');
   ok(kit.switches === 0, 'kit: 无 switch 样本(裁定 1——Task 3 勘定官方 0 switch)');
