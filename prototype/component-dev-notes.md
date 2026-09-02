@@ -417,6 +417,9 @@ state = { view, mode, current, sessions, busy:{}, fallback:{}, queue:{}, stats:{
 - **todo 变换闪烁（用户报障③）**：renderFurn 重建差分（text→done/now/todo 基线），类变行/新行
   flashIn 三拍（`mcfx mc-ghost`→拍毕净）；活体实证：清单首现三行全闪、完成步骤一后 done 行闪 +
   fallback now 迁移行（步骤二）同闪。
+- **todo 初始折叠（2026-09-02 用户裁定）**：开合态改入注册表状态 `furnLive.todoOpen`（初值 false=
+  折叠；点头开合写入；跨重绘保持；换会话重置折叠）——替换原「DOM 读 prevAcc 类」的隐式保持
+  （其初值恒 open）。活体实证：首现折叠（body 高 0）→点头展开→数据重绘后展开态保持。
 - **furn 内部布局（用户报障②）**：`[data-mc-dock-furn]` 此前普通 block——子件零间距（.dock flex
   gap 只及 furn↔composer）——即「todo 与 goal 无间隔」根因。修复：furn 自身 flex column gap:8 +
   `.todo-acc + .goal-card{margin-top:8}` ⇒ 实测 16px。

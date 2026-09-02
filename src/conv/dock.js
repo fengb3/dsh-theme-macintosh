@@ -492,7 +492,7 @@ var McDock = {
     //   todos: projection todos = TodoItem{content,status} → 归一 {done,now,text}
     //   goal:  projection goal = GoalProjection → mcGoalCard → {text,phase,badge,rounds,why}(complete→null)
     //   ctx:   退役——ctx 圆环走 dock 批官方锚(renderCmp/composerCtx)
-    var furnLive = { queueText: null, todos: null, goal: null, sig: '', cur: undefined, goalKey: '',
+    var furnLive = { queueText: null, todos: null, goal: null, sig: '', cur: undefined, goalKey: '', todoOpen: false,
       unList: null, unSess: null, unTodos: null, unGoal: null };
     // dock2 批:goal 内联编辑态(draft 随输入事件维护;goal 变更重置——官方 goalId 变化同款)
     var goalEdit = { on: false, draft: '' };
@@ -540,8 +540,7 @@ var McDock = {
       { id: 'todos', order: 10, get: function () {
           var td = furnLive.todos;
           if (!td || !td.length) return '';
-          var prevAcc = furn ? furn.querySelector('[data-mc-todo]') : null; // 开合态跨重绘保持(裁定 7)
-          var furnOpen = prevAcc ? prevAcc.classList.contains('open') : true;
+          var furnOpen = !!furnLive.todoOpen; // dock2 批:初始折叠(用户裁定);展开后跨重绘保持,换会话重置
           var segs = mcTodoSegments(td);
           var bar = '';
           for (var i = 0; i < segs.length; i++) bar += '<i class="' + segs[i] + '"></i>';
@@ -602,9 +601,9 @@ var McDock = {
         if (!SS || !SS.list || typeof SS.list.getSnapshot !== 'function') return;
         var st = SS.list.getSnapshot();
         var cur = st ? st.current : undefined;
-        if (cur !== furnLive.cur) { // session switch: resubscribe + clear state (no cross-session afterimage), keep silent then fill in
+        if (cur !== furnLive.cur) { // 换会话:重订 + 清态(跨会话不留残影;todo 开合重置为折叠)
           furnLive.cur = cur;
-          furnLive.queueText = null; furnLive.todos = null; furnLive.goal = null;
+          furnLive.queueText = null; furnLive.todos = null; furnLive.goal = null; furnLive.todoOpen = false;
           furnBindSession(cur && SS.binding && typeof SS.binding === 'function' ? SS.binding(cur) : null);
         }
         var b = (cur && SS.binding && typeof SS.binding === 'function') ? SS.binding(cur) : null;
@@ -666,6 +665,7 @@ var McDock = {
         var acc = furn.querySelector('[data-mc-todo]');
         accToggle(acc, function () { // 原型 L2746:瞬切拍 tri 同转(落地初版漏,Task 8 QA 补)
           acc.classList.toggle('open');
+          furnLive.todoOpen = acc.classList.contains('open'); // dock2 批:开合态入注册表状态(跨重绘保持)
           var tri = head.querySelector('svg.tri');
           if (tri) tri.classList.toggle('open');
         });
