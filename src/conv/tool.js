@@ -223,6 +223,8 @@ const MC_TOOL_CSS = [
 // —— 模块（协议 { css, slots(ctx) }；遮蔽 tool-call keyed 槽）——
 var MC_TOOL_PRIM = null;
 try { if (typeof require === 'function') MC_TOOL_PRIM = require("@deepseek-ai/dsh-client-ui-primitives"); } catch (e) { MC_TOOL_PRIM = null; }
+// kit 演示桥：slots 装配后指向 { card }（真 McToolCard 渲染 demo block）；缺席 = kit 分区降级静态说明
+var MC_TOOL_DEMO = null;
 
 const McTool = {
   css: MC_TOOL_CSS,
@@ -362,5 +364,10 @@ const McTool = {
     ctx.effect(() => S.inject('conversation.chat.node', () => S.register({
       name: 'conversation.chat.node', key: 'tool-call', priority: -1, registrant: 'macintosh',
     }, McToolTree)));
+
+    // kit 演示桥（kit.js 在 order 中后于 McTool；组件闭包内真卡渲染 demo block）
+    MC_TOOL_DEMO = {
+      card: function (block) { return h(McToolCard, { block: block }); },
+    };
   },
 };

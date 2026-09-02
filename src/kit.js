@@ -202,6 +202,57 @@ const MC_KIT_THINK_TXT = [
 function mcTokenize(s) {
   return s.match(/[\u2E80-\u9FFF\uF900-\uFFEF]|[0-9]+|[A-Za-z]+|\s|[^\s]/g) || [];
 }
+// —— 工具卡分区演示块（toolcard 批）：真 McToolCard 吃的 ToolCallBlock 字面量（wire 形状）——
+const MC_KIT_TOOL_READ = { kind: 'tool-result', callId: 'demo-read',
+  call: { name: 'read', argsRaw: '{"path":"prototype/macintosh-workspace.html","offset":1,"limit":260}' },
+  isError: false, content: [{ type: 'text', text: 'L1-260 · 84.2 kB — 带行号返回 UTF-8 文本,offset/limit 分段读取。' }],
+  callView: null, resultView: null, subCalls: [] };
+const MC_KIT_TOOL_EDIT = { kind: 'tool-result', callId: 'demo-edit',
+  call: { name: 'edit', argsRaw: '{"path":"prototype/macintosh-workspace.html"}' },
+  isError: false, content: [{ type: 'text', text: '+2 −1 · .tool-head .t-name 字族落 display。' }],
+  callView: null,
+  resultView: { card: 'diff', diffs: [{ path: 'prototype/macintosh-workspace.html',
+    oldText: 'font:600 12px/1 var(--font-ui)', newText: 'font:600 12px/1 var(--font-display)' }] },
+  subCalls: [] };
+const MC_KIT_TOOL_BASH = { kind: 'tool-result', callId: 'demo-bash',
+  call: { name: 'bash', argsRaw: '{"command":"node verify-run.mjs verify/verify-proto-diff.js"}' },
+  isError: true, error: { name: 'ToolError', code: 'exit_1' },
+  content: [{ type: 'text', text: '✖ flow.tool .tool — rect dy +2.4px 超差(±1.5px)\nexit code: 1 · 148ms' }],
+  callView: { card: 'terminal', title: 'node verify-run.mjs verify/verify-proto-diff.js', description: '几何差分门禁' },
+  resultView: { card: 'terminal', output: '$ node verify-run.mjs\n✖ flow.tool .tool — rect dy +2.4px 超差(±1.5px)', exitCode: 1 },
+  subCalls: [] };
+const MC_KIT_TOOL_WEB = { kind: 'tool-result', callId: 'demo-web',
+  call: { name: 'web_search', argsRaw: '{"queries":["Classic Macintosh System 7 UI 设计规范"]}' },
+  isError: false, content: [{ type: 'text', text: '命中 2 条来源。' }],
+  callView: null,
+  resultView: { card: 'web', kind: 'search', truncated: false,
+    sources: [
+      { url: 'https://developer.apple.com/design/hig/', title: 'Apple HIG — System 7', snippet: '菜单栏/窗口语汇权威基准' },
+      { url: 'https://guidebookgallery.org/screenshots/macos7', title: 'GUI Gallery — System 7 截图集' }] },
+  subCalls: [] };
+const MC_KIT_TOOL_UNKNOWN = { kind: 'tool-result', callId: 'demo-unknown',
+  call: { name: 'cast_glyph_v9', argsRaw: '{"glyph":"aurum","weight":9}' },
+  isError: true, error: { name: 'UnknownTool', code: 'not_found' },
+  content: [{ type: 'text', text: '未知工具 · 兜底卡(名称照登 + 原始参数摘要)。' }],
+  callView: null, resultView: null, subCalls: [] };
+// 状态三帧循环节拍块：running(运行形,无 kind) → done → fail(同一 callId 模拟状态变迁)
+const MC_KIT_TOOL_RUN = { callId: 'demo-state', name: 'job_output',
+  argsRaw: '{"job_id":"pwsh-7f3a","wait":false}',
+  callView: { card: 'terminal', title: 'pwsh -c long-job.ps1', description: '后台作业轮询' }, subCalls: [] };
+const MC_KIT_TOOL_STATE_DONE = { kind: 'tool-result', callId: 'demo-state',
+  call: { name: 'job_output', argsRaw: '{"job_id":"pwsh-7f3a","wait":false}' },
+  isError: false, content: [{ type: 'text', text: 'job-2 完成 · 12.4s' }],
+  callView: { card: 'terminal', title: 'pwsh -c long-job.ps1', description: '后台作业轮询' },
+  resultView: { card: 'terminal', output: '$ pwsh -c long-job.ps1\nDONE in 12.4s', exitCode: 0 }, subCalls: [] };
+const MC_KIT_TOOL_STATE_FAIL = { kind: 'tool-result', callId: 'demo-state',
+  call: { name: 'job_output', argsRaw: '{"job_id":"pwsh-7f3a"}' },
+  isError: true, error: { name: 'ToolError', code: 'exit_1' },
+  content: [{ type: 'text', text: 'job 失败:exit 1' }],
+  callView: { card: 'terminal', title: 'pwsh -c long-job.ps1', description: '后台作业轮询' },
+  resultView: { card: 'terminal', output: '$ pwsh -c long-job.ps1\nexit 1', exitCode: 1 }, subCalls: [] };
+
+// —— 状态三帧循环演示：running(默认展开+扫掠) → done(自动收起) → fail(红边+warning) ———
+// CLOCK 1.6s 一帧；同一 callId 走真状态变迁（含 running 默认展开/落地自动收起行为）。
 const MC_KIT_TOKS = mcTokenize(MC_KIT_THINK_TXT);
 const MC_KIT_PER_TICK = 28; /* 一次追加 = 帧 B + 帧 A 两帧的量（设计稿同款） */
 
@@ -637,7 +688,49 @@ function McKitPage() {
               h('div', { className: 'kit-frame-body' },
                 h('div', { className: 'kit-dockctx', 'data-mc-dock': '' },
                   h('div', { className: 'composer-bar' },
-                    h('span', { className: 'cb-right' }, dockCtx))))))))));
+                    h('span', { className: 'cb-right' }, dockCtx))))))),
+        // (g) 工具卡分区（toolcard 批）：MC_TOOL_DEMO 桥真卡渲染（primitives 缺席 → 降级说明）
+        h('section', null,
+          h('h3', { className: 'kit-h' }, '工具卡'),
+          h('div', { className: 'kit-frames' },
+            MC_TOOL_DEMO ? [
+              h('div', { className: 'kit-frame', key: 'samples' },
+                h('div', { className: 'kit-frame-tag' },
+                  h('span', null, '样本 · read 文本体 / edit diff 体 / bash 终端体(fail 红边) / web_search 引用体 / 未知工具 dots 兜底'),
+                  h('em', null, 'tool')),
+                h('div', { className: 'kit-frame-body kit-stack sm' },
+                  MC_TOOL_DEMO.card(MC_KIT_TOOL_READ),
+                  MC_TOOL_DEMO.card(MC_KIT_TOOL_EDIT),
+                  MC_TOOL_DEMO.card(MC_KIT_TOOL_BASH),
+                  MC_TOOL_DEMO.card(MC_KIT_TOOL_WEB),
+                  MC_TOOL_DEMO.card(MC_KIT_TOOL_UNKNOWN))),
+              h('div', { className: 'kit-frame', key: 'states' },
+                h('div', { className: 'kit-frame-tag' },
+                  h('span', null, '状态三帧循环 · running(默认展开+琥珀扫掠) → done(自动收起) → fail(红边+warning 图标) — CLOCK 1.6s 一帧'),
+                  h('em', null, 'tool·state')),
+                h('div', { className: 'kit-frame-body' },
+                  h(McKitToolStates, null))),
+            ] : [
+              h('div', { className: 'kit-frame', key: 'na' },
+                h('div', { className: 'kit-frame-tag' }, h('span', null, '工具卡'), h('em', null, 'tool')),
+                h('div', { className: 'kit-frame-body' },
+                  h('div', { className: 'kit-note' }, 'McTool 未装配（primitives 缺席）— 宿主原生工具卡渲染中。'))),
+            ])))));
+
+function McKitToolStates() {
+  const h = React.createElement;
+  const ixV = React.useState(0);
+  const ix = ixV[0], setIx = ixV[1];
+  React.useEffect(function () {
+    if (!CLOCK || typeof CLOCK.next !== 'function') return undefined;
+    let timer = null; let n = 0;
+    const tick = function () { n = (n + 1) % 3; setIx(n); timer = CLOCK.next(tick, 1600); };
+    timer = CLOCK.next(tick, 1600);
+    return function () { if (timer) { try { CLOCK.clear(timer); } catch (e) {} } };
+  }, []);
+  const seq = [MC_KIT_TOOL_RUN, MC_KIT_TOOL_STATE_DONE, MC_KIT_TOOL_STATE_FAIL];
+  return MC_TOOL_DEMO.card(seq[ix]);
+}
 
 // —— ReasoningDemo：推理卡五帧流式演示（§8.2 状态机 kit 化）——
 // 五帧一周期 500ms：帧 B（t+0）追加 span.cover + 标题换字挂 flash → 帧 A（t+100）合并进

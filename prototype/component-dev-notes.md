@@ -436,6 +436,53 @@ state = { view, mode, current, sessions, busy:{}, fallback:{}, queue:{}, stats:{
   活体复测：cmd/perm/ctx 三弹层与 todo 重叠区 elementFromPoint 全命中 MENU。门禁断言1d
   固化（pop 门控期卡 computed z=9999）。
 
+### 8.11 工具卡落地差异（2026-09-02 toolcard 批实录，host 0.1.1-rc.2）
+
+- **挂载点是一颗 keyed 键**（部署包直读勘定，本地安装包与运行宿主同版本）：工具卡不是
+  独立 chat node kind 皮——`conversation.chat.node` keyed 槽的 **`tool-call`** kind →
+  `dsh-client-ui-tool` 的 `ToolCallTree`（根卡+子调用树）；树内每次调用再经
+  `tool.call.toolview` keyed 槽按**精确工具名**派发（bash/read/edit/write/grep/glob/
+  web_search/web_fetch/todo_write/ask_user_question 有官方专用行，其余走 GenericToolCard
+  兜底；无通配键 → mcp__* 开放集合无法逐名接管）。**遮蔽父级 `tool-call` 一颗键即整体
+  接管**（McTool，priority:-1 同 think/syscard 先例）；primitives 缺席不注册，官方
+  ToolCallTree 兜底（拔演练实测：自绘卡退场、官方 6 行回归、其余 19 节点无恙）。
+- **数据形状**：node.data.root = RunningToolCall{name,argsRaw,callView,subCalls}（运行形，
+  无 kind）| ToolResultNode{kind:'tool-result',call:{name,argsRaw}|null,isError,error?,
+  content,callView,resultView,subCalls}；`call` 为 null（窗口截断）时卡头以 callId 兜底。
+  **官方 state 推导**：`!done→running；error?.code==='interrupted'→stopped；isError→
+  error；否则 ok`（照抄为 mcToolState 纯函数）。
+- **结构化卡面材料挂 wire view**：callView/resultView.card ∈ generic/terminal/diff/
+  read/search/web，载荷随 view 携带（diffs/lines/files/paths/sources），官方 card models
+  只是防御 narrowing 薄层——我们同法自建 mcViewCard（坏载荷/未知 card 值 → null 走
+  generic），组件层 shape→kind 映射后喂 primitives 块（TerminalBlock/DiffBlock/
+  ReadBlock/SearchBlock/WebBlock 均在 primitives 导出面）。search 块组件判别字段叫
+  `kind`（wire 叫 shape）；web 块 kind 与卡面 kind 撞名，narrowing 改名 webKind。
+- **内容体两级**：结构化 view 命中 → 宿主 Block 保真；未命中 → JsonBlock(argsRaw) +
+  content text 连缀（20k 截断）。error 态展开体首行红显 `error.name: error.code`。
+- **行为**：running 卡默认展开（interactive 先例）、落地自动收起（accToggle 拍内，
+  useEffect [state] 驱动）；running 头条纹扫掠 `--sweep-delay` 组件内 CLOCK.syncAnim
+  相位对齐（syscard retry 先例）；开合 accToggle 四拍；出场 flash 由 McFlow 观察器在
+  flowItem 行级供给（每张工具卡是独立 tool-call 节点 = 独立 flowItem，免费获得出场闪）。
+- **图标语义映射**（§10.4 表适配真实 wire 名）：read/read_image→i-doc、write→i-floppy、
+  edit/str_replace_editor→i-px-edit、bash/pwsh→i-px-terminal、grep/web_search→i-px-search、
+  glob→i-folder、web_fetch→i-px-ext、todo_write→i-px-list、ask_user_question→i-balloon、
+  subagent→i-suitcase、send_message→i-px-copy、interrupt_agent→i-px-stop、
+  workflow→i-px-timeline、ralph→i-px-reload、job_*→i-px-clock、*_goal→i-px-goal、
+  skill→i-sparkle、mcp__ 前缀→i-px-zap、error 态一律 i-px-warning（真失败才叹号）、
+  未知→i-px-dots。**sprite 补六只**：i-floppy/i-balloon（原型 FIGMA-ASSETS 区间逐抄）+
+  i-px-ext/i-px-goal/i-px-list/i-px-warning（pixelarticons 源文件照搬）。
+- **参数摘要**：按工具名优先键表（grep→pattern 非 path；web_search 实际键是 `queries`
+  数组，取首两个 ' / ' 连接），白名单兜底；非法 JSON → argsRaw 单行化；空形参 → callId。
+- **浅色陷阱**：WebBlock 根底色为宿主**硬编码深色**（非 token），浅色不翻转——
+  `html[data-theme="light"] .mc-tbb-web{background:var(--mc-surface)…}` 翻白（仅 web 块
+  挂 mc-tbb-web 类；terminal/diff 等块宿主两主题同为深底，视为嵌入终端语汇保留）。
+- **audit 协同**：自有 CSS 三态用类（.mc-run/.mc-fail）不用 `[data-state=…]` 属性选择器
+  ——该片段在 audit 的宿主选择器特征清单内（官方 DOM 有 data-state），自有 DOM 用它会
+  误触 MC_MAP 泄漏检查。
+- **已知限制**：inspect 轨迹跳转、openFile 文件链接不渲染（原型无此件；官方 DetailsPanel
+  另有入口）；官方专用行（BashRow 命令描述等）摘要增强不保留；stopped 态 pill 沿用 done
+  形（「已停止」进摘要后缀）。
+
 
 
 
