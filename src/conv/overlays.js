@@ -53,7 +53,9 @@ function mcHeroTitle(lang) {
 }
 function mcHeroAction(phase) { return phase === 'hero' ? 'mount' : 'unmount'; }
 var MC_HERO_CSS = [
-  '.mc-hero{display:flex;flex-direction:column;align-items:center;gap:14px;padding:52px 24px 40px;text-align:center}',
+  // 裁定轮 2(R10):mark 与标题改左右横排(mark 在左,成对居中;窗框仍在顶)——column → row,
+  // 交叉轴居中+主轴居中,窄幅 flex-wrap 兜底(标题 640px 断点降 26px 不溢出)。
+  '.mc-hero{display:flex;flex-direction:row;flex-wrap:wrap;align-items:center;justify-content:center;gap:14px;padding:52px 24px 40px;text-align:center}',
   '.mc-hero .mh-mark{width:48px;height:48px;color:var(--mc-fg);filter:drop-shadow(2px 2px 0 rgba(0,0,0,.4))}',
   'html[data-theme="light"] .mc-hero .mh-mark{filter:none}',
   '.mc-hero .mh-title{font:700 34px/1.15 var(--font-display);letter-spacing:.01em;color:var(--mc-fg)}',
@@ -82,10 +84,19 @@ var MC_HERO_CSS = [
 // 官方空态藏匿 CSS:own gate 属性门控(html[data-mc-hero],dock 批 composerHide 藏匿同款形态;
 // 控制器裁定——overlays 段零宿主属性片段硬编码,相位一致性由 heroSync 置/撤属性自动达成)。
 // typeof 守卫:单文件被测试以 CJS 独立加载时 MC_MAP 缺席(装配体内恒在),照 dock 先例静默回退空串。
-// 验收裁定轮四条门控追加(2026-09-03):①官方 hero 晕 SVG 藏(heroGlow,椭圆渐变真身);②chrome 批
-// 的 hero ::before 装饰条让位(真 DOM 窗框替代伪元素版,unmount/teardown 撤 gate 即回返);③composer
-// 席位 margin-top:auto 钉到滚动口底(hero 相「输入框靠屏幕最底下」裁定);④hero 本体上下 auto margin
-// 与③均分剩余空间(构图垂直居中于标题栏与输入坞之间)。
+// 验收裁定轮门控追加(2026-09-03):①官方 hero 晕 SVG 藏(heroGlow,椭圆渐变真身);②chrome 批
+// 的 hero ::before 装饰条让位(真 DOM 窗框替代伪元素版,unmount/teardown 撤 gate 即回返)。
+// 裁定轮 2(2026-09-03)重排 hero 相滚动口纵向构图(R9):composer 席位与 composerHero 变体栈
+// display:contents 拍平(勘定 2026-09-03 probe-r2-recon:两枚官方下拉[选择工作区/标准模式]挂在
+// composerStack 的 composerHero 变体内,不在 heroOfficial 藏匿域,hero 相本就可见;拍平后行升为
+// 滚动口直接 flex 子件,DOM 序恰在 .mc-hero 之后——零 order 零 re-parent)。「双下拉水平居中、
+// 垂直屏幕中心偏下、紧贴 logo+slogan 行之下」由三条达成:heroRow align-self:center+内部
+// justify-content:center(行盒 792px+左 20px 内衬拍 0,双钮真居中)+margin-top 26px 紧贴 hero;
+// hero 只留 margin-top:auto(拍平后自由空间两份均分:hero 上方/自绘坞上方,实测行盒 461-489
+// 落视口中心 450 偏下,hero 构图仍居中于标题栏与输入坞之间——R3 语汇保持);自绘坞
+// [data-mc-dock] margin-top:auto 接棒钉底(原席位钉底规则随 display:contents 失效——
+// display:contents 盒无 margin,勘定 stack 内官方 hero 变体卡根 h=0 空盒零视觉参与)。
+// heroRow max-width+flex-wrap:窄幅双钮折行不溢出(1440×900 验证视口不触发)。
 var MC_OVERLAYS2_CSS = MC_HERO_CSS
   + (typeof MC_MAP !== 'undefined' && MC_MAP.heroOfficial
     ? 'html[data-mc-hero] ' + MC_MAP.heroOfficial + '{display:none!important}' : '')
@@ -93,9 +104,13 @@ var MC_OVERLAYS2_CSS = MC_HERO_CSS
     ? 'html[data-mc-hero] ' + MC_MAP.heroGlow + '{display:none!important}' : '')
   + (typeof MC_MAP !== 'undefined' && MC_MAP.heroRoot
     ? 'html[data-mc-hero] ' + MC_MAP.heroRoot + '::before{display:none!important}' : '')
-  + (typeof MC_MAP !== 'undefined' && MC_MAP.composerSeat
-    ? 'html[data-mc-hero] ' + MC_MAP.composerSeat + '{margin-top:auto!important}' : '')
-  + 'html[data-mc-hero] .mc-hero{margin-top:auto!important;margin-bottom:auto!important}';
+  + (typeof MC_MAP !== 'undefined' && MC_MAP.composerSeat && MC_MAP.heroStack
+    ? 'html[data-mc-hero] ' + MC_MAP.composerSeat + ',html[data-mc-hero] ' + MC_MAP.heroStack + '{display:contents!important}' : '')
+  + (typeof MC_MAP !== 'undefined' && MC_MAP.heroRow
+    ? 'html[data-mc-hero] ' + MC_MAP.heroRow + '{align-self:center!important;flex:none!important;flex-wrap:wrap!important;'
+      + 'justify-content:center!important;max-width:calc(100% - 32px)!important;padding:0!important;margin:26px 0 0!important}' : '')
+  + 'html[data-mc-hero] .mc-hero{margin-top:auto!important;margin-bottom:0!important}'
+  + 'html[data-mc-hero] [data-mc-dock]{margin-top:auto!important}';
 // Task 5 定义表：项集按附录 A 勘定对齐宿主实有菜单（会话=rename/fork/archive workspace L700-716；
 // 工作区=rename/delete L459-468；新建类=workspaces.startSession/workspaces.create（二批 A 官方语义）。
 // view 两项宿主无对应服务/勘不通 → 不写 WIRING 键（mcMenuItems 自动滤除，菜单整体 no-op）。
@@ -454,6 +469,13 @@ var McMenus = {
     // content),顶栏走 absolute 外挂横贯卡顶,flex 布局不被打断——nav/content 整体下移 20px。
     if (MC_MAP.dlgCard) {
       dlgCss += MC_MAP.dlgCard + ':has(.mc-dlg-tb){padding-top:20px!important;box-sizing:border-box!important}';
+    }
+    // 裁定轮 2(R11):官方「关闭」钮隐——关窗只走顶栏左上方块(镜像官方钮程序化 click;display:none
+    // 不影响 .click() 派发,live 实证 2026-09-03 probe-r2-recon B/B2:置 display:none 后 click 仍
+    // 令 dlgCard 退场)+Esc-on-card 兜底不变(锚漂移时顶栏方块自行降级派发)。选择器自带 dlgCard
+    // 前缀,域定 settings 面板语义内,零越域。
+    if (MC_MAP.dlgClose) {
+      dlgCss += MC_MAP.dlgClose + '{display:none!important}';
     }
     if (dlgCss) {
       var dlgEl = document.createElement('style');

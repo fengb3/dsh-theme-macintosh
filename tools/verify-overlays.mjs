@@ -1,26 +1,30 @@
-// tools/verify-overlays.mjs — overlays2 批活体门禁(2026-09-02;验收裁定轮改版 2026-09-03)
+// tools/verify-overlays.mjs — overlays2 批活体门禁(2026-09-02;验收裁定轮改版 2026-09-03;裁定轮 2 增补)
 // 用法: node tools/verify-overlays.mjs   (宿主须运行于 127.0.0.1:3080)
-// 断言(照 brief Step 2 清单+裁定轮五条;switch 断言无——Task 3 勘定实证 settings 面板 0 switch,
-// 控制器裁定 1):
+// 断言(照 brief Step 2 清单+裁定轮五条+裁定轮 2 四条;switch 断言无——Task 3 勘定实证 settings
+// 面板 0 switch,控制器裁定 1):
 //   A hero: boot 相值(info)/.mc-hero 在场+own gate/官方空态容器 computed display=none(heroOfficial
 //           在场时)/构图裁定版(mark 48px+use#i-cl-HappyMac+标题随 locale zh「探索未知之境」en
 //           「Think Classic」+badge/sub 退役)/窗框标题栏(.mc-hero-tb 20px pinstripe+sprite
 //           #i-close/#i-zoom 双方块+chrome ::before 让位)/heroGlow 官方晕 SVG 藏(椭圆渐变勘定)/
-//           composer 席位钉窗口底(gate 门控 margin-top:auto)/切实有会话 → 退场(含窗框) →
-//           新建会话钮镜像 click → 复挂;
+//           自绘坞钉窗口底(dock 本体量;裁定轮 2 席位 display:contents 盒消隐)/R9 双下拉行(拍平
+//           升滚动口子件:双钮可见+水平居中+紧贴 hero 之下+行垂直中心屏幕中线偏下)/R10 mark-title
+//           横排(左右相邻+中线对齐)/切实有会话 → 退场(含窗框)→ R8 主列窗框(.mc-main-tb 20px
+//           root 首子+sprite 双方块+标题镜像官方 crumb+官方 header 保全+装饰方块零 tab 序)→
+//           新建会话钮镜像 click → 复挂(主列窗框随 hero 相退场);
 //   B dialog: MC_MAP.dlgTriggerSettings 点开 → dlgCard 壳(直角/1px 实线/像素字/硬投影 3px)/
 //           scrim 点阵幕 radial-gradient(z 仅 info 记录不 assert 官方值)/顶栏注入(.mc-dlg-tb
-//           20px+sprite 双方块+标题读 aria-labelledby)/关闭方块 click → dlgCard 退场(镜像官方
-//           关闭钮,Mac 关窗语义——用户裁定);
+//           20px+sprite 双方块+标题读 aria-labelledby)/R11 官方关闭钮 display:none(关窗只走
+//           顶栏方块)/关闭方块 click → dlgCard 退场(镜像官方关闭钮,Mac 关窗语义——用户裁定);
 //   C 确认框(遇则断): 删除确认小卡在场时同款壳断言;不可达合法 INFO(Task 3 实证官方树被
 //           McFinder 遮蔽,删除确认非破坏路径不可达——预期走 INFO 分支);
-//   D 深浅两遍: html[data-theme] 切换后 A/B 核心断言复跑(dialog 闭路走 Esc,双关闭路径各验一遍);
+//   D 深浅两遍: html[data-theme] 切换后 A/B 核心断言复跑(含 R9/R10/R11;dialog 闭路走 Esc,
+//           双关闭路径各验一遍);
 //   G 失配演练(spec §5 活体门禁硬项「破坏锚 → 官方原样 → 还原」;深色,顺序双演练,置于 kit 分区
 //           之前——kit 的 addInitScript 持久注入,reload 会重开检视页且其 hero 样本直用 .mc-hero
 //           真类,会污染演练② heroCount):①摘 style[data-mc-dlgskin] → 点设置 → 官方渲染回返
 //           (dlgCard 圆角非 0)→ Esc → reload 主题重挂皮(单例 1 还原);②摘 .mc-hero+.mc-hero-tb
 //           +own gate → 官方空态回返 → 良性突变拨一拍 body observer → 自愈复挂(构图+窗框+gate);
-//   E 零页面错误 + 截图 shots/overlays2-{dark,light}-{hero,dlg}.png;
+//   E 零页面错误 + 截图 shots/overlays2-{dark,light}-{hero,dlg}.png + dark-active.png(主列窗框);
 //   F kit 浮层分区(verify-toolcard「kit 分区」先例补账): hero 样本裁定版构图(窗框+mark+title,
 //           无 badge/sub)/控件样本(无 switch)/注记行。
 // 只读纪律: 不发消息不删数据;新建会话镜像 click 为复挂验证所需(留一个空会话,不产生模型调用)。
@@ -41,6 +45,7 @@ const SEL = {
   phase: 'div[data-phase]',                                     // MC_MAP.heroRoot(同 mainColumn 同源)
   heroOfficial: '.pXSMma_root',                                 // MC_MAP.heroOfficial(build-hash,漂移则 info 降级)
   heroGlow: 'svg[class*="heroGlow"]',                           // MC_MAP.heroGlow(hashed-substring,漂移则 info 降级)
+  heroRow: '[class*="heroWorkspaceRow"]',                       // MC_MAP.heroRow(裁定轮 2 R9;hashed-substring,漂移则 info 降级)
   trigger: '#root > div > div > div:first-child button[aria-haspopup="dialog"]', // MC_MAP.dlgTriggerSettings
   dlgCard: '[role="dialog"][aria-labelledby]',                  // MC_MAP.dlgCard
   dlgMask: '[role="presentation"]:has([role="dialog"][aria-labelledby]) > div[aria-hidden="true"]', // MC_MAP.dlgMask
@@ -66,7 +71,7 @@ const heroProbe = () => pg.evaluate((sel) => {
   const tb = document.querySelector('.mc-hero-tb');
   const official = document.querySelector(sel.heroOfficial);
   const glow = document.querySelector(sel.heroGlow);
-  const seat = document.querySelector('[data-composer-seat]');
+  const dock = document.querySelector('[data-mc-dock]'); // 裁定轮 2:席位 display:contents(盒消隐)→ 钉底量自绘坞本体
   const r = {
     phase: root ? root.getAttribute('data-phase') : null,
     gate: document.documentElement.hasAttribute('data-mc-hero'),
@@ -78,7 +83,7 @@ const heroProbe = () => pg.evaluate((sel) => {
     glowDisplay: glow ? getComputedStyle(glow).display : null,
     beforeDisplay: root ? getComputedStyle(root, '::before').display : null, // chrome ::before 伪元素版让位断言
     lang: (document.documentElement && document.documentElement.lang) || navigator.language,
-    seatBottom: seat ? Math.round(seat.getBoundingClientRect().bottom) : null,
+    dockBottom: dock ? Math.round(dock.getBoundingClientRect().bottom) : null,
     rootBottom: root ? Math.round(root.getBoundingClientRect().bottom) : null,
     vh: innerHeight,
   };
@@ -92,7 +97,33 @@ const heroProbe = () => pg.evaluate((sel) => {
     r.titleText = title ? title.textContent : null;
     r.badge = !!hero.querySelector('.mh-badge');
     r.sub = !!hero.querySelector('.mh-sub');
+    // R10 横排几何:mark 在左、title 在右、垂直中线对齐
+    if (mark && title) {
+      const m = mark.getBoundingClientRect(), t = title.getBoundingClientRect();
+      r.rowGeom = {
+        sideBySide: t.left >= m.right - 2,
+        centerYDelta: Math.abs((m.top + m.height / 2) - (t.top + t.height / 2)),
+        markLeft: Math.round(m.left), titleLeft: Math.round(t.left),
+      };
+    }
   }
+  // R9 双下拉行几何(gate 拍平后 = 滚动口直接 flex 子件)
+  const row = document.querySelector(sel.heroRow);
+  if (row) {
+    const rb = row.getBoundingClientRect();
+    const sb = document.querySelector('[data-conversation-scroll]');
+    const sbc = sb ? sb.getBoundingClientRect() : null;
+    r.rowGeom2 = {
+      present: true,
+      w: Math.round(rb.width), h: Math.round(rb.height),
+      top: Math.round(rb.top), bottom: Math.round(rb.bottom),
+      centerX: Math.round(rb.left + rb.width / 2),
+      scrollCenterX: sbc ? Math.round(sbc.left + sbc.width / 2) : null,
+      heroBottom: hero ? Math.round(hero.getBoundingClientRect().bottom) : null,
+      btns: [...row.querySelectorAll('button')].filter((x) => x.getBoundingClientRect().width > 0).length,
+      justify: getComputedStyle(row).justifyContent,
+    };
+  } else r.rowGeom2 = { present: false };
   if (tb) {
     const cl = tb.querySelector('.mc-tbx.cl use');
     const zm = tb.querySelector('.mc-tbx.zm use');
@@ -165,6 +196,8 @@ const dlgProbe = () => pg.evaluate((sel) => {
       const lab = card.getAttribute('aria-labelledby');
       const labEl = lab ? document.getElementById(lab) : null;
       r.cardTitle = labEl ? String(labEl.textContent || '').trim() : null; // 顶栏标题应读它
+      const oclose = card.querySelector('button[class*="close"]'); // R11:官方关闭钮(=顶栏镜像靶)
+      r.officialClose = oclose ? getComputedStyle(oclose).display : null;
     }
   }
   if (mask) {
@@ -239,9 +272,20 @@ ok(String(hp.tbBg).indexOf('repeating-linear-gradient') >= 0, '深色 hero: 窗�
 ok(hp.beforeDisplay === 'none', '深色 hero: chrome ::before 伪元素版让位 (display=' + hp.beforeDisplay + ')');
 if (hp.glowPresent) ok(hp.glowDisplay === 'none', '深色 hero: 官方 hero 晕 SVG 藏(椭圆渐变勘定) (' + hp.glowDisplay + ')');
 else info('深色 hero: heroGlow 锚未命中(宿主未渲染晕或哈希漂移;渐变断言降级)', hp.glowPresent);
-info('深色 hero: composer 钉底记录', { seatBottom: hp.seatBottom, rootBottom: hp.rootBottom, vh: hp.vh });
-ok(hp.seatBottom != null && hp.rootBottom != null && hp.rootBottom - hp.seatBottom <= 8,
-  '深色 hero: composer 席位钉窗口底 (seat=' + hp.seatBottom + ' vs 窗底=' + hp.rootBottom + '; 距视口底 ' + (hp.vh - hp.seatBottom) + 'px=桌面缝隙 12px 语汇)');
+info('深色 hero: composer 钉底记录', { dockBottom: hp.dockBottom, rootBottom: hp.rootBottom, vh: hp.vh });
+ok(hp.dockBottom != null && hp.rootBottom != null && hp.rootBottom - hp.dockBottom <= 8,
+  '深色 hero: 自绘坞钉窗口底 (dock=' + hp.dockBottom + ' vs 窗底=' + hp.rootBottom + '; 距视口底 ' + (hp.vh - hp.dockBottom) + 'px=桌面缝隙 12px 语汇)');
+// R10 横排构图:mark 左 / title 右、中线对齐
+ok(!!hp.rowGeom && hp.rowGeom.sideBySide && hp.rowGeom.centerYDelta <= 4,
+  '深色 hero: R10 构图横排 — mark 在左 title 在右且中线对齐 (sideBySide=' + (hp.rowGeom ? hp.rowGeom.sideBySide : null) + ' Δmid=' + (hp.rowGeom ? hp.rowGeom.centerYDelta.toFixed(1) : null) + 'px)');
+// R9 双下拉行:拍平升为滚动口子件、水平居中、紧贴 hero 之下、垂直中心落于屏幕中线偏下
+if (hp.rowGeom2.present) {
+  const g = hp.rowGeom2;
+  ok(g.btns >= 2, '深色 hero: R9 双下拉行在场且双钮可见 (btns=' + g.btns + ' w=' + g.w + ')');
+  ok(g.scrollCenterX != null && Math.abs(g.centerX - g.scrollCenterX) <= 8, '深色 hero: R9 行水平居中 (行中=' + g.centerX + ' vs 口中=' + g.scrollCenterX + ')');
+  ok(g.heroBottom != null && g.top >= g.heroBottom, '深色 hero: R9 行紧贴 logo+slogan 之下 (hero 底=' + g.heroBottom + ' 行顶=' + g.top + ')');
+  ok(g.top + g.h / 2 >= hp.vh / 2, '深色 hero: R9 行垂直中心屏幕中线偏下 (行中Y=' + Math.round(g.top + g.h / 2) + ' vs 半屏=' + Math.round(hp.vh / 2) + ')');
+} else info('深色 hero: R9 双下拉行未命中(heroRow 锚漂移或宿主未渲染;断言降级)', null);
 await pg.screenshot({ path: join(SHOTS, 'overlays2-dark-hero.png') });
 
 // 切进任一会话 → 相变退场 → 新建镜像复挂
@@ -298,6 +342,7 @@ if (dg.bar) {
   ok(dg.bar.closeHref === '#i-close' && dg.bar.zoomHref === '#i-zoom', '深色 dlg: 顶栏 sprite 双方块 (cl=' + dg.bar.closeHref + ' zm=' + dg.bar.zoomHref + ')');
   ok(dg.bar.title === dg.cardTitle, '深色 dlg: 顶栏标题读 aria-labelledby (「' + dg.bar.title + '」)');
 } else ok(false, '深色 dlg: 顶栏 .mc-dlg-tb 未注入');
+if (dg.card) ok(dg.officialClose === 'none', '深色 dlg: R11 官方关闭钮 display:none (display=' + dg.officialClose + ')');
 if (dg.mask) {
   ok(dg.maskBgImage.indexOf('radial-gradient') >= 0, '深色 scrim: 点阵幕 radial-gradient 在场');
   info('深色 scrim: zIndex 记录(mask=' + dg.maskZ + ' / overlay=' + dg.overlayZ + ',官方原值不 assert)', { maskZ: dg.maskZ, overlayZ: dg.overlayZ });
@@ -326,7 +371,13 @@ ok(/ChiKareGo/.test(hl.titleFont), '浅色 hero: 标题像素字复跑 (' + hl.t
 ok(!hl.badge && !hl.sub && hl.markW === '48px', '浅色 hero: 构图复跑(badge/sub 退役+mark 48px)');
 ok(hl.tbCount === 1 && hl.tbClose === '#i-close' && hl.tbZoom === '#i-zoom', '浅色 hero: 窗框复跑 (cl=' + hl.tbClose + ' zm=' + hl.tbZoom + ')');
 if (hl.glowPresent) ok(hl.glowDisplay === 'none', '浅色 hero: hero 晕 SVG 仍藏 (' + hl.glowDisplay + ')');
-ok(hl.seatBottom != null && hl.rootBottom != null && hl.rootBottom - hl.seatBottom <= 8, '浅色 hero: composer 钉底复跑 (seat=' + hl.seatBottom + ' vs 窗底=' + hl.rootBottom + ')');
+ok(hl.dockBottom != null && hl.rootBottom != null && hl.rootBottom - hl.dockBottom <= 8, '浅色 hero: 自绘坞钉底复跑 (dock=' + hl.dockBottom + ' vs 窗底=' + hl.rootBottom + ')');
+if (hl.rowGeom2.present) { // R9/R10 浅色复跑
+  const gl = hl.rowGeom2;
+  ok(gl.scrollCenterX != null && Math.abs(gl.centerX - gl.scrollCenterX) <= 8 && gl.top >= gl.heroBottom && gl.top + gl.h / 2 >= hl.vh / 2,
+    '浅色 hero: R9 双下拉行复跑(居中/贴 hero/中线偏下) (行中=' + gl.centerX + ' 口中=' + gl.scrollCenterX + ' 行顶=' + gl.top + ')');
+  ok(!!hl.rowGeom && hl.rowGeom.sideBySide && hl.rowGeom.centerYDelta <= 4, '浅色 hero: R10 横排复跑 (Δmid=' + (hl.rowGeom ? hl.rowGeom.centerYDelta.toFixed(1) : null) + 'px)');
+} else info('浅色 hero: R9 双下拉行未命中(降级)', null);
 if (hl.officialPresent) ok(hl.officialDisplay === 'none', '浅色 hero: 官方空态仍藏 (' + hl.officialDisplay + ')');
 await pg.screenshot({ path: join(SHOTS, 'overlays2-light-hero.png') });
 
@@ -339,6 +390,7 @@ if (dl.card) {
   ok(/ChiKareGo|Fusion Pixel/.test(dl.font), '浅色 dlg: 像素字复跑 (' + dl.font.slice(0, 44) + ')');
   ok(String(dl.shadow).indexOf('3px') >= 0, '浅色 dlg: 硬投影复跑');
   ok(dl.bar && dl.bar.h === '20px' && dl.bar.closeHref === '#i-close', '浅色 dlg: 顶栏复跑 (h=' + (dl.bar ? dl.bar.h : null) + ')');
+  ok(dl.officialClose === 'none', '浅色 dlg: R11 官方关闭钮仍隐 (display=' + dl.officialClose + ')');
 }
 if (dl.mask) {
   ok(dl.maskBgImage.indexOf('radial-gradient') >= 0, '浅色 scrim: 点阵幕复跑');
