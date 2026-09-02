@@ -722,7 +722,8 @@ function McKitPage() {
         //     hero 直接复用全局原语构图(真类真样式;标题读 MC_HERO_COPY 按 locale 取值,kit 面板内
         //     无 observer 纯陈列——相位挂载/官方藏匿由活体 heroSync 供:body observer +
         //     own gate html[data-mc-hero]);验收裁定轮构图=窗框(.mc-hero-tb,sprite 方块)+mark+title
-        //     三件(badge/sub 已裁);dialog 控件样本 = §C dlg 皮规格的 .mc-dlg-demo
+        //     三件(badge/sub 已裁);裁定轮 2(R10)=mark‖title 横排成对居中(.mc-hero column→row,
+        //     CSS 一处即 kit 样本随链生效);dialog 控件样本 = §C dlg 皮规格的 .mc-dlg-demo
         //     kit 局部复刻,自有类零官方属性(audit 宿主扫描零接触);switch 样本随 Task 3
         //     勘定裁除(官方 settings 面板 0 switch,不渲染官方没有的结构——控制器裁定 1)。
         h('section', null,
@@ -730,7 +731,7 @@ function McKitPage() {
           h('div', { className: 'kit-frames' },
             h('div', { className: 'kit-frame' },
               h('div', { className: 'kit-frame-tag' },
-                h('span', null, 'hero 空态 · 窗框标题栏+HappyMac mark+标题三件套(裁定轮:badge/sub 裁除,标题随 locale zh/en)· 活体挂 flowScroll 首+窗框挂 heroRoot 首,官方空态与 hero 晕经自有门控属性藏匿'),
+                h('span', null, 'hero 空态 · 窗框标题栏+HappyMac mark‖标题横排成对居中(裁定轮2 R10;badge/sub 裁除,标题随 locale zh/en)· 活体挂 flowScroll 首+窗框挂 heroRoot 首,官方空态与 hero 晕经自有门控属性藏匿'),
                 h('em', null, 'hero')),
               h('div', { className: 'kit-frame-body' },
                 h('div', { className: 'mc-hero-tb' },

@@ -670,6 +670,47 @@ subcalls：左 2px 软线缩进 + sc-row（ok=绿 i-check / run=琥珀 clock）�
     `:not(.mc-tbx)`。verify 门禁 42→58 断言（badge/sub 退役/locale 标题/窗框双方块/晕藏/
     composer 钉底/顶栏注入+关闭方块关窗/演练②含窗框自愈）。
 
+- **裁定轮 2 实录（2026-09-03，主列窗框+hero 双下拉居中+横排+官方关闭钮隐 R8-R11）**：用户
+  四条裁定落地，verify 58→75 PASS GREEN——
+  - **R8 主聊天列窗口框**：勘定 active 相主列顶 = 官方 `header.wSkVaW_header`（经
+    `display:contents` 槽位壳 `div[data-slot=conversation.session.header]` 成为 root 的 flex 子件；
+    内含 titleCluster 会话标题面包屑钮 `wSkVaW_crumb.wSkVaW_crumbCurrent`+模式指示+Session log
+    钮+对话/轨迹/上下文三页签；**模型选择器不在 header**，在输入坞域）。处置=**家具级注入**
+    （官方 header 无 bar 元素可皮，且零外科保全交互）：`.mc-main-tb` 插 root 首子（root 是 flex
+    column，header/滚动口自然整体下移 21px，无需 dialog 那套 `:has` padding 占位），hero
+    窗框同面同方块三方共用一族 CSS；标题**只读镜像**官方 crumb（新 map 键 `sessTitle`
+    `[class*="crumbCurrent"]` hashed-substring，textContent 写入零 HTML 注入面，每拍 observer
+    校对——切会话/行内改名随拍刷新，锚漂移回退 'DeepSeek Harness'）；关闭/缩放方块装饰
+    （active 相无「关窗」官方语义，tabindex -1）。hero 相=hero 窗框、active 相=本条，同根
+    互斥共存（mainSync 与 heroSync 各按 data-phase 挂摘，同一 body observer 兼职）。
+  - **R9 hero 双下拉居中**：勘定两枚官方下拉（`pXSMma_workspace`「选择工作区」+
+    `cubgiG_seat`「标准模式」）挂 `wSkVaW_heroWorkspaceRow`（composerStack 的 composerHero
+    变体内，**不在 heroOfficial 藏匿域**——hero 相本就可见，无需 un-hide，只需重排）。处置=
+    **display:contents 拍平**：gate CSS 把 composer 席位与 composerHero 变体栈拍平（两中间层
+    本就是官方 contents 匿名壳），行升为滚动口直接 flex 子件，DOM 序恰在 `.mc-hero` 之后
+    （零 order 零 re-parent）；`align-self:center`+内部 `justify-content:center`+拍掉 20px 左
+    内衬=双钮真居中；`margin-top:26px` 紧贴 hero。纵向构图重排：hero 只留 `margin-top:auto`
+    （原上下 auto+席位 auto 三分改两分——hero 上方/自绘坞上方各半），自绘坞
+    `[data-mc-dock]{margin-top:auto}` 接棒钉底。实测 1440×900：hero 295-435、行 461-489
+    （行垂直中心 475 = 屏幕中线 450 偏下 ✓）、坞 750-887（与轮 1 持平）；`max-width+flex-wrap`
+    窄幅折行兜底。**勘定陷阱**：composerHero 栈内另有官方 hero 变体 composer 卡根
+    （`uV2eYG_hero`，visible 但 h=0——真卡 `uV2eYG_card` 带 `data-composer-card` 被 dock 批
+    gate 藏匿）——拍平后以 812×0 空盒参与 flow，零视觉；钉底断言从席位改量自绘坞本体
+    （display:contents 盒消隐 getBoundingClientRect 全零）。
+  - **R10 logo+slogan 横排**：`.mc-hero` column→row（align/justify center+flex-wrap 兜底），
+    mark 在左 title 在右成对居中，窗框仍在顶；kit 样本同链生效（真类复用）+tag 文案改版。
+  - **R11 官方关闭钮隐**：`dlgClose{display:none!important}` 入 `style[data-mc-dlgskin]`
+    （选择器自带 dlgCard 前缀零越域）；**display:none 不影响程序化 `.click()`**（live 实证：
+    置 none 后 click 仍令 dlgCard 退场）——关窗只走顶栏左上方块（镜像官方钮），Esc-on-card
+    兜底不变；皮摘演练① 官方钮随皮回返，语义自洽。
+  - map 增键：`sessTitle`/`heroRow`（`[class*="heroWorkspaceRow"]`）/`heroStack`
+    （`[class*="composerHero"]`）三键全 hashed-substring DRIFT-RISK（同 heroGlow 纪律），
+    audit OVERLAYS_WHITELIST 防御性登记同步。verify 增断言：R8 主列窗框六断（在场 20px
+    root 首子/sprite 双方块/标题镜像 crumb/官方 header 保全钮数≥4/窗框在 header 上方/装饰
+    方块零 tab 序）+hero 相退场、R9 四断（双钮可见/水平居中≤8px/紧贴 hero/行中心过半屏）、
+    R10 两断（深浅横排 Δmid≤4px）、R11 两断（深浅官方钮 display:none）+钉底改坞本体+
+    kit 横排断言。
+
 ---
 
 ## 12 · §10 响应式

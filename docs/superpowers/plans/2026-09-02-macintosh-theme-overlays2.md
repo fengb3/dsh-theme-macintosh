@@ -391,3 +391,35 @@ E. pageerror 零异常;截图 shots/overlays2-{dark,light}-{hero,dlg}.png。
    - `node tools/assemble.mjs && node tools/make-persistent-client.mjs` 重建链；
      `git diff client.js` 仅 overlays/map/kit 快照段（139/114 行级）；`npm test` 64/64 全绿+
      audit all green（两提交各自入库前均验）。
+
+## 收尾实录 · 裁定轮 2（2026-09-03，branch feat/mc-overlays2）
+
+用户活体验收后四条裁定（R8-R11），三提交落地：
+
+1. **`0f1b264` 主聊天列窗口框（R8）**
+   - 勘定：active 相主列顶 = 官方 `header.wSkVaW_header`（`display:contents` 槽位壳→root flex
+     子件；会话标题面包屑钮 `wSkVaW_crumbCurrent`+模式指示+Session log+三页签；模型选择器
+     不在 header）。官方 header 无 bar 元素 → 家具级注入：`.mc-main-tb` 插 root 首子（flex
+     column 自然下移，无需 `:has` padding 占位），hero/dialog/main 三态共用一族 pinstripe CSS。
+   - 标题只读镜像官方 crumb（新 map 键 `sessTitle` hashed-substring；textContent 写入零注入
+     面，每拍 observer 校对，锚漂移回退 'DeepSeek Harness'）；关闭/缩放方块装饰（tabindex -1，
+     active 相无「关窗」官方语义）。hero 相=hero 窗框、active 相=本条，同根互斥共存。
+2. **`561ec52` hero 双下拉居中/横排/官方关闭钮隐（R9-R11）**
+   - R9：双下拉（选择工作区+标准模式）挂 `wSkVaW_heroWorkspaceRow`（composerHero 变体内，
+     不在 heroOfficial 藏匿域，本就可见）→ gate CSS `display:contents` 拍平席位+变体栈（新键
+     `heroRow`/`heroStack`），行升滚动口直接 flex 子件（DOM 序恰在 hero 后，零 order 零
+     re-parent）；align-self:center+内部 justify:center+拍 20px 左内衬=真居中，margin-top 26px
+     贴 hero。纵向重排：hero 只留 margin-top:auto（三分改两分），自绘坞 `[data-mc-dock]`
+     margin-top:auto 接棒钉底。实测 hero 295-435/行 461-489（行中心 475>半屏 450 偏下 ✓）/
+     坞 750-887 持平。陷阱在册：官方 hero 变体卡根 h=0 空盒参与 flow 零视觉；钉底断言改量
+     坞本体（contents 盒 rect 全零）。
+   - R10：`.mc-hero` column→row，mark 左 title 右成对居中；kit 样本同链生效+tag 改版。
+   - R11：`dlgClose{display:none!important}` 入 dlgskin——display:none 不影响程序化 click
+     （live 实证关净），关窗只走顶栏左上方块，Esc-on-card 兜底不变。
+3. **本提交 门禁/kit/注记（收尾）**
+   - verify-overlays.mjs：58→75 PASS GREEN。R8 六断+hero 相退场、R9 四断（深浅）、R10 两断
+     （深浅）、R11 两断（深浅）、钉底改坞本体、kit 横排断言；既有段全绿保持。
+   - 注记 §11.3 追加裁定轮 2 实录（主列 header 勘定/contents 拍平构图重排/h=0 空盒陷阱/
+     display:none click 可达性/hashed-substring 三新键）。
+   - 每提交前重建链+`npm test` 64/64+audit all green+`git diff client.js` 核对仅 overlays/map
+     快照段；live 门禁 verify-overlays 各提交点均 GREEN。

@@ -479,6 +479,8 @@ const kit = await pg.evaluate(() => {
     tbZoom: zm ? (zm.getAttribute('href') || '') : null,
     badgeAbsent: !sec.querySelector('.mh-badge') && !sec.querySelector('.mh-sub'),
     titleText: title ? title.textContent : '',
+    // R10 kit 复跑:mark‖title 横排(title 左缘 ≥ mark 右缘;mark 是 SVG 无 offsetLeft,用 rect)
+    row10: mark && title ? (t => title.getBoundingClientRect().left >= t.right - 2)(mark.getBoundingClientRect()) : false,
     lang,
     btns: sec.querySelectorAll('.mc-dlg-demo button').length,
     input: !!sec.querySelector('.mc-dlg-demo input'),
@@ -490,6 +492,7 @@ const kit = await pg.evaluate(() => {
 if (!kit.NO) {
   ok(kit.hero && kit.markW === '48px' && kit.tb && kit.tbClose === '#i-close' && kit.tbZoom === '#i-zoom', 'kit: hero 样本构图(窗框 sprite 双方块+48px HappyMac mark)');
   ok(kit.badgeAbsent, 'kit: hero 样本裁定 — 无 badge/sub');
+  ok(kit.row10, 'kit: R10 hero 样本横排(mark 左 title 右成对)');
   ok(kit.titleText === wantTitle(kit.lang), 'kit: hero 文案读 MC_HERO_COPY 按 locale (lang=' + kit.lang + ' 「' + kit.titleText + '」)');
   ok(kit.btns >= 2 && kit.input && kit.sep, 'kit: dialog 控件样本(方角钮×' + kit.btns + '+input+分隔线)');
   ok(kit.note, 'kit: 注记行(toast 不做裁定+存在门控说明)');
