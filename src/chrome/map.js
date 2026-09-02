@@ -129,6 +129,25 @@ const MC_MAP = {
   deliverFile: '.P4kPIW_file',   // DRIFT-RISK: 同上(文件名 chip 按钮;含 measure 探针 P4kPIW_probe 同类复用)
   deliverMore: '.P4kPIW_more',   // DRIFT-RISK: 同上("+N 个文件"溢出标签)
   deliverProbe: '.P4kPIW_probe', // DRIFT-RISK: 同上(宿主测宽探针,同类复用 chip 皮肤;轮5 重绘数据面)
+  // —— overlays2 段(hero 空态 + dialog/scrim 换皮;探针 probe-overlays 实勘 2026-09-02,host 0.1.1-rc.2)——
+  // heroRoot = ConversationRoot 根 div(实勘空会话 data-phase="hero" 同点在场)。根 div 兼带
+  // data-phase(settling|hero|active)——裸 [data-phase] 与 mainColumn 同点且不辨相,故取模块根类。
+  heroRoot: '.wSkVaW_root',       /* DRIFT-RISK: build-hash class(类值随构建漂移,宿主升级先复核;勘定 2026-09-02) */
+  // heroOfficial = 官方空态内容容器(fish 品牌+「探索未至之境」headline+预览徽标+工作区选择位)。
+  // 不在滚动口内(scroll 首子为空 div[data-slot=conversation.session]),挂 composerStack 的
+  // composerHero 变体内;容器自身无 data-*(内层仅 conversation.hero.brand.mark 槽位)。
+  heroOfficial: '.pXSMma_root',   /* DRIFT-RISK: build-hash class(同上;勘定 2026-09-02) */
+  // dlg 组 = 官方 settings 弹窗(settings-general SettingsRoot:触发钮居侧栏 footArea>settingsArea,
+  // 面板 role=dialog aria-modal+aria-labelledby,overlay role=presentation fixed inset:0 z:1000,
+  // mask rgba(0,0,0,.5)+blur(2px) 点击/Esc 关)。实勘 2026-09-02:触发钮点开→Esc 关净(role=dialog 归零)。
+  // 全 app 四处 role=dialog(settings 面板/图片 lightbox/ctx meter popover/feedback note 面板),
+  // 仅 settings 面板以 aria-labelledby 定题(其余 aria-label)→ dlgCard 以此唯一化;
+  // mask = overlay 首子 div[aria-hidden](input-trigger 的 role=presentation 皆为叶子标题,零碰撞);
+  // 面板 switch 数 0(通用设置节为 navCell/分段钮形态,无 role=switch)。
+  dlgCard: '[role="dialog"][aria-labelledby]',                // aria 语义锚 stable
+  dlgMask: '[role="presentation"] > div[aria-hidden="true"]', // aria 语义锚 stable
+  dlgNav: '[role="dialog"][aria-labelledby] nav',             // 弹窗左 nav(节序:通用/模型/插件/Agent 预设/豆包模式)
+  dlgTriggerSettings: '#root > div > div > div:first-child button[aria-haspopup="dialog"]', /* DRIFT-RISK: structural 前缀(同 sidebar* 列链)+aria 语义锚后缀;源级另有 ctx meter/feedback note 两 haspopup=dialog 钮(条件挂载、会话列内),侧栏列限定零碰撞 */
   // —— menu 段(弹出菜单;探针 2026-09-01,host 0.1.1-rc.1——附录A)——
   // 宿主原生菜单 = dsh-client-ui-primitives Menu(portal:true):createPortal(list,document.body),
   // list 为 div[role="menu"] 定位浮层(position:fixed 内联 left/top,viewport 内 clamp;

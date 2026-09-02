@@ -73,12 +73,13 @@ const clientText = scanText(clientRaw, []); // client.js 全量（check 1/2/3；
 const clientNoMap = scanText(clientRaw, [segmentRaw(clientRaw, '// src/chrome/map.js', '// src/chrome/chrome.js'), segmentRaw(clientRaw, '// src/conv/overlays.js', '// src/kit.js'), segmentRaw(clientRaw, '// src/conv/dock.js', '// src/conv/overlays.js'), segmentRaw(clientRaw, '// src/finder.js', '// src/conv/think.js'), segmentRaw(clientRaw, '// src/conv/tool.js', '// src/conv/dock.js')]); // check 5
 // M5（终审修复批）：overlays 段不再整段豁免为盲区 —— 段内白名单反查。
 // 段内仅允许 menuPortal/menuHostItem 两 token 出现（Task 4 mount 兜底隐藏引用 MC_MAP.menuPortal）；
+// overlays2 批防御性登记 hero/dlg 六键名（键名非括号形态不产 token，Task 2/3/4 按名消费）；
 // 其余任何 MC_MAP 特征片段（[data-…/[role=…/[aria-… 等）在段内出现即 FAIL。
 const distOverlays = distRaw != null ? stripComments(segmentRaw(distRaw, '// src/conv/overlays.js', '// src/kit.js') || '') : null;
 const clientOverlays = clientRaw != null ? stripComments(segmentRaw(clientRaw, '// src/conv/overlays.js', '// src/kit.js') || '') : null;
 const srcOverlaysFile = join(ROOT, 'src', 'conv', 'overlays.js');
 const srcOverlaysText = srcText.get(srcOverlaysFile) || null;
-const OVERLAYS_WHITELIST = new Set(['menuPortal', 'menuHostItem']);
+const OVERLAYS_WHITELIST = new Set(['menuPortal', 'menuHostItem', 'heroRoot', 'heroOfficial', 'dlgCard', 'dlgMask', 'dlgNav', 'dlgTriggerSettings']); // overlays2 批(2026-09-02)防御性登记六键名——键名非括号形态不产 token,照 dock 先例
 // dock 段照 overlays 段同款机制：段定位 '// src/conv/dock.js' → '// src/conv/overlays.js'，
 // 白名单 DOCK_WHITELIST = composerCard + MC_MAP dock 键（骨架期零选择器；Task 4+ mount 引用时放行；
 // 验收轮1 2026-09-01 增四新键 composerCmd/composerPerm/composerModel/composerCtx——新值全为闭合
@@ -196,7 +197,7 @@ const rel = (f) => relative(ROOT, f).replace(/\\/g, '/');
     for (const tok of tokens)
       if (t.includes(tok)) bad.push(`${rel(f)} 含宿主选择器片段 ${tok}`);
   }
-  // M5：overlays 段白名单反查（src/conv/overlays.js + dist/client 对应段）——只许 menuPortal/menuHostItem
+  // M5：overlays 段白名单反查（src/conv/overlays.js + dist/client 对应段）——白名单键名（menu 两键 + overlays2 hero/dlg 六键名，键名防御性登记）
   for (const [name, seg] of [['src/conv/overlays.js', srcOverlaysText], ['dist/client-body.js', distOverlays], ['client.js', clientOverlays]]) {
     if (!seg) continue;
     for (const tok of tokens) {
@@ -229,7 +230,7 @@ const rel = (f) => relative(ROOT, f).replace(/\\/g, '/');
     }
   }
   bad.length ? fail(`MC_MAP 选择器泄漏到管制文件之外:\n  ` + [...new Set(bad)].join('\n  '))
-              : pass(`宿主选择器仅存在于 map 段（src/chrome/map.js + dist/client.js 对应快照段豁免；overlays 段白名单反查 menuPortal/menuHostItem；tool 段白名单反查 [aria-expanded] 读态钩子；${tokens.size} 个特征片段核验）`);
+              : pass(`宿主选择器仅存在于 map 段（src/chrome/map.js + dist/client.js 对应快照段豁免；overlays 段白名单反查 menuPortal/menuHostItem + overlays2 hero/dlg 六键名；tool 段白名单反查 [aria-expanded] 读态钩子；${tokens.size} 个特征片段核验）`);
 }
 
 const joined = [distText ? 'dist/client-body.js' : null, clientText ? 'client.js' : null].filter(Boolean);
