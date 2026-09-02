@@ -602,6 +602,11 @@ const MC_MAP = {
   composerPerm:  '[data-composer-card] button[aria-label^="访问模式"]',   // 动态后缀=当前模式明文(「访问模式，当前：Full access」)
   composerModel: '[data-composer-card] button[aria-label^="选择模型"]',   // title 属性=当前模型名(精确读值锚)
   composerCtx:   '[data-composer-card] [title^="上下文已用"], [data-composer-card] button[aria-label^="上下文已用"]', // 全态在场(验收轮3 深扫勘定:idle=SPAN[title] 非交互形态,busy=BUTTON[aria-label];title/aria 均带 %)
+  // —— dock2 段(官方 input dock 槽;部署包直读 2026-09-02,host 0.1.1-rc.2)——
+  // renderer SlotOutlet:每槽 div[data-slot=<key>] display:contents 包装;官方 input dock
+  // 三注入(todo=conversation包 order0/goal=[data-goal-bar] order10/queue=QueueDock order20)
+  // 渲染于 composerStack 官方卡之外——藏卡不藏它,故整槽藏匿(自绘坞完全替代;藏未删,goal 镜像钮在内)。
+  composerDockSlot: '[data-slot="conversation.input.dock"]',
 };
 
 
@@ -2499,6 +2504,11 @@ const MC_DOCK_CSS = [
   // 会 ReferenceError,flow.js css 同款先例 typeof 守卫回退空串;client.js 装配域恒有 MC_MAP)
   (function () {
     return typeof MC_MAP === 'undefined' ? '' : 'html[data-mc-dock-on] ' + MC_MAP.composerHide + '{display:none!important}';
+  })(),
+  // dock2 批:官方 input dock 槽(todo/goal/queue 三注入)整槽藏匿——自绘坞完全替代官方 dock
+  // (槽包装 div[data-slot=…] display:contents → display:none;藏未删,GoalBar 镜像钮仍可 click)
+  (function () {
+    return typeof MC_MAP === 'undefined' || !MC_MAP.composerDockSlot ? '' : 'html[data-mc-dock-on] ' + MC_MAP.composerDockSlot + '{display:none!important}';
   })(),
   // 验收轮2:官方弹层 CSS 注入(用户裁定:弃自绘转写,官方菜单+皮)。html[data-mc-pop] 门控开层:
   // 官方卡从 display:none 切「离屏抹除态」(fixed -32000px 1px 盒,overflow:visible)——display:none

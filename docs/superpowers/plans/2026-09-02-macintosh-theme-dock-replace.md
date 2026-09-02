@@ -19,10 +19,10 @@ prototype/component-dev-notes.md §8.10 注记
 
 ### Task 1: 官方 input dock 槽藏匿（MC_MAP 键 + CSS 行 + audit）
 
-- [ ] Step 1: MC_MAP 增 `composerDockSlot`（client.js + src/chrome/map.js）；dock.js CSS 尾部
+- [x] Step 1: MC_MAP 增 `composerDockSlot`（client.js + src/chrome/map.js）；dock.js CSS 尾部
        追加藏匿行（同 composerHide 门控形态，IIFE 守卫）。
-- [ ] Step 2: audit.mjs DOCK_WHITELIST 增补；`npm test` 全绿。
-- [ ] Step 3: Commit `feat(mc-dock2): 官方 input dock 槽藏匿——自绘坞完全替代`
+- [x] Step 2: audit.mjs DOCK_WHITELIST 增补；`npm test` 全绿。
+- [x] Step 3: Commit `feat(mc-dock2): 官方 input dock 槽藏匿——自绘坞完全替代`
 
 ### Task 2: goal 动作镜像 + 内联编辑 + todo 闪烁 + 间距 + 家具注册表
 

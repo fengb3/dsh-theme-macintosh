@@ -116,6 +116,11 @@ const MC_DOCK_CSS = [
   (function () {
     return typeof MC_MAP === 'undefined' ? '' : 'html[data-mc-dock-on] ' + MC_MAP.composerHide + '{display:none!important}';
   })(),
+  // dock2 批:官方 input dock 槽(todo/goal/queue 三注入)整槽藏匿——自绘坞完全替代官方 dock
+  // (槽包装 div[data-slot=…] display:contents → display:none;藏未删,GoalBar 镜像钮仍可 click)
+  (function () {
+    return typeof MC_MAP === 'undefined' || !MC_MAP.composerDockSlot ? '' : 'html[data-mc-dock-on] ' + MC_MAP.composerDockSlot + '{display:none!important}';
+  })(),
   // 验收轮2:官方弹层 CSS 注入(用户裁定:弃自绘转写,官方菜单+皮)。html[data-mc-pop] 门控开层:
   // 官方卡从 display:none 切「离屏抹除态」(fixed -32000px 1px 盒,overflow:visible)——display:none
   // 祖先纯 CSS 不可复活,门控期换藏匿形态;卡无 transform/filter,fixed 子件仍以视口定位,卡内官方

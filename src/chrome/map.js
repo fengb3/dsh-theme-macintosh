@@ -152,5 +152,10 @@ const MC_MAP = {
   composerPerm:  '[data-composer-card] button[aria-label^="访问模式"]',   // 动态后缀=当前模式明文(「访问模式，当前：Full access」)
   composerModel: '[data-composer-card] button[aria-label^="选择模型"]',   // title 属性=当前模型名(精确读值锚)
   composerCtx:   '[data-composer-card] [title^="上下文已用"], [data-composer-card] button[aria-label^="上下文已用"]', // 全态在场(验收轮3 深扫勘定:idle=SPAN[title] 非交互形态,busy=BUTTON[aria-label];title/aria 均带 %)
+  // —— dock2 段(官方 input dock 槽;部署包直读 2026-09-02,host 0.1.1-rc.2)——
+  // renderer SlotOutlet:每槽 div[data-slot=<key>] display:contents 包装;官方 input dock
+  // 三注入(todo=conversation包 order0/goal=[data-goal-bar] order10/queue=QueueDock order20)
+  // 渲染于 composerStack 官方卡之外——藏卡不藏它,故整槽藏匿(自绘坞完全替代;藏未删,goal 镜像钮在内)。
+  composerDockSlot: '[data-slot="conversation.input.dock"]',
 };
 
