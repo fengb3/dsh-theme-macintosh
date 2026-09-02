@@ -367,6 +367,33 @@ state = { view, mode, current, sessions, busy:{}, fallback:{}, queue:{}, stats:{
   todo-acc 开合 **tri 同转**（原型 L2746 瞬切拍 toggle，初版接线漏）+ `svg.tri.open` 旋 90° 规则。
   kit 输入坞分区（composer 三态+本地 mcDockState 轮播/todo/goal/queue/ctx pct74）随批陈列于检视页。
 
+### 8.9 家具区落地差异（2026-09-02 furn 批实录，host 0.1.1-rc.2）
+- **上批「数据面全零命中」翻案**：dock 批页面 chunk 扫描（script src 相对导入图 80 文件上限）未达
+  goal/plan/todo 包；furn 批改本地部署包直读（`C:\Users\fengb\node_modules\@deepseek-ai\`，rc.2 同版本）
+  勘出全量数据面（recon 记录：specs/2026-09-02-macintosh-theme-furniture-recon.md）。
+- **数据通道实况（纯 JS 零 React）**：`ctx.sessions.list`（`getSnapshot().current` 换会话检测）+
+  `binding(cur).session.subscribe`（queue=ConversationSnapshot.queue 瞬态收件箱）+
+  `session.projections.faceOf('todos'|'goal')`（ObservableSnapshot{getSnapshot,subscribe}，身份稳定
+  可先订后值；undefined=能力缺席、null=合法空态，均静默）。
+- **纯只读裁定（spec 裁定 2）**：`ISession` 的 prompt('queue')/updateQueue/cancel/command('/goal')
+  写通道一概不接；goal-card 原型 Pause/Edit/Delete 钮组不落地（写通道候选=官方 GoalBar 镜像驱动，
+  其挂 conversation.input.dock 槽、goal 设置期才在场，另批勘定）。
+- **todo 归一**：宿主 `TodoItem{content,status:pending|in_progress|completed}` → `{done,now,text}`；
+  **in_progress 全标 now**（宿主允许多行并行；原型单 now 语义仅在零 in_progress 时兜底——首未完成
+  标 now）；开合态跨重绘保持（重建前读 open 类回放，tri 同转）。
+- **goal 归一**：complete → 整件不渲染（官方 GoalBar 同款终态消失）；paused/blocked 显 gc-badge 文字
+  徽标（+paused 边框降灰、blocked 琥珀边沿用）；轮次「第 N/M 轮」进 title 提示（roundsStarted=0 或
+  maxGoalRounds 缺席不显）。
+- **queue 文案**：`队列中还有 N 条消息 — 第一条:<preview||text>`，仅计 `placement==='queued'`
+  （steering/context 不混入——steering 是转向即时消费，非排队追加）。
+- **差分重绘纪律**：四通道唤醒收敛 furnSync → 签名 `JSON.stringify([queueText,todos,goal])` 比对，
+  变了才 renderFurn（innerHTML 重建）——list 通知高频（running 态增量），无差分会自激重绘；
+  换会话清态重订（跨会话不留残影）；teardown 四退订。
+- **门禁语义翻转**：verify-dock 断言6 由「全静默零匹配」改为「在场=结构断言（queue 文案正则/
+  todo bar+meta+行/goal 相位枚举）/缺席=静默合法 INFO」；真实数据呈现归用户活体验收
+  （需含 todo/goal 实数据的会话，门禁会话无数据）。
+
+
 ---
 
 ## 9 · §6 输入坞

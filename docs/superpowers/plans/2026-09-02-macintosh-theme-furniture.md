@@ -69,10 +69,10 @@ dist/client-body.js + client.js   重建产物(不手改)
 
 **Files:** `tools/verify-dock.mjs`、`prototype/component-dev-notes.md`
 
-- [ ] Step 1: verify-dock 增家具段——dock 在场性不变；`[data-mc-dock-furn]` 内：若有
+- [x] Step 1: verify-dock 增家具段——dock 在场性不变；`[data-mc-dock-furn]` 内：若有
       `.todo-acc` 断言 bar/meta/行结构；若有 `.goal-card` 断言 data-phase 与徽标；若有
       `.queue-row` 断言文案正则；全无 = 静默合法（INFO）；页面 error 监听零异常。
-- [ ] Step 2: `node tools/verify-dock.mjs` GREEN（截图两张刷新留证）。
-- [ ] Step 3: component-dev-notes §8.9 注记（数据通道实况/只读裁定/遗留写通道候选）。
-- [ ] Step 4: `npm test` 全绿 → Commit `test(mc-furn): 门禁家具断言+注记收尾`
-- [ ] Step 5: 汇报用户：三件家具已活装；活体验收（含 todo/goal 实数据的会话）由用户发起。
+- [x] Step 2: `node tools/verify-dock.mjs` GREEN（截图两张刷新留证）。
+- [x] Step 3: component-dev-notes §8.9 注记（数据通道实况/只读裁定/遗留写通道候选）。
+- [x] Step 4: `npm test` 全绿 → Commit `test(mc-furn): 门禁家具断言+注记收尾`
+- [x] Step 5: 汇报用户：三件家具已活装；活体验收（含 todo/goal 实数据的会话）由用户发起。

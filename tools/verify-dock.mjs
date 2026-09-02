@@ -258,14 +258,39 @@ if (guardOk) {
   info('断言5 拔桥演练 deferred(断言4 守护未过;brief:守护在场才演拔桥)', null);
 }
 
-// 5) 断言 6:家具断言(DOCK_DATA 空表 → 全静默合法终态)
-info('家具素材: DOCK_DATA 空表(Task 1 附录A 勘定,四件数据面均勘不通 → 全静默)', null);
+// 5) 断言 6:家具(furn 批活装后语义翻转:在场=结构断言;缺席=静默合法 INFO)
+info('家具素材: furn 批活装(纯只读)——queue/todos/goal 四订阅差分重绘;无数据会话静默合法', null);
 p = await dockProbe();
-check('断言6: 家具静默 — .queue-row 零匹配', p.queue === 0);
-check('断言6: 家具静默 — .todo-acc 零匹配', p.todo === 0);
-check('断言6: 家具静默 — .goal-card 零匹配', p.goal === 0);
-check('断言6: 家具静默 — furn 内 .ctx-ring 零匹配(bar 圆环常驻,scope 到 furn)', p.furnCtx === 0);
-check('断言6: [data-mc-dock-furn] 零子节点', p.furnKids === 0);
+{
+  const f = await page.evaluate(() => {
+    const furn = document.querySelector('[data-mc-dock-furn]');
+    if (!furn) return { furnMissing: true };
+    const q = furn.querySelector('.queue-row');
+    const t = furn.querySelector('.todo-acc');
+    const g = furn.querySelector('.goal-card');
+    return {
+      kids: furn.children.length,
+      queueText: q ? (q.textContent || '') : null,
+      todoBar: t ? !!t.querySelector('.todo-bar') : null,
+      todoMeta: t ? ((t.querySelector('.todo-meta') || {}).textContent || '') : null,
+      todoItems: t ? t.querySelectorAll('.t-item').length : 0,
+      goalPhase: g ? g.getAttribute('data-phase') : null,
+      goalObj: g ? !!g.querySelector('.gc-obj') : null,
+      furnCtx: furn.querySelectorAll('.ctx-ring').length,
+    };
+  });
+  if (f.furnMissing) check('断言6: [data-mc-dock-furn] 容器在场', false);
+  else if (f.kids === 0) {
+    info('断言6: 家具静默(当前会话无 queue/todos/goal 数据 — 合法态)', null);
+    check('断言6: 静默时 furn 零子节点', true);
+  } else {
+    if (f.queueText != null) check('断言6: queue-row 文案形态(队列中还有 N 条消息 — …)', /队列中还有 \d+ 条消息/.test(f.queueText));
+    if (f.todoBar != null) check('断言6: todo-acc 结构(bar+meta 计数+行)', !!f.todoBar && /^\d+\/\d+$/.test(f.todoMeta) && f.todoItems > 0);
+    if (f.goalPhase != null) check('断言6: goal-card 相位合法(active|paused|blocked)且有目标文', ['active', 'paused', 'blocked'].indexOf(f.goalPhase) >= 0 && !!f.goalObj);
+    info('断言6: 家具在场实况', { kids: f.kids, goalPhase: f.goalPhase, todoItems: f.todoItems });
+  }
+  if (!f.furnMissing) check('断言6: furn 内 .ctx-ring 零匹配(bar 圆环常驻,scope 到 furn)', f.furnCtx === 0);
+}
 
 // 6) 断言 7:深浅两轮(computed background 反转 + 双截图)
 const darkBg = p.cmpBg;
