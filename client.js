@@ -4028,13 +4028,13 @@ var McMenus = {
         + 'border-radius:0!important;box-shadow:var(--mc-shadow-pop)!important;'
         + 'font-family:var(--font-ui)!important;color:var(--mc-fg)!important}'
         + D + ' *{font-family:inherit!important;border-radius:0!important}'           // 像素字+直角全域压平
-        + D + ' h1,h2,h3{font-family:var(--font-display)!important}'                    // 标题像素字
+        + D + ' h1,' + D + ' h2,' + D + ' h3{font-family:var(--font-display)!important}' // 标题像素字(逗号臂逐臂带卡锚——裸 h2,h3 臂重置后代组合符会全域命中宿主标题)
         + D + ' button{background:var(--mc-surface-2)!important;border:1px solid var(--mc-border)!important;'
         + 'border-radius:0!important;font:500 12px/1.6 var(--font-ui)!important;color:var(--mc-fg)!important;padding:4px 12px}'
         + D + ' button:active{background:var(--mc-fg)!important;color:var(--mc-surface)!important}'
         + D + ' input,textarea{background:var(--mc-surface)!important;border:1px solid var(--mc-border)!important;'
         + 'border-radius:0!important;font:400 12px/1.6 var(--font-ui)!important;color:var(--mc-fg)!important}'
-        + D + ' hr,[class*="separator"]{background:var(--mc-border-soft)!important;height:1px}';
+        + D + ' hr,' + D + ' [class*="separator"]{background:var(--mc-border-soft)!important;height:1px}'; // 发丝线(class 臂同带卡锚——裸 [class*="separator"] 全域拍 1px)
       // switch 换皮两行已裁(控制器裁定 1:T1 勘定实证 settings 面板 0 switch——navCell/分段钮形态,
       // spec §2「官方没有的结构不强造」硬前提;官方日后引入 switch 时 verify B 段会提示补皮)
     }
