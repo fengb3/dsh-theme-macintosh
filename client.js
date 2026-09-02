@@ -2614,11 +2614,13 @@ const MC_TOOL_CSS = [
   '.mc-tool.mc-fail{border-color:var(--mc-danger)}',
   '.mc-tool.mc-fail .mc-t-ic{color:var(--mc-danger);border-color:var(--mc-danger)}',
   // 展开体：错误首行 + 输出 pre + 宿主结构化块外壳
+  // 裁定（2026-09-02 二轮）：展开体内一切内容直角化 + 统一像素字体（宿主块的圆角/dsw 字族压平）
+  '.mc-tb-in,.mc-tb-in *{border-radius:0!important;font-family:var(--font-code)!important}',
   '.mc-tb-err{color:var(--mc-danger);margin:0 0 4px}',
-  '.mc-tb-out{margin:6px 0 0;padding:6px 8px;background:var(--mc-bg-deep);border:1px solid var(--mc-border-soft);border-radius:var(--mc-r-tag);font:400 11.5px/1.7 var(--font-code);color:var(--mc-muted);white-space:pre-wrap;word-break:break-word;overflow-x:auto}',
+  '.mc-tb-out{margin:6px 0 0;padding:6px 8px;background:var(--mc-bg-deep);border:1px solid var(--mc-border-soft);font:400 11.5px/1.7 var(--font-code);color:var(--mc-muted);white-space:pre-wrap;word-break:break-word;overflow-x:auto}',
   '.mc-tool-block{margin:2px 0}',
   // 浅色:WebBlock 根底色为宿主硬编码深色(非 token),翻白保引用列表可读;链接色宿主自管
-  'html[data-theme="light"] .mc-tbb-web{background:var(--mc-surface);border:1px solid var(--mc-border-soft);border-radius:var(--mc-r-tag)}',
+  'html[data-theme="light"] .mc-tbb-web{background:var(--mc-surface);border:1px solid var(--mc-border-soft)}',
   // 子调用缩进列表（原型 subcalls 语汇：左 2px 软线；内层同构卡压掉投影）
   '.mc-subcalls{display:flex;flex-direction:column;gap:4px;margin:4px 0 2px 22px;padding-left:8px;border-left:2px solid var(--mc-border-soft)}',
   '.mc-subcalls .mc-tool{box-shadow:none}',
@@ -2669,19 +2671,12 @@ const McTool = {
       var name = mcToolName(block);
       var state = mcToolState(block);
       var done = block && typeof block === 'object' && ('kind' in block);
-      var openV = React.useState(state === 'running');
+      var openV = React.useState(false); // 裁定（2026-09-02 二轮）：首登场一律折叠
       var open = openV[0], setOpen = openV[1];
       var cardRef = React.useRef(null);
       var headRef = React.useRef(null);
       var pillRef = React.useRef(null);
-      var openRef = React.useRef(open);
-      openRef.current = open;
-      var prevState = React.useRef(state);
-      React.useEffect(function () { // 落地自动收起（running→settle 一拍）
-        var was = prevState.current;
-        prevState.current = state;
-        if (was === 'running' && state !== 'running' && openRef.current) mcFold(cardRef.current, function () { setOpen(false); });
-      }, [state]);
+      var bodyRef = React.useRef(null);
       React.useEffect(function () { // 扫掠/脉冲相位对齐（组件内自管，syscard retry 先例）
         try {
           if (state === 'running' && headRef.current && CLOCK && typeof CLOCK.syncAnim === 'function') CLOCK.syncAnim(headRef.current, CLOCK.SWEEP, '--sweep-delay');
@@ -2690,6 +2685,26 @@ const McTool = {
       }, [state]);
       function toggle() {
         mcFold(cardRef.current, function () { setOpen(function (o) { return !o; }); });
+      }
+      // 展开体内宿主折叠面板（DisclosureRow 系：[data-expandable]/[aria-expanded]）点击 →
+      // 方向判定（捕获阶段读 pre-click 态）+ 库 flash：展开 flashIn / 收起 flashOut（用户裁定⑤）。
+      // 宿主自身 handler 照常切换（不拦截），我们只在切换后补白块闪烁；REDUCED 不挂。
+      function onBodyCapture(ev) {
+        var t = ev.target;
+        if (!t || !t.closest) return;
+        var head = null;
+        try { head = t.closest('[data-expandable],[aria-expanded]'); } catch (e) { return; }
+        if (!head || !bodyRef.current || !bodyRef.current.contains(head)) return;
+        var wasOpen = head.getAttribute('aria-expanded') === 'true';
+        var panel = head.closest('[data-expandable]') || head.parentElement || head;
+        if (REDUCED || !CLOCK || typeof CLOCK.next !== 'function') return;
+        CLOCK.next(function () {
+          try {
+            if (!panel.isConnected) return;
+            if (wasOpen) { if (typeof flashOut === 'function') flashOut(panel, function () {}); }
+            else { if (typeof flashIn === 'function') flashIn(panel, function () {}); }
+          } catch (e) {}
+        }, 100);
       }
       var icon = mcToolIconName(name, state);
       var pillCls = state === 'running' ? 'run' : state === 'error' ? 'fail' : 'done';
@@ -2704,7 +2719,8 @@ const McTool = {
             h('span', { className: 'mc-t-args' }, argsText)),
           h('span', { className: 'mc-pill ' + pillCls, ref: pillRef }, pillText),
           h('svg', { className: 'chev' + (open ? ' open' : ''), 'aria-hidden': true }, h('use', { href: '#i-caretright' }))),
-        h('div', { className: 'mc-tool-body' }, h('div', { className: 'mc-tb-in' }, mcBody(block, name, state, done))));
+        h('div', { className: 'mc-tool-body', ref: bodyRef, onClickCapture: onBodyCapture },
+          h('div', { className: 'mc-tb-in' }, mcBody(block, name, state, done))));
     }
 
     // 展开体：wire view 结构化材料 → 宿主 Block 保真；未命中 → JsonBlock(IN) + text(OUT)
@@ -4629,7 +4645,7 @@ function McKitPage() {
                   MC_TOOL_DEMO.card(MC_KIT_TOOL_UNKNOWN))),
               h('div', { className: 'kit-frame', key: 'states' },
                 h('div', { className: 'kit-frame-tag' },
-                  h('span', null, '状态三帧循环 · running(默认展开+琥珀扫掠) → done(自动收起) → fail(红边+warning 图标) — CLOCK 1.6s 一帧'),
+                  h('span', null, '状态三帧循环 · running(琥珀扫掠) → done → fail(红边+warning 图标) — CLOCK 1.6s 一帧;首登场一律折叠,落地不改折叠态(用户裁定 2026-09-02)'),
                   h('em', null, 'tool·state')),
                 h('div', { className: 'kit-frame-body' },
                   h(McKitToolStates, null))),

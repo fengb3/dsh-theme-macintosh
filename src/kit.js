@@ -706,7 +706,7 @@ function McKitPage() {
                   MC_TOOL_DEMO.card(MC_KIT_TOOL_UNKNOWN))),
               h('div', { className: 'kit-frame', key: 'states' },
                 h('div', { className: 'kit-frame-tag' },
-                  h('span', null, '状态三帧循环 · running(默认展开+琥珀扫掠) → done(自动收起) → fail(红边+warning 图标) — CLOCK 1.6s 一帧'),
+                  h('span', null, '状态三帧循环 · running(琥珀扫掠) → done → fail(红边+warning 图标) — CLOCK 1.6s 一帧;首登场一律折叠,落地不改折叠态(用户裁定 2026-09-02)'),
                   h('em', null, 'tool·state')),
                 h('div', { className: 'kit-frame-body' },
                   h(McKitToolStates, null))),

@@ -459,8 +459,8 @@ state = { view, mode, current, sessions, busy:{}, fallback:{}, queue:{}, stats:{
   `kind`（wire 叫 shape）；web 块 kind 与卡面 kind 撞名，narrowing 改名 webKind。
 - **内容体两级**：结构化 view 命中 → 宿主 Block 保真；未命中 → JsonBlock(argsRaw) +
   content text 连缀（20k 截断）。error 态展开体首行红显 `error.name: error.code`。
-- **行为**：running 卡默认展开（interactive 先例）、落地自动收起（accToggle 拍内，
-  useEffect [state] 驱动）；running 头条纹扫掠 `--sweep-delay` 组件内 CLOCK.syncAnim
+- **行为（用户裁定 2026-09-02 二轮修订）**：首登场一律折叠；落地不刻意折叠（不改用户手动
+  开合态）；running 头条纹扫掠 `--sweep-delay` 组件内 CLOCK.syncAnim
   相位对齐（syscard retry 先例）；开合 accToggle 四拍；出场 flash 由 McFlow 观察器在
   flowItem 行级供给（每张工具卡是独立 tool-call 节点 = 独立 flowItem，免费获得出场闪）。
 - **图标语义映射**（§10.4 表适配真实 wire 名）：read/read_image→i-doc、write→i-floppy、
@@ -479,6 +479,10 @@ state = { view, mode, current, sessions, busy:{}, fallback:{}, queue:{}, stats:{
 - **audit 协同**：自有 CSS 三态用类（.mc-run/.mc-fail）不用 `[data-state=…]` 属性选择器
   ——该片段在 audit 的宿主选择器特征清单内（官方 DOM 有 data-state），自有 DOM 用它会
   误触 MC_MAP 泄漏检查。
+
+- **展开体二轮裁定**：内容直角化 + 像素字体（`.mc-tb-in,.mc-tb-in *{border-radius:0;
+  font-family:var(--font-code)}` !important 压平宿主块）；展开体内宿主折叠面板点击 → 方向判定
+  （捕获阶段读 aria-expanded）+ flashIn/flashOut 闪烁（宿主自身切换不拦截，CLOCK.next(100) 补闪）。
 - **已知限制**：inspect 轨迹跳转、openFile 文件链接不渲染（原型无此件；官方 DetailsPanel
   另有入口）；官方专用行（BashRow 命令描述等）摘要增强不保留；stopped 态 pill 沿用 done
   形（「已停止」进摘要后缀）。

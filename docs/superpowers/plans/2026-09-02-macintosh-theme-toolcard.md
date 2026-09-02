@@ -132,3 +132,15 @@ dist/client-body.js + client.js 重建产物（不手改）
   toolcard-kit-section.png / toolcard-verify-{dark,light}.png。
 - 遗留：子调用缩进的实会话断言（遇子调用卡时断，verify 内条件断言已备）；活体验收归用户
   （多会话规则：工具密集/空会话/历史会话/切回）。
+## 用户裁定补丁（2026-09-02 二轮，四条全落地）
+
+1. **首登场一律折叠**：`useState(false)`（原 running 默认展开撤销）。
+2. **落地不改折叠态**：删除 running→settle 自动收起 useEffect（用户手动展开的卡完成后保持展开）。
+3. **展开体直角 + 像素字体**：`.mc-tb-in,.mc-tb-in *{border-radius:0!important;font-family:var(--font-code)!important}`
+   （宿主块圆角/dsw 字族压平；.mc-tb-out 圆角移除）。
+4. **展开体内折叠面板闪烁**：卡体 `onClickCapture` 委托，命中 `[data-expandable],[aria-expanded]`
+   （DisclosureRow 系真实钩子，部署包类型面核验）；捕获阶段读 pre-click 方向 → `CLOCK.next(100)`
+   补 `flashIn`（展开）/`flashOut`（收起）；宿主自身切换不拦截，REDUCED 不挂。
+- 验证：npm test 61/61 + audit 绿；verify-toolcard GREEN（新增裁定断言：全部首登折叠/展开体
+  直角化 tb·inner·block 全 0px/像素字体 Fusion Pixel 压平）。
+- 待活体：面板闪烁的实会话观察（当前窗口无 DisclosureRow 折叠面板样本，归用户活体验收)。

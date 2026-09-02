@@ -68,12 +68,30 @@ if (dark.subcalls > 0) {
 } else { info('子调用', '本会话窗口无子调用卡 — 缩进断言跳过(合法)'); }
 await pg.screenshot({ path: join(SHOTS, 'toolcard-verify-dark.png') });
 
-// 开合: 点首卡 → open + body 展开
+// 开合: 点首卡 → open + body 展开;展开态断言直角化 + 像素字体(用户裁定 2026-09-02 二轮)
 if (dark.count > 0) {
+  const allCollapsed = await pg.evaluate(() => [...document.querySelectorAll('.mc-tool')].every((c) => !c.className.includes('open')));
+  ok(allCollapsed, '裁定: 全部卡首登折叠(无 .open)');
   await pg.evaluate(() => { document.querySelector('.mc-tool .mc-tool-head').click(); });
   await pg.waitForTimeout(1100);
-  const opened = await pg.evaluate(() => { const c = document.querySelector('.mc-tool'); return { open: c.className.includes('open'), h: getComputedStyle(c.querySelector('.mc-tool-body')).height }; });
+  const opened = await pg.evaluate(() => {
+    const c = document.querySelector('.mc-tool');
+    const tb = c.querySelector('.mc-tb-in');
+    const inner = tb.querySelector('*');
+    return {
+      open: c.className.includes('open'),
+      h: getComputedStyle(c.querySelector('.mc-tool-body')).height,
+      tbRadius: getComputedStyle(tb).borderTopLeftRadius,
+      innerRadius: inner ? getComputedStyle(inner).borderTopLeftRadius : 'n/a',
+      blockRadius: (function () { const b = tb.querySelector('.mc-tool-block, pre, [class*="block"]'); return b ? getComputedStyle(b).borderTopLeftRadius : 'n/a'; })(),
+      font: getComputedStyle(tb).fontFamily,
+      innerFont: inner ? getComputedStyle(inner).fontFamily.slice(0, 60) : 'n/a',
+    };
+  });
   ok(opened.open && opened.h !== '0px', '开合: accToggle 后展开 (open=' + opened.open + ' h=' + opened.h + ')');
+  ok(opened.tbRadius === '0px' && opened.innerRadius === '0px', '裁定: 展开体直角化 (tb=' + opened.tbRadius + ' inner=' + opened.innerRadius + ' block=' + opened.blockRadius + ')');
+  ok(opened.font.indexOf('Fusion Pixel') >= 0, '裁定: 展开体像素字体 (' + opened.font.slice(0, 50) + ')');
+  ok(opened.innerFont.indexOf('Fusion Pixel') >= 0, '裁定: 块内像素字体压平 (' + opened.innerFont + ')');
   await pg.evaluate(() => { document.querySelector('.mc-tool .mc-tool-head').click(); });
   await pg.waitForTimeout(1100);
 }

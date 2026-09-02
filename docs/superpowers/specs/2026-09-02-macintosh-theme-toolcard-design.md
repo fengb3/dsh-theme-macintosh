@@ -49,6 +49,10 @@
 3. **三态**：running = 琥珀边 + 标题条条纹扫掠（repeating-linear-gradient + mc-sweep
    steps(2) 1s + `--sweep-delay` 相位对齐）；error/fail = 红边 + 图标转红；stopped =
    pill done 形 + 摘要后缀「已停止」；ok/done = 常态。pill 文案：running/done/fail。
+> **用户裁定修订（2026-09-02 二轮）**：①首登场一律折叠（running 也不例外）；②落地不刻意折叠
+> （不改变用户手动开合的折叠态）；③展开体内一切内容直角矩形 + 统一像素字体（--font-code，
+> 宿主块圆角/字族 !important 压平）；④展开体内折叠面板（[data-expandable]/[aria-expanded]）点击
+> 方向判定 + flashIn/flashOut 闪烁（捕获委托，宿主自身切换不拦截）。已实施。
 4. **出场与开合**：整卡出场 flashIn（挂卡壳；红/白遮罩协议）；开合 accToggle 四拍
    （MC_MAP.toolcard 段零宿主锚，卡自带 position:relative）。**running 卡默认展开、
    落地后自动收起**（interactive appendToolCard 先例：running 默认 .open 出场，
