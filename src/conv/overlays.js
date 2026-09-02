@@ -41,6 +41,31 @@ function mcMenuState(state, ev) {
   if (ev.t === 'open') return { open: { id: ev.id, anchor: ev.anchor || null } };
   return { open: null }; // close/esc/pick 一律关
 }
+// —— §B hero 空态(overlays 批2;原型 §9 L769-787,用户裁定:去芯片行/去模式下拉,纯静态零行为)——
+var MC_HERO_COPY = {
+  title: 'Think Classic,跑点什么。', titleEm: 'Classic',
+  badge: 'MACINTOSH · System 7 复古主题',
+  sub: '经典麦金塔工作区:白窗黑线、条纹标题栏、Finder 会话树。',
+};
+function mcHeroAction(phase) { return phase === 'hero' ? 'mount' : 'unmount'; }
+var MC_HERO_CSS = [
+  '.mc-hero{display:flex;flex-direction:column;align-items:center;gap:14px;padding:52px 24px 40px;text-align:center}',
+  '.mc-hero .mh-mark{width:48px;height:48px;color:var(--mc-fg);filter:drop-shadow(2px 2px 0 rgba(0,0,0,.4))}',
+  'html[data-theme="light"] .mc-hero .mh-mark{filter:none}',
+  '.mc-hero .mh-title{font:700 34px/1.15 var(--font-display);letter-spacing:.01em;color:var(--mc-fg)}',
+  '.mc-hero .mh-title em{font-style:normal;color:var(--mc-accent)}',
+  '.mc-hero .mh-badge{display:inline-flex;align-items:center;padding:3px 10px;background:var(--mc-sel-bg);',
+  ' border:1px solid var(--mc-border-soft);border-radius:0;font:600 11px/1.6 var(--font-display);',
+  ' letter-spacing:.05em;color:var(--mc-fg)}',
+  '.mc-hero .mh-sub{max-width:420px;font:400 13px/1.8 var(--font-ui);color:var(--mc-muted)}',
+  '@media (max-width:640px){.mc-hero .mh-title{font-size:26px}}',
+].join('');
+// 官方空态藏匿 CSS:own gate 属性门控(html[data-mc-hero],dock 批 composerHide 藏匿同款形态;
+// 控制器裁定——overlays 段零宿主属性片段硬编码,相位一致性由 heroSync 置/撤属性自动达成)。
+// typeof 守卫:单文件被测试以 CJS 独立加载时 MC_MAP 缺席(装配体内恒在),照 dock 先例静默回退空串。
+var MC_OVERLAYS2_CSS = MC_HERO_CSS
+  + (typeof MC_MAP !== 'undefined' && MC_MAP.heroOfficial
+    ? 'html[data-mc-hero] ' + MC_MAP.heroOfficial + '{display:none!important}' : '');
 // Task 5 定义表：项集按附录 A 勘定对齐宿主实有菜单（会话=rename/fork/archive workspace L700-716；
 // 工作区=rename/delete L459-468；新建类=workspaces.startSession/workspaces.create（二批 A 官方语义）。
 // view 两项宿主无对应服务/勘不通 → 不写 WIRING 键（mcMenuItems 自动滤除，菜单整体 no-op）。
@@ -169,7 +194,7 @@ var MC_MENU_OPEN = null; // Task 5 桥：McFinder 触发钮经此调 openMenu（
 var MC_MENU_FIRE = null;
 var MC_EDIT_HOOK = null; // 二批 C 桥：菜单「重命名」项 → McFinder 行内编辑态 setter（McFinder 树注册）
 var McMenus = {
-  css: MC_MENUS_CSS,
+  css: MC_MENUS_CSS + MC_OVERLAYS2_CSS,
   mount: function (ctx) {
     var state = { open: null };
     var wrap = null;           // 当前活动菜单 DOM
@@ -262,6 +287,36 @@ var McMenus = {
         + MC_MAP.menuPortal + ' *{font-family:inherit!important;border-radius:0!important}';
       document.head.appendChild(styleEl);
     }
+    // §B hero:官方空态 CSS 藏 + 自绘 .mc-hero 挂 flowScroll 首;-相变/内容换场全走一个 body observer
+    // (heroRoot 缺席不轮询——body observer 兼职探测,吸取 McFlow「8s 上限耗尽」教训)。
+    // own gate:挂载置 html[data-mc-hero]、摘除撤之——官方空态藏匿随相位自动一致(控制器裁定 1/2)。
+    var heroEl = null, heroRoot = null;
+    try { heroRoot = document.querySelector(MC_MAP.heroRoot); } catch (e) {}
+    function heroSync() {
+      var act = mcHeroAction(heroRoot ? heroRoot.getAttribute('data-phase') : null);
+      if (act === 'mount' && !heroEl) {
+        var host = heroRoot ? (heroRoot.querySelector(MC_MAP.flowScroll) || heroRoot) : null;
+        if (!host) return;
+        heroEl = document.createElement('div');
+        heroEl.className = 'mc-hero';
+        heroEl.innerHTML = '<svg class="mh-mark" aria-hidden="true"><use href="#i-cl-HappyMac"/></svg>'
+          + '<div class="mh-title">Think <em>' + MC_HERO_COPY.titleEm + '</em>,跑点什么。</div>'
+          + '<span class="mh-badge">' + MC_HERO_COPY.badge + '</span>'
+          + '<p class="mh-sub">' + MC_HERO_COPY.sub + '</p>'; // 静态字面量拼接常量,audit §3 豁免形态
+        host.insertBefore(heroEl, host.firstChild);
+        try { document.documentElement.setAttribute('data-mc-hero', ''); } catch (e) {}
+        flashIn(heroEl, function () {});
+      } else if (act === 'unmount' && heroEl) {
+        heroEl.remove(); heroEl = null;
+        try { document.documentElement.removeAttribute('data-mc-hero'); } catch (e) {}
+      }
+    }
+    var heroObs = new MutationObserver(function () {
+      try { if (!heroRoot || !heroRoot.isConnected) heroRoot = document.querySelector(MC_MAP.heroRoot); } catch (e) {}
+      heroSync();
+    });
+    try { heroObs.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['data-phase', 'class'] }); } catch (e) {}
+    heroSync();
     return function teardown() {
       // M3 撤桥守卫：仅当桥仍指向本 mount 的 openMenu/fire 才撤——防止先卸的旧 mount 误撤后 mount 的桥
       if (MC_MENU_OPEN === openMenu) MC_MENU_OPEN = null;
@@ -271,7 +326,11 @@ var McMenus = {
       try { document.removeEventListener('scroll', onScroll, { capture: true }); } catch (e) {}
       try { if (styleEl) styleEl.remove(); } catch (e) {}
       try { if (wrap) wrap.remove(); } catch (e) {}
+      // §B hero 撤净:observer 断开 + heroEl 摘除 + own gate 属性撤(藏匿门随卸载归零)
+      try { heroObs.disconnect(); } catch (e) {}
+      try { if (heroEl) heroEl.remove(); } catch (e) {}
+      try { document.documentElement.removeAttribute('data-mc-hero'); } catch (e) {}
     };
   },
 };
-if (typeof module !== 'undefined') module.exports = { McMenus: McMenus, mcMenuItems: mcMenuItems, mcMenuAlign: mcMenuAlign, mcMenuTop: mcMenuTop, mcMenuState: mcMenuState, mcMenuWsId: mcMenuWsId };
+if (typeof module !== 'undefined') module.exports = { McMenus: McMenus, mcMenuItems: mcMenuItems, mcMenuAlign: mcMenuAlign, mcMenuTop: mcMenuTop, mcMenuState: mcMenuState, mcMenuWsId: mcMenuWsId, mcHeroAction: mcHeroAction, MC_HERO_COPY: MC_HERO_COPY };
