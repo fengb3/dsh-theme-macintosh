@@ -263,8 +263,8 @@ var MC_OVERLAYS2_CSS = MC_HERO_CSS
         + D + ' hr,[class*="separator"]{background:var(--mc-border-soft)!important;height:1px}'
         + D + ' button[role="switch"]{width:34px!important;height:18px!important;border:1px solid var(--mc-border)!important;'
         + 'border-radius:0!important;background:var(--mc-surface-3)!important;position:relative!important}'
-        + D + ' button[role="switch"][aria-checked="true"],' + D + ' button[role="switch"][data-state="checked"]'
-        + '{background:var(--mc-accent)!important}';                                     // 方块开关 34×18,checked 染 accent(原型 .switch 规格,形态按勘定)
+        + D + ' button[role="switch"][aria-checked="true"]'
+        + '{background:var(--mc-accent)!important}';                                     // 方块开关 34×18,checked 染 accent(原型 .switch 规格,checked 选择器按勘定裁——禁 [data-state= 前缀形态,撞 audit token)
     }
     if (MC_MAP.dlgMask) {
       dlgCss += MC_MAP.dlgMask + '{background-image:radial-gradient(rgba(0,0,0,.55) 1px,transparent 1px)!important;'
