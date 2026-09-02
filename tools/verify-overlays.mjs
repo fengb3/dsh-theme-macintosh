@@ -1,4 +1,6 @@
-// tools/verify-overlays.mjs — overlays2 批活体门禁(2026-09-02;验收裁定轮改版 2026-09-03;裁定轮 2 增补)
+// tools/verify-overlays.mjs — overlays2 批活体门禁(2026-09-02;验收裁定轮改版 2026-09-03;裁定轮 2 增补;
+// 终审修复 2026-09-03:tabbability 断言实心化——旧 '.mc-tbx [tabindex="0"]' 选择器计数对无 tabindex 的
+// 裸 button 恒 0=虚断,改为逐钮读 tabIndex 属性(hero/main 全钮须 -1;dlg 缩放方块 -1+镜像关闭钮 0 双向钉死))
 // 用法: node tools/verify-overlays.mjs   (宿主须运行于 127.0.0.1:3080)
 // 断言(照 brief Step 2 清单+裁定轮五条+裁定轮 2 四条;switch 断言无——Task 3 勘定实证 settings
 // 面板 0 switch,控制器裁定 1):
@@ -10,7 +12,8 @@
 //           升滚动口子件:双钮可见+水平居中+紧贴 hero 之下+行垂直中心屏幕中线偏下)/R10 mark-title
 //           横排(左右相邻+中线对齐)/切实有会话 → 退场(含窗框)→ R8 主列窗框(.mc-main-tb 20px
 //           root 首子+sprite 双方块+标题镜像官方 crumb+官方 header 保全+装饰方块零 tab 序)→
-//           新建会话钮镜像 click → 复挂(主列窗框随 hero 相退场);
+//           新建会话钮镜像 click → 复挂(主列窗框随 hero 相退场)+装饰方块零 tab 序逐钮实心断言
+//           (深浅两遍 hero 窗框+深色 main 窗框+深浅两遍 dlg 顶栏;dlg 关闭方块设计 tabIndex=0——R11 镜像关路);
 //   B dialog: MC_MAP.dlgTriggerSettings 点开 → dlgCard 壳(直角/1px 实线/像素字/硬投影 3px)/
 //           scrim 点阵幕 radial-gradient(z 仅 info 记录不 assert 官方值)/顶栏注入(.mc-dlg-tb
 //           20px+sprite 双方块+标题读 aria-labelledby)/R11 官方关闭钮 display:none(关窗只走
@@ -131,6 +134,11 @@ const heroProbe = () => pg.evaluate((sel) => {
     r.tbBg = getComputedStyle(tb).backgroundImage;
     r.tbClose = cl ? (cl.getAttribute('href') || '') : null;
     r.tbZoom = zm ? (zm.getAttribute('href') || '') : null;
+    // 终审修复:tabbability 实心化——逐钮读 tabIndex 属性(旧 '.mc-tbx [tabindex="0"]' 选择器计数
+    // 对无 tabindex 的裸 button 恒 0=虚断,摘掉 tabindex="-1" 也 PASS)。hero 窗框全钮装饰 → 全 -1。
+    const tbBtns = [...tb.querySelectorAll('button')];
+    r.tbBtns = tbBtns.length;
+    r.tbFailIdx = tbBtns.filter((x) => x.tabIndex !== -1).length;
   }
   return r;
 }, SEL);
@@ -149,13 +157,16 @@ const mainProbe = () => pg.evaluate(() => {
     const bcs = getComputedStyle(tb);
     const cl = tb.querySelector('.mc-tbx.cl use');
     const zm = tb.querySelector('.mc-tbx.zm use');
+    // 终审修复:同 hero——逐钮 tabIndex 属性实心断言(选择器计数虚断已废)
+    const tbBtns = [...tb.querySelectorAll('button')];
     r.tb = {
       h: bcs.height,
       first: tb.parentElement === root && root.firstElementChild === tb,
       closeHref: cl ? (cl.getAttribute('href') || '') : null,
       zoomHref: zm ? (zm.getAttribute('href') || '') : null,
       title: (tb.querySelector('.mc-tb-title') || { textContent: '' }).textContent,
-      focusable: tb.querySelectorAll('.mc-tbx [tabindex="0"]').length, // 装饰方块不应进 tab 序
+      btns: tbBtns.length,
+      failIdx: tbBtns.filter((x) => x.tabIndex !== -1).length, // 装饰方块不应进 tab 序(逐钮属性)
     };
     r.crumbText = r.crumb ? String(r.crumb.textContent || '').trim() : null;
     // 官方 header 交互保全:标题钮+页签钮在场可点(零外科=只读镜像的前提)
@@ -186,12 +197,20 @@ const dlgProbe = () => pg.evaluate((sel) => {
       const bcs = getComputedStyle(bar);
       const cl = bar.querySelector('.mc-tbx.cl use');
       const zm = bar.querySelector('.mc-tbx.zm use');
+      // 终审修复:dlg 顶栏 tab 序逐钮属性。注意与 hero/main 不同构:zm 缩放方块装饰(tabIndex=-1),
+      // cl 关闭方块是 R11 官方关闭钮的镜像交互路径(aria 无「装饰」缀;官方钮 display:none 后它是
+      // 唯一 tab 可达关路)→ 设计 tabIndex=0,断言双向钉死防双向回归。
+      const clBtn = bar.querySelector('.mc-tbx.cl');
+      const zmBtn = bar.querySelector('.mc-tbx.zm');
       r.bar = {
         h: bcs.height,
         pos: bcs.position,
         title: (bar.querySelector('.mc-tb-title') || { textContent: '' }).textContent,
         closeHref: cl ? (cl.getAttribute('href') || '') : null,
         zoomHref: zm ? (zm.getAttribute('href') || '') : null,
+        btns: bar.querySelectorAll('button').length,
+        clIdx: clBtn ? clBtn.tabIndex : null,
+        zmIdx: zmBtn ? zmBtn.tabIndex : null,
       };
       const lab = card.getAttribute('aria-labelledby');
       const labEl = lab ? document.getElementById(lab) : null;
@@ -269,6 +288,8 @@ ok(hp.titleFont.indexOf('ChiKareGo') >= 0, '深色 hero: 构图 .mh-title 像素
 ok(hp.tbCount === 1 && hp.tbH === '20px', '深色 hero: 窗框标题栏在场 20px (count=' + hp.tbCount + ' h=' + hp.tbH + ')');
 ok(hp.tbClose === '#i-close' && hp.tbZoom === '#i-zoom', '深色 hero: 窗框 sprite 双方块 (cl=' + hp.tbClose + ' zm=' + hp.tbZoom + ')');
 ok(String(hp.tbBg).indexOf('repeating-linear-gradient') >= 0, '深色 hero: 窗框 pinstripe 条纹面');
+info('深色 hero: 装饰方块 tab 序逐钮记录', { btns: hp.tbBtns, failIdx: hp.tbFailIdx });
+ok(hp.tbBtns > 0 && hp.tbFailIdx === 0, '深色 hero: 装饰方块零 tab 序实心化 — 逐钮 tabIndex=-1 (钮数=' + hp.tbBtns + ' 违例=' + hp.tbFailIdx + ')');
 ok(hp.beforeDisplay === 'none', '深色 hero: chrome ::before 伪元素版让位 (display=' + hp.beforeDisplay + ')');
 if (hp.glowPresent) ok(hp.glowDisplay === 'none', '深色 hero: 官方 hero 晕 SVG 藏(椭圆渐变勘定) (' + hp.glowDisplay + ')');
 else info('深色 hero: heroGlow 锚未命中(宿主未渲染晕或哈希漂移;渐变断言降级)', hp.glowPresent);
@@ -311,7 +332,8 @@ if (picked == null) {
     ok(mp.crumbText != null && mp.tb.title === mp.crumbText, '深色 main: 标题只读镜像官方 crumb (「' + mp.tb.title + '」 vs 「' + mp.crumbText + '」)');
     ok(mp.headerPresent && mp.headerButtons >= 4 && mp.crumbVisible, '深色 main: 官方 header 保全(钮数=' + mp.headerButtons + ' 标题钮可见=' + mp.crumbVisible + ')');
     ok(mp.tbTop != null && mp.headerTop != null && mp.headerTop >= mp.tbTop + 18, '深色 main: 窗框在 header 上方且官方头部整体下移 (tb=' + mp.tbTop + ' header=' + mp.headerTop + ')');
-    ok(mp.tb.focusable === 0, '深色 main: 装饰方块零 tab 序 (tabindex=0 数=' + mp.tb.focusable + ')');
+    info('深色 main: 装饰方块 tab 序逐钮记录', { btns: mp.tb.btns, failIdx: mp.tb.failIdx });
+    ok(mp.tb.btns > 0 && mp.tb.failIdx === 0, '深色 main: 装饰方块零 tab 序实心化 — 逐钮 tabIndex=-1 (钮数=' + mp.tb.btns + ' 违例=' + mp.tb.failIdx + ')');
     await pg.screenshot({ path: join(SHOTS, 'overlays2-dark-active.png') });
   }
   const used = await newSessionMirror();
@@ -341,6 +363,8 @@ if (dg.bar) {
   ok(dg.bar.h === '20px' && dg.bar.pos === 'absolute', '深色 dlg: 顶栏注入 20px absolute 卡顶 (h=' + dg.bar.h + ' pos=' + dg.bar.pos + ')');
   ok(dg.bar.closeHref === '#i-close' && dg.bar.zoomHref === '#i-zoom', '深色 dlg: 顶栏 sprite 双方块 (cl=' + dg.bar.closeHref + ' zm=' + dg.bar.zoomHref + ')');
   ok(dg.bar.title === dg.cardTitle, '深色 dlg: 顶栏标题读 aria-labelledby (「' + dg.bar.title + '」)');
+  info('深色 dlg: 顶栏钮 tab 序逐钮记录', { btns: dg.bar.btns, clIdx: dg.bar.clIdx, zmIdx: dg.bar.zmIdx });
+  ok(dg.bar.btns >= 2 && dg.bar.zmIdx === -1 && dg.bar.clIdx === 0, '深色 dlg: 顶栏 tab 序实心化 — 装饰缩放方块 tabIndex=-1+镜像关闭钮 tabIndex=0 (cl=' + dg.bar.clIdx + ' zm=' + dg.bar.zmIdx + ')');
 } else ok(false, '深色 dlg: 顶栏 .mc-dlg-tb 未注入');
 if (dg.card) ok(dg.officialClose === 'none', '深色 dlg: R11 官方关闭钮 display:none (display=' + dg.officialClose + ')');
 if (dg.mask) {
@@ -370,6 +394,8 @@ ok(hl.titleText === wantTitle(hl.lang), '浅色 hero: 标题 locale 复跑 (「'
 ok(/ChiKareGo/.test(hl.titleFont), '浅色 hero: 标题像素字复跑 (' + hl.titleFont.slice(0, 40) + ')');
 ok(!hl.badge && !hl.sub && hl.markW === '48px', '浅色 hero: 构图复跑(badge/sub 退役+mark 48px)');
 ok(hl.tbCount === 1 && hl.tbClose === '#i-close' && hl.tbZoom === '#i-zoom', '浅色 hero: 窗框复跑 (cl=' + hl.tbClose + ' zm=' + hl.tbZoom + ')');
+info('浅色 hero: 装饰方块 tab 序复跑逐钮记录', { btns: hl.tbBtns, failIdx: hl.tbFailIdx });
+ok(hl.tbBtns > 0 && hl.tbFailIdx === 0, '浅色 hero: 装饰方块零 tab 序实心化复跑 — 逐钮 tabIndex=-1 (钮数=' + hl.tbBtns + ' 违例=' + hl.tbFailIdx + ')');
 if (hl.glowPresent) ok(hl.glowDisplay === 'none', '浅色 hero: hero 晕 SVG 仍藏 (' + hl.glowDisplay + ')');
 ok(hl.dockBottom != null && hl.rootBottom != null && hl.rootBottom - hl.dockBottom <= 8, '浅色 hero: 自绘坞钉底复跑 (dock=' + hl.dockBottom + ' vs 窗底=' + hl.rootBottom + ')');
 if (hl.rowGeom2.present) { // R9/R10 浅色复跑
@@ -391,6 +417,7 @@ if (dl.card) {
   ok(String(dl.shadow).indexOf('3px') >= 0, '浅色 dlg: 硬投影复跑');
   ok(dl.bar && dl.bar.h === '20px' && dl.bar.closeHref === '#i-close', '浅色 dlg: 顶栏复跑 (h=' + (dl.bar ? dl.bar.h : null) + ')');
   ok(dl.officialClose === 'none', '浅色 dlg: R11 官方关闭钮仍隐 (display=' + dl.officialClose + ')');
+  ok(dl.bar && dl.bar.btns >= 2 && dl.bar.zmIdx === -1 && dl.bar.clIdx === 0, '浅色 dlg: 顶栏 tab 序实心化复跑 (cl=' + (dl.bar ? dl.bar.clIdx : null) + ' zm=' + (dl.bar ? dl.bar.zmIdx : null) + ')');
 }
 if (dl.mask) {
   ok(dl.maskBgImage.indexOf('radial-gradient') >= 0, '浅色 scrim: 点阵幕复跑');
