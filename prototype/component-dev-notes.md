@@ -578,6 +578,61 @@ subcalls：左 2px 软线缩进 + sc-row（ok=绿 i-check / run=琥珀 clock）�
 - HTML `hidden` 属性 + `[hidden]{display:none}` 兜底；显示/隐藏必须放 flashIn/flashOut 回调里（帧中途）
 - interactive 无 dialog/toast/scrim（文件头声明 §9 只取 hero+菜单）——**这三件以 workspace 为唯一规范源**
 
+### 11.3 overlays 批 2 落地注记（2026-09-02，host 0.1.1-rc.2）
+
+- **hero 相锚实勘**：`heroRoot` = `div[data-phase]`（ConversationRoot 根 div，`settling|hero|active`
+  三相载体；与 flow 批 `mainColumn` 同源同点——probe 实勘全页唯一，弃 build-hash 类锚）。
+  官方空态容器 `heroOfficial` = `.pXSMma_root`（build-hash 类，DRIFT-RISK 在册）：不在滚动口内
+  （scroll 首子为空 `div[data-slot=conversation.session]`），挂 composerStack 的 composerHero 变体；
+  容器自身无 data-*，内层仅 `conversation.hero.brand.mark` 槽位。锚漂移即失配回退官方空态，不破版。
+- **`html[data-mc-hero]` own-gate 裁定**：官方空态藏匿不走 `heroRoot[data-phase="hero"] heroOfficial`
+  相位选择器拼接（overlays 段禁宿主属性片段硬编码），改 own gate 属性——heroSync 挂载置
+  `data-mc-hero`、摘除/teardown 撤之，藏匿规则 `html[data-mc-hero] .pXSMma_root{display:none!important}`。
+  相位判定全在 JS（`mcHeroAction(phase)` 纯函数：仅 `'hero'`→mount），属性翻转与 DOM 挂摘同拍，
+  官方空态显隐自动一致（dock 批 composerHide 藏匿同款形态）。滞留态自愈：宿主 React 重建子树
+  而 phase 仍 hero 时闭包 heroEl 变 detached 但恒真值 → 挂载判定加 `isConnected` 重挂路径。
+- **存在门控 vs JS 门控（三浮层门控异构谱）**：dialog/scrim 皮 = head 常驻 `style[data-mc-dlgskin]`
+  **纯 CSS 存在门控**——官方弹窗自开自关（React 受控），JS 置撤属性反而会与官方时序竞争；
+  hero = body observer 相位同步 + own gate 属性置/撤（JS 门控）；dock = `html[data-mc-dock-on]`
+  JS 置撤属性门控。择型依据：**挂载者是谁**——官方自管开合的浮层用存在门控，主题自绘件的
+  生命周期归主题管的用 JS 门控。hero observer 兼职探测（childList+subtree+attributes 过滤
+  `data-phase/class`），heroRoot 缺席不轮询（McFlow「8s 上限耗尽」教训在案）。
+- **`:has` scrim 域定**：全 app 四处 `role=dialog`（settings 面板/图片 lightbox/ctx meter popover/
+  feedback note），仅 settings 面板以 `aria-labelledby` 定题（其余 aria-label）→ `dlgMask` 走
+  `[role="presentation"]:has([role="dialog"][aria-labelledby]) > div[aria-hidden="true"]`——裸
+  `[role=presentation]>div[aria-hidden]` 会误伤其余三处 overlay 的遮罩（live 普查 ctx popover
+  零命中实证，z-index 1000 官方原值不动=spec 裁定 4）。`:has` 需 Chromium 105+（宿主部署面达标）。
+- **逗号臂修复实录（三臂同族缺陷，fix round 1/1b）**：计划原稿 `D h1,h2,h3{…}` / `D hr,[class*=
+  "separator"]{…}` / `D input,textarea{…}` 三条选择器列表的裸逗号臂重置后代组合符 → `h2/h3`、
+  `[class*=separator]`、`textarea` 三个裸臂**全文档生效**（latent×2 + active×1——活体实证
+  composer textarea 正被裸 textarea 臂染 `--mc-surface` 底）。修复=逐臂补卡锚 `D h1,D h2,D h3` /
+  `D hr,D [class*="separator"]` / `D input,D textarea`（声明一字不动，只收域）。教训入册：
+  **带后代组合符的选择器列表，逗号每一臂都要独立携带域定前缀**——audit 查不出（宿主片段仍在
+  卡锚臂内），只有活体 computed 对照能抓。
+- **switch 砍除记因**：Task 1 探针实证 settings 面板 0 枚 `button[role=switch]`——通用/模型/插件/
+  Agent 预设/豆包模式五节全为 navCell/分段钮形态（「外观」三态是分段钮组非开关）。spec §2
+  「官方没有的结构不强造」硬前提 → brief 的 `button[role="switch"]` 两行皮不实施，裁剪处码内
+  注记留位（官方日后引入 switch 时补一小段，verify B 段会暴露）。kit 控件样本随之改 button/input
+  形态（无 switch 样本），verify 亦无 switch 断言（控制器裁定 1）。
+- **confirm 不可达实证**：删除会话确认小卡非破坏路径无靶——官方会话树被 McFinder 遮蔽（live 无
+  `treeitem`），McFinder 行菜单项集为 rename/fork/archive（无删除项）；工作区删除动真实数据故
+  不做破坏性实勘。verify C 段按条件断言落地：确认卡在场（`[role=dialog|alertdialog]` 文含
+  「删除」）才断同款壳，否则 INFO 合法跳过——今日跑实录即 INFO 分支。
+- **toast 缺席记因**：spec §0 裁定 1 范围表 toast 无任务=裁定落地——宿主通知面（运行结果/
+  错误横幅）为官方内联渲染，无可锚定的浮层 toast 结构；原型 §9 toast（fixed 右下 z:90、点击
+  flashOut 关）无宿主挂载点，强造即空转。kit 注记行照登「toast 不做裁定」，原型规格留在本节
+  备查（宿主日后出现 toast 形态再议）。
+- **结构档取舍实录**：`dlgNav` 结构档成立——live 实勘面板 `display:flex row`，nav 即固定宽
+  flex 兄弟（188×800，旁 content 612×800）→ 172px+border-right 结构照上；唯 brief 原稿
+  `dlgCard+' '+dlgNav` 双前缀拼出嵌套 dialog 死选择器（`…[aria-labelledby] [role="dialog"]… nav`，
+  live 0 命中）——`dlgNav` 值本身已含 dlgCard 全前缀，单键即完整域定，修正拼接（声明四项一字
+  未动）。皮活体形态：卡 bg=--mc-surface/1px 边/直角/`3px 3px 0` 硬投影/ChiKareGo 像素字，
+  按钮面 surface-2 直角、input 直角（豆包模式节 2 枚原生 input 实证命中），分段钮/分隔线发丝
+  化；Esc 关净后 `style[data-mc-dlgskin]` 仍在 head（mount 生存期单例，官方自开自关语义正确）。
+  kit「浮层」分区同批陈列（hero 构图静态样本读 `MC_HERO_COPY` + `.mc-dlg-demo` 控件样本 +
+  门控差异注记行）；verify 门禁 `tools/verify-overlays.mjs`（A 相变/B 换皮/C 条件/D 深浅两遍，
+  34 断言 GREEN）随批落库。
+
 ---
 
 ## 12 · §10 响应式

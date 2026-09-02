@@ -61,6 +61,7 @@ DSH（DeepSeek Harness Web GUI）的 Classic Macintosh 像素风主题插件。�
   node tools/verify-menus.mjs        # 菜单门禁：五菜单开合/样式/归档接线深浅两轮（--dry-run 只验注入）
   node tools/verify-dock.mjs         # 输入坞门禁：镜像发送/守护重插/拔桥降级深浅两轮（--dry-run 只验注入）
 node tools/verify-toolcard.mjs     # 工具卡门禁：卡壳样式/开合/深浅两遍/kit 分区（只读，不发消息）
+  node tools/verify-overlays.mjs   # 浮层门禁：hero 相变/dialog 换皮/深浅两遍（只读，不发消息）
   ```
 
   **注意：`verify-flow` / `verify-dock` 每次运行都会发送一条真实模型消息**（经 composer 驱动真实回合，

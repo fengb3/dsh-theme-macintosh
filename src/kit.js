@@ -163,7 +163,20 @@ html[data-theme="light"] .kit-panel .reasoning.run .r-txt .cover{background:#000
 /* 输入坞分区(Task 8):dock CSS 全部 scoped 到 [data-mc-dock],样本直接包 div[data-mc-dock]
    复用原语;kit-dockwrap 限宽对齐原型 kit-band 640px 惯例,kit-dockctx 给 ctx-pop 上弹留位 */
 .kit-panel .kit-dockwrap{max-width:640px}
-.kit-panel .kit-dockctx{max-width:640px;min-height:172px;justify-content:flex-end}`,
+.kit-panel .kit-dockctx{max-width:640px;min-height:172px;justify-content:flex-end}
+/* 浮层分区(overlays2 批 Task 4):hero 样本直用全局 .mc-hero 原语构图(静态陈列,面板内无
+   observer——相位挂载行为由活体 heroSync 供);dialog 控件样本 = §C dlg 皮规格的 .mc-dlg-demo
+   kit 局部复刻,自有类零官方属性(audit 宿主扫描零接触);switch 样本随 Task 3 勘定裁除
+   (官方 settings 面板 0 switch——navCell/分段钮形态,不渲染官方没有的结构)。 */
+.kit-panel .mc-dlg-demo{display:flex;flex-direction:column;gap:10px;max-width:420px;
+  padding:14px;background:var(--mc-surface);border:1px solid var(--mc-border);border-radius:0;
+  box-shadow:var(--mc-shadow-pop);font:400 12px/1.6 var(--font-ui);color:var(--mc-fg)}
+.kit-panel .mc-dlg-demo button{background:var(--mc-surface-2);border:1px solid var(--mc-border);
+  border-radius:0;font:500 12px/1.6 var(--font-ui);color:var(--mc-fg);padding:4px 12px;cursor:pointer}
+.kit-panel .mc-dlg-demo button:active{background:var(--mc-fg);color:var(--mc-surface)}
+.kit-panel .mc-dlg-demo input{background:var(--mc-surface);border:1px solid var(--mc-border);
+  border-radius:0;font:400 12px/1.6 var(--font-ui);color:var(--mc-fg);padding:4px 8px}
+.kit-panel .mc-dlg-demo .dd-sep{height:1px;background:var(--mc-border-soft)}`,
 
   slots(ctx) {
     // 席位：shell.overlay（additive 列表槽，order 靠后）；默认渲染 null。
@@ -471,6 +484,18 @@ function McKitPage() {
     force(function (n) { return n + 1; }); // 钮标 ▶/■ 重渲
   };
 
+  // —— 浮层分区(overlays2 批 Task 4):hero 文案读 MC_HERO_COPY shim(Task 2 出口)。
+  // kit 面板内无需 observer,纯陈列(相位挂载/官方藏匿由活体 heroSync 供)。孤立加载
+  // (单文件 CJS 测试域)MC_HERO_COPY 缺席 → 空 copy 降级(dock mcDockState 守卫同款)。
+  // title 按 titleEm 切三段复刻活体构图(Think <em>Classic</em>,跑点什么。)——单源,无双源坑。
+  const heroCopy = (typeof MC_HERO_COPY !== 'undefined' && MC_HERO_COPY) ? MC_HERO_COPY
+    : { title: '', titleEm: '', badge: '', sub: '' };
+  const heroTitle = (function () {
+    const t = heroCopy.title || ''; const em = heroCopy.titleEm || '';
+    const ix = em ? t.indexOf(em) : -1;
+    return ix >= 0 ? [t.slice(0, ix), t.slice(ix + em.length)] : [t, ''];
+  })();
+
   const swatches = [
     ['--mc-bg', 'bg 桌面底'], ['--mc-surface', 'surface 窗面'], ['--mc-fg', 'fg 文字'],
     ['--mc-border', 'border 描边'], ['--mc-accent', 'accent 强调'], ['--mc-spark', 'spark 次强调'],
@@ -689,6 +714,42 @@ function McKitPage() {
                 h('div', { className: 'kit-dockctx', 'data-mc-dock': '' },
                   h('div', { className: 'composer-bar' },
                     h('span', { className: 'cb-right' }, dockCtx))))))),
+        // (h) 浮层分区(overlays2 批 Task 4):hero 空态静态陈列 + dialog 控件样本 + 注记行。
+        //     hero 直接复用全局 .mc-hero 原语构图(真类真样式;文案读 MC_HERO_COPY,kit 面板内
+        //     无 observer 纯陈列——相位挂载/官方藏匿由活体 heroSync 供:body observer +
+        //     own gate html[data-mc-hero]);dialog 控件样本 = §C dlg 皮规格的 .mc-dlg-demo
+        //     kit 局部复刻,自有类零官方属性(audit 宿主扫描零接触);switch 样本随 Task 3
+        //     勘定裁除(官方 settings 面板 0 switch,不渲染官方没有的结构——控制器裁定 1)。
+        h('section', null,
+          h('h3', { className: 'kit-h' }, '浮层'),
+          h('div', { className: 'kit-frames' },
+            h('div', { className: 'kit-frame' },
+              h('div', { className: 'kit-frame-tag' },
+                h('span', null, 'hero 空态 · HappyMac 构图四件套(mark/title/badge/sub)· 文案读 MC_HERO_COPY · 活体挂 flowScroll 首,官方空态经自有门控属性藏匿'),
+                h('em', null, 'hero')),
+              h('div', { className: 'kit-frame-body' },
+                h('div', { className: 'mc-hero' },
+                  h('svg', { className: 'mh-mark', 'aria-hidden': true }, h('use', { href: '#i-cl-HappyMac' })),
+                  h('div', { className: 'mh-title' },
+                    heroTitle[0],
+                    heroCopy.titleEm ? h('em', null, heroCopy.titleEm) : null,
+                    heroTitle[1]),
+                  h('span', { className: 'mh-badge' }, heroCopy.badge),
+                  h('p', { className: 'mh-sub' }, heroCopy.sub)))),
+            h('div', { className: 'kit-frame' },
+              h('div', { className: 'kit-frame-tag' },
+                h('span', null, 'dialog 控件样本 · §C 皮规格直抄(方角钮/输入域/发丝分隔线)· 活体=官方弹窗纯 CSS 存在门控换皮,零 JS 门控'),
+                h('em', null, 'dlg')),
+              h('div', { className: 'kit-frame-body' },
+                h('div', { className: 'mc-dlg-demo' },
+                  h('div', { className: 'kit-row' },
+                    h('button', { type: 'button' }, '确认'),
+                    h('button', { type: 'button' }, '取消')),
+                  h('input', { placeholder: '输入域 · 直角 1px 边', readOnly: true }),
+                  h('div', { className: 'dd-sep' }),
+                  h('span', { className: 'kit-note' }, 'toast 不做裁定(spec §0 范围外);switch 样本随 Task 3 勘定裁除(官方面板 0 switch)'))))),
+          h('div', { className: 'kit-row' },
+            h('span', { className: 'kit-note' }, '门控差异注记:dialog/scrim 皮 = head 常驻 style 标签纯 CSS 存在门控(官方自开自关,JS 门控不可靠);hero = body observer 相位同步 + 自有门控属性置/撤;dock = JS 置撤属性门控 — 存在门控与 JS 门控异构,不混用。'))),
         // (g) 工具卡分区（toolcard 批）：MC_TOOL_DEMO 桥真卡渲染（primitives 缺席 → 降级说明）
         h('section', null,
           h('h3', { className: 'kit-h' }, '工具卡'),
