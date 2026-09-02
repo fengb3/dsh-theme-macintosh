@@ -157,6 +157,11 @@ const MC_MAP = {
   dlgCard: '[role="dialog"][aria-labelledby]',                // aria 语义锚 stable
   dlgMask: '[role="presentation"]:has([role="dialog"][aria-labelledby]) > div[aria-hidden="true"]', // aria 语义锚 stable+:has 域定 settings 语义
   dlgNav: '[role="dialog"][aria-labelledby] nav',             // 弹窗左 nav(节序:通用/模型/插件/Agent 预设/豆包模式)
+  // dlgClose = settings 面板官方「关闭」钮(勘定 2026-09-03 probe-recon2:VOzbGW_close,面板
+  // content>header 右上 28×28;全面板 button 普查唯一 .close 后缀)。裁定轮 5:dialog 注入顶栏的
+  // 关闭方块镜像此钮程序化 click(活体实证 click→面板关净,与 Esc 同效;保官方行为)。
+  // 类后缀 close 为语义 token,前缀哈希随构建漂移(同 heroGlow/sessionRowArrow 纪律)。
+  dlgClose: '[role="dialog"][aria-labelledby] button[class*="close"]', /* DRIFT-RISK: hashed-substring */
   dlgTriggerSettings: '#root > div > div > div:first-child button[aria-haspopup="dialog"]', /* DRIFT-RISK: structural 前缀(同 sidebar* 列链)+aria 语义锚后缀;源级另有 ctx meter/feedback note 两 haspopup=dialog 钮(条件挂载、会话列内),侧栏列限定零碰撞 */
   // —— menu 段(弹出菜单;探针 2026-09-01,host 0.1.1-rc.1——附录A)——
   // 宿主原生菜单 = dsh-client-ui-primitives Menu(portal:true):createPortal(list,document.body),

@@ -613,6 +613,11 @@ const MC_MAP = {
   dlgCard: '[role="dialog"][aria-labelledby]',                // aria 语义锚 stable
   dlgMask: '[role="presentation"]:has([role="dialog"][aria-labelledby]) > div[aria-hidden="true"]', // aria 语义锚 stable+:has 域定 settings 语义
   dlgNav: '[role="dialog"][aria-labelledby] nav',             // 弹窗左 nav(节序:通用/模型/插件/Agent 预设/豆包模式)
+  // dlgClose = settings 面板官方「关闭」钮(勘定 2026-09-03 probe-recon2:VOzbGW_close,面板
+  // content>header 右上 28×28;全面板 button 普查唯一 .close 后缀)。裁定轮 5:dialog 注入顶栏的
+  // 关闭方块镜像此钮程序化 click(活体实证 click→面板关净,与 Esc 同效;保官方行为)。
+  // 类后缀 close 为语义 token,前缀哈希随构建漂移(同 heroGlow/sessionRowArrow 纪律)。
+  dlgClose: '[role="dialog"][aria-labelledby] button[class*="close"]', /* DRIFT-RISK: hashed-substring */
   dlgTriggerSettings: '#root > div > div > div:first-child button[aria-haspopup="dialog"]', /* DRIFT-RISK: structural 前缀(同 sidebar* 列链)+aria 语义锚后缀;源级另有 ctx meter/feedback note 两 haspopup=dialog 钮(条件挂载、会话列内),侧栏列限定零碰撞 */
   // —— menu 段(弹出菜单;探针 2026-09-01,host 0.1.1-rc.1——附录A)——
   // 宿主原生菜单 = dsh-client-ui-primitives Menu(portal:true):createPortal(list,document.body),
@@ -4079,6 +4084,7 @@ var McMenus = {
     var heroObs = new MutationObserver(function () {
       try { if (!heroRoot || !heroRoot.isConnected) heroRoot = document.querySelector(MC_MAP.heroRoot); } catch (e) {}
       heroSync();
+      dlgSync(); // 裁定轮 5:同一 body observer 兼职 dialog 顶栏注入/摘除(官方开卡=childList 突变)
     });
     try { heroObs.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['data-phase', 'class'] }); } catch (e) {}
     heroSync();
@@ -4091,9 +4097,9 @@ var McMenus = {
         + 'font-family:var(--font-ui)!important;color:var(--mc-fg)!important}'
         + D + ' *{font-family:inherit!important;border-radius:0!important}'           // 像素字+直角全域压平
         + D + ' h1,' + D + ' h2,' + D + ' h3{font-family:var(--font-display)!important}' // 标题像素字(逗号臂逐臂带卡锚——裸 h2,h3 臂重置后代组合符会全域命中宿主标题)
-        + D + ' button{background:var(--mc-surface-2)!important;border:1px solid var(--mc-border)!important;'
+        + D + ' button:not(.mc-tbx){background:var(--mc-surface-2)!important;border:1px solid var(--mc-border)!important;' // :not(.mc-tbx)=注入顶栏的 13px 方块钮不吃按钮皮(!important 皮会压过 .mc-tbx 裸规则,裁定轮 5)
         + 'border-radius:0!important;font:500 12px/1.6 var(--font-ui)!important;color:var(--mc-fg)!important;padding:4px 12px}'
-        + D + ' button:active{background:var(--mc-fg)!important;color:var(--mc-surface)!important}'
+        + D + ' button:not(.mc-tbx):active{background:var(--mc-fg)!important;color:var(--mc-surface)!important}'
         + D + ' input,' + D + ' textarea{background:var(--mc-surface)!important;border:1px solid var(--mc-border)!important;' // 输入域皮(逗号臂逐臂带卡锚——裸 textarea 臂全域命中活体 composer 输入框,见 Fix round 1b)
         + 'border-radius:0!important;font:400 12px/1.6 var(--font-ui)!important;color:var(--mc-fg)!important}'
         + D + ' hr,' + D + ' [class*="separator"]{background:var(--mc-border-soft)!important;height:1px}'; // 发丝线(class 臂同带卡锚——裸 [class*="separator"] 全域拍 1px)
@@ -4112,12 +4118,59 @@ var McMenus = {
       dlgCss += MC_MAP.dlgNav + '{width:172px!important;flex:none!important;'
         + 'border-right:1px solid var(--mc-border-soft)!important;font-family:var(--font-sb)!important}';
     }
+    // 裁定轮 5:顶栏占位——卡 padding-top:20px(:has 门控挂在自有类 .mc-dlg-tb 在场,零官方锚;
+    // box-sizing 改 border-box 让 20px 吃进官方原高,面板不增高)。官方卡 display:flex row(nav|
+    // content),顶栏走 absolute 外挂横贯卡顶,flex 布局不被打断——nav/content 整体下移 20px。
+    if (MC_MAP.dlgCard) {
+      dlgCss += MC_MAP.dlgCard + ':has(.mc-dlg-tb){padding-top:20px!important;box-sizing:border-box!important}';
+    }
     if (dlgCss) {
       var dlgEl = document.createElement('style');
       dlgEl.setAttribute('data-mc-dlgskin', '');
       dlgEl.textContent = dlgCss;
       document.head.appendChild(dlgEl);
     }
+    // —— §C+ 裁定轮 5:dialog Mac 顶栏注入(官方无 titlebar DOM,家具级注入)。幕后同款 pinstripe
+    // 语汇+sprite 方块;关闭方块镜像官方「关闭」钮程序化 click(勘定 2026-09-03:VOzbGW_close
+    // click→面板关净,与 Esc 同效;保官方行为),锚漂移兜底=向卡派发 Esc keydown(冒泡至 React
+    // 根委托,live 实证退场)。缩放方块装饰(tabindex -1)。幂等:bar 在场且父为卡则跳过;卡被
+    // React 重建则 bar detached → isConnected 判定重建(与 heroEl 自愈同款)。teardown 摘净。
+    var dlgBar = null;
+    function mcDlgTitle(card) { // 顶栏标题读官方 aria-labelledby 指题元素(动态文本 → esc 后入 innerHTML)
+      try {
+        var id = card.getAttribute('aria-labelledby');
+        var el = id ? document.getElementById(id) : null;
+        var t = el ? String(el.textContent || '').trim() : '';
+        return t || '设置';
+      } catch (e) { return '设置'; }
+    }
+    function dlgSync() {
+      var card = null;
+      try { card = MC_MAP.dlgCard ? document.querySelector(MC_MAP.dlgCard) : null; } catch (e) {}
+      if (!card) {
+        if (dlgBar) { try { dlgBar.remove(); } catch (e) {} dlgBar = null; }
+        return;
+      }
+      if (dlgBar && dlgBar.isConnected && dlgBar.parentElement === card) return; // 幂等
+      dlgBar = document.createElement('div');
+      dlgBar.className = 'mc-dlg-tb';
+      dlgBar.innerHTML = '<span class="mc-tb-title">' + esc(mcDlgTitle(card)) + '</span>'
+        + '<button type="button" class="mc-tbx cl" aria-label="关闭" title="关闭">'
+        + '<svg aria-hidden="true"><use href="#i-close"/></svg></button>'
+        + '<button type="button" class="mc-tbx zm" aria-label="缩放（装饰）" title="缩放" tabindex="-1">'
+        + '<svg aria-hidden="true"><use href="#i-zoom"/></svg></button>';
+      dlgBar.querySelector('.mc-tbx.cl').addEventListener('click', function () {
+        var btn = null;
+        try { btn = MC_MAP.dlgClose ? card.querySelector(MC_MAP.dlgClose) : null; } catch (e) {}
+        if (btn) { try { btn.click(); return; } catch (e) {} } // 主路:镜像官方关闭钮
+        try { // 兜底:锚漂移时向卡派发 Esc(React 根委托捕获;live 实证同效)
+          card.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+        } catch (e) {}
+      });
+      card.insertBefore(dlgBar, card.firstChild);
+      flashIn(dlgBar, function () {});
+    }
+    dlgSync();
     return function teardown() {
       // M3 撤桥守卫：仅当桥仍指向本 mount 的 openMenu/fire 才撤——防止先卸的旧 mount 误撤后 mount 的桥
       if (MC_MENU_OPEN === openMenu) MC_MENU_OPEN = null;
@@ -4132,8 +4185,9 @@ var McMenus = {
       try { if (heroEl) heroEl.remove(); } catch (e) {}
       try { if (heroTb) heroTb.remove(); } catch (e) {}
       try { document.documentElement.removeAttribute('data-mc-hero'); } catch (e) {}
-      // §C dlg 皮撤净(styleEl menuPortal 同款:head 挂/teardown 摘)
+      // §C dlg 皮撤净(styleEl menuPortal 同款:head 挂/teardown 摘)+顶栏 DOM 摘(裁定轮 5)
       try { if (dlgEl) dlgEl.remove(); } catch (e) {}
+      try { if (dlgBar) dlgBar.remove(); } catch (e) {}
     };
   },
 };
