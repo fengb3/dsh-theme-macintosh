@@ -4032,7 +4032,7 @@ var McMenus = {
         + D + ' button{background:var(--mc-surface-2)!important;border:1px solid var(--mc-border)!important;'
         + 'border-radius:0!important;font:500 12px/1.6 var(--font-ui)!important;color:var(--mc-fg)!important;padding:4px 12px}'
         + D + ' button:active{background:var(--mc-fg)!important;color:var(--mc-surface)!important}'
-        + D + ' input,textarea{background:var(--mc-surface)!important;border:1px solid var(--mc-border)!important;'
+        + D + ' input,' + D + ' textarea{background:var(--mc-surface)!important;border:1px solid var(--mc-border)!important;' // 输入域皮(逗号臂逐臂带卡锚——裸 textarea 臂全域命中活体 composer 输入框,见 Fix round 1b)
         + 'border-radius:0!important;font:400 12px/1.6 var(--font-ui)!important;color:var(--mc-fg)!important}'
         + D + ' hr,' + D + ' [class*="separator"]{background:var(--mc-border-soft)!important;height:1px}'; // 发丝线(class 臂同带卡锚——裸 [class*="separator"] 全域拍 1px)
       // switch 换皮两行已裁(控制器裁定 1:T1 勘定实证 settings 面板 0 switch——navCell/分段钮形态,
