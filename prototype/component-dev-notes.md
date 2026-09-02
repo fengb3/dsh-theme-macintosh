@@ -401,6 +401,32 @@ state = { view, mode, current, sessions, busy:{}, fallback:{}, queue:{}, stats:{
   镜像留本地稿可重试。门禁断言8b 固化（稿清空/无幽灵稿/消息入流）。idle 回车与 IME 组字守卫
   勘定无恙（probe-enter-send：纯键序回车发送正常，isComposing 跳过语义正确）。
 
+### 8.10 dock 完全替代官方（2026-09-02 dock2 批实录，host 0.1.1-rc.2）
+- **官方 input dock 勘定**：renderer SlotOutlet 每槽 `div[data-slot=<key>]` display:contents 包装；
+  `conversation.input.dock` 三注入 = todo（conversation 包 order0）/goal（`[data-goal-bar]` order10）/
+  queue（QueueDock order20），渲染于 composerStack **官方卡之外**——dock 批藏卡不藏它，故与自绘
+  家具重复（用户报障④）。修复：`html[data-mc-dock-on] [data-slot="conversation.input.dock"]`
+  {display:none!important}（MC_MAP.composerDockSlot）——自绘坞完全替代；官方 QueueDock 队列删改
+  随整槽退场（写通道遗留候选）。
+- **goal 动作镜像（用户报障⑤）**：GoalBar 全形态部署包直读——常驻条钮 aria（暂停目标/恢复目标/
+  编辑目标/清除目标，按相位条件渲染）+ 编辑态受控 `input[aria-label="目标内容"]`（Enter=存/Esc=撤）
+  + 保存目标/取消编辑。自绘卡四钮=click 官方钮（display:none 内 click 先例）；Edit 四步=官方编辑态
+  开启→自绘内联输入（.gc-input，Enter/Esc/IME 守卫）→`mcMirrorAny`（textarea/input 按原型选
+  描述符）镜像草稿→click 官方保存；goal 变更（text|phase 键）重置编辑态（官方 goalId 同款）。
+  活体全周期实证：/goal 建→Pause(paused 徽标)→Resume→Edit(文案回写)→Delete(退场)。
+- **todo 变换闪烁（用户报障③）**：renderFurn 重建差分（text→done/now/todo 基线），类变行/新行
+  flashIn 三拍（`mcfx mc-ghost`→拍毕净）；活体实证：清单首现三行全闪、完成步骤一后 done 行闪 +
+  fallback now 迁移行（步骤二）同闪。
+- **furn 内部布局（用户报障②）**：`[data-mc-dock-furn]` 此前普通 block——子件零间距（.dock flex
+  gap 只及 furn↔composer）——即「todo 与 goal 无间隔」根因。修复：furn 自身 flex column gap:8 +
+  `.todo-acc + .goal-card{margin-top:8}` ⇒ 实测 16px。
+- **z 遮挡（用户报障①）**：官方条（面板 position:relative+负 margin 叠压带）藏匿即根治；自绘家具
+  全静态位，弹菜单（body 挂载 .mc-menu z:70 / 官方注入层 z:9000）恒在上——活体 elementFromPoint
+  命中实证（模型弹层中心命中弹层自身）。
+- **家具 slot 注册表**：`MC_DOCK_FURN`（{id,order,get}；内置 queue=0/todos=10/goal=20）+
+  `MC_DOCK_API.slot(id, order, get)` 注册/注销——自绘坞支持插入新元素（官方槽能力对等）。
+
+
 
 
 ---

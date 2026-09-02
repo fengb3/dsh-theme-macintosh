@@ -35,9 +35,9 @@ prototype/component-dev-notes.md §8.10 注记
 
 ### Task 3: 重建 + 活体勘验 + 门禁 + 注记收尾
 
-- [ ] Step 1: 装配重建（assemble + make-persistent）。
-- [ ] Step 2: 活体勘验（scratch 会话）：/goal 建目标 → 官方条 display:none + 自绘 goal 卡四钮；
+- [x] Step 1: 装配重建（assemble + make-persistent）。
+- [x] Step 2: 活体勘验（scratch 会话）：/goal 建目标 → 官方条 display:none + 自绘 goal 卡四钮；
        Pause→paused 徽标/Resume 回 active/Edit 内联改文案/Clear 退场；todo 有无时弹菜单
        （.mc-menu/官方注入层）不被遮挡；todo 变换行闪。勘毕 Clear 目标清场。
-- [ ] Step 3: verify-dock 增断言（官方槽藏匿确定性断言 + goal 钮形态 INFO/断言）→ GREEN。
-- [ ] Step 4: kit goal 样本补钮 + §8.10 注记 + `npm test` 全绿 → Commit `test(mc-dock2): 门禁/kit/注记收尾`
+- [x] Step 3: verify-dock 增断言（官方槽藏匿确定性断言 + goal 钮形态 INFO/断言）→ GREEN。
+- [x] Step 4: kit goal 样本补钮 + §8.10 注记 + `npm test` 全绿 → Commit `test(mc-dock2): 门禁/kit/注记收尾`

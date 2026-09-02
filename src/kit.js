@@ -617,7 +617,7 @@ function McKitPage() {
                   h('span', { className: 'kit-note' }, '400ms 一拍 · CLOCK.next 栅格 · idle→ready→busy→idle 循环')))),
             h('div', { className: 'kit-frame' },
               h('div', { className: 'kit-frame-tag' },
-                h('span', null, '家具 · queue-row / todo-acc 折叠+展开(点头开合)/ goal-card active+blocked —— furn 批活装(纯只读),本区为静态样本'),
+                h('span', null, '家具 · queue-row / todo-acc 折叠+展开(点头开合)/ goal-card active+blocked —— dock2 批:goal 动作钮镜像官方 GoalBar,官方槽整条藏匿;本区为静态样本'),
                 h('em', null, 'dock·furn')),
               h('div', { className: 'kit-frame-body' },
                 h('div', { className: 'kit-dockwrap', 'data-mc-dock': '' },

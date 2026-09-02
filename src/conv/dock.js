@@ -54,7 +54,8 @@ const MC_DOCK_CSS = [
   '[data-mc-dock] .goal-card[data-phase="paused"]{border-color:var(--mc-muted)}', // furn 批:paused 降灰(数据驱动徽标同挂)
   '[data-mc-dock] .gc-badge{flex:none;font:500 10px/1.6 var(--font-mono);color:var(--mc-fg);',
   ' background:var(--mc-surface-2);border:1px solid var(--mc-border);border-radius:var(--mc-r-tag);padding:0 5px}', // furn 批:paused/blocked 文字徽标
-  '[data-mc-dock] .todo-acc + .goal-card{margin-top:8px}', // dock2 批:todo 与 goal 卡间隔(叠 .dock flex gap:8 ⇒ 视觉 16px)
+  '[data-mc-dock] .todo-acc + .goal-card{margin-top:8px}', // dock2 批:todo 与 goal 卡额外间隔(furn 内 gap 8 + 此 8 ⇒ 视觉 16px)
+  '[data-mc-dock-furn]{display:flex;flex-direction:column;gap:8px}', // dock2 批:furn 内部布局(原型 .dock 同款节奏;此前 block 零间距=用户报障②)
   '[data-mc-dock] .goal-card .gc-input{flex:1;min-width:0;height:24px;padding:0 7px;background:var(--mc-surface-2);',
   ' border:1px solid var(--mc-border);color:var(--mc-fg);font:400 12px/1.6 var(--font-ui);outline:none}', // dock2 批:goal 内联编辑输入
   '[data-mc-dock] .composer{display:flex;flex-direction:column;gap:8px;background:var(--mc-surface);',

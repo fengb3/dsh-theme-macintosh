@@ -161,6 +161,15 @@ let p = await dockProbe();
 check('断言1: 自绘坞在场([data-mc-dock] .composer textarea)', here && p.dock && p.ta);
 check('断言1: 官方卡藏未删(在场且 display=none)', p.offPresent && p.offDisplay === 'none');
 check('断言1: html[data-mc-dock-on] 属性在场', p.on);
+// 断言1c(dock2 批):官方 input dock 槽(todo/goal/queue 三注入)藏匿——自绘坞完全替代
+{
+  const s = await page.evaluate(() => {
+    const slot = document.querySelector('[data-slot="conversation.input.dock"]');
+    return { present: !!slot, display: slot ? getComputedStyle(slot).display : null };
+  });
+  if (s.present) check('断言1c: 官方 input dock 槽藏匿(display:none)', s.display === 'none');
+  else info('断言1c: 官方 dock 槽未渲染(空态无靶;藏匿规则不破)', null);
+}
 const sendIdleDisabled = p.sendDisabled;
 const idleBusy = p.busy;
 const taHIdle = p.taH; // autogrow 基线(空稿 rows=1)
@@ -301,7 +310,14 @@ p = await dockProbe();
   } else {
     if (f.queueText != null) check('断言6: queue-row 文案形态(队列中还有 N 条消息 — …)', /队列中还有 \d+ 条消息/.test(f.queueText));
     if (f.todoBar != null) check('断言6: todo-acc 结构(bar+meta 计数+行)', !!f.todoBar && /^\d+\/\d+$/.test(f.todoMeta) && f.todoItems > 0);
-    if (f.goalPhase != null) check('断言6: goal-card 相位合法(active|paused|blocked)且有目标文', ['active', 'paused', 'blocked'].indexOf(f.goalPhase) >= 0 && !!f.goalObj);
+    if (f.goalPhase != null) {
+      check('断言6: goal-card 相位合法(active|paused|blocked)且有目标文', ['active', 'paused', 'blocked'].indexOf(f.goalPhase) >= 0 && !!f.goalObj);
+      const gBtns = await page.evaluate(() => {
+        const g = document.querySelector('[data-mc-dock] .goal-card');
+        return g ? [...g.querySelectorAll('.gc-acts button')].map((x) => x.textContent) : [];
+      });
+      check('断言6: goal-card 动作钮在场(dock2 镜像官方)', gBtns.indexOf('Edit') >= 0 && gBtns.indexOf('Delete') >= 0);
+    }
     info('断言6: 家具在场实况', { kids: f.kids, goalPhase: f.goalPhase, todoItems: f.todoItems });
   }
   if (!f.furnMissing) check('断言6: furn 内 .ctx-ring 零匹配(bar 圆环常驻,scope 到 furn)', f.furnCtx === 0);
