@@ -138,6 +138,13 @@ const MC_MAP = {
   // 不在滚动口内(scroll 首子为空 div[data-slot=conversation.session]),挂 composerStack 的
   // composerHero 变体内;容器自身无 data-*(内层仅 conversation.hero.brand.mark 槽位)。
   heroOfficial: '.pXSMma_root',   /* DRIFT-RISK: build-hash class(同上;勘定 2026-09-02) */
+  // heroGlow = 官方 hero 空态背后的装饰晕 SVG——用户验收报告的「椭圆形的圆形渐变色」真身
+  // (勘定 2026-09-03 probe-recon5/6:svg.wSkVaW_heroGlow viewBox 0 0 1051 468,内含
+  // <ellipse rx=425.5 ry=134 fill=#6187D8 fill-opacity=.08> + feGaussianBlur 50,position:absolute
+  // z:-1 1100×490;挂 composerStack 的 composerHero 变体内,不在 heroOfficial 藏匿域 → 官方空态
+  // 藏了晕还在)。CSS background/box-shadow/伪元素全零命中——渐变由 SVG 内部图形自绘,选择器
+  // 只能锚 class 后缀 heroGlow(语义 token,前缀哈希随构建漂移,同 sessionRowArrow 纪律)。
+  heroGlow: 'svg[class*="heroGlow"]', /* DRIFT-RISK: hashed-substring */
   // dlg 组 = 官方 settings 弹窗(settings-general SettingsRoot:触发钮居侧栏 footArea>settingsArea,
   // 面板 role=dialog aria-modal+aria-labelledby,overlay role=presentation fixed inset:0 z:1000,
   // mask rgba(0,0,0,.5)+blur(2px) 点击/Esc 关)。实勘 2026-09-02:触发钮点开→Esc 关净(role=dialog 归零)。

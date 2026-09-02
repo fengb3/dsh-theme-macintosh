@@ -164,8 +164,9 @@ html[data-theme="light"] .kit-panel .reasoning.run .r-txt .cover{background:#000
    复用原语;kit-dockwrap 限宽对齐原型 kit-band 640px 惯例,kit-dockctx 给 ctx-pop 上弹留位 */
 .kit-panel .kit-dockwrap{max-width:640px}
 .kit-panel .kit-dockctx{max-width:640px;min-height:172px;justify-content:flex-end}
-/* 浮层分区(overlays2 批 Task 4):hero 样本直用全局 .mc-hero 原语构图(静态陈列,面板内无
-   observer——相位挂载行为由活体 heroSync 供);dialog 控件样本 = §C dlg 皮规格的 .mc-dlg-demo
+/* 浮层分区(overlays2 批 Task 4):hero 样本直用全局原语构图(静态陈列,面板内无
+   observer——相位挂载行为由活体 heroSync 供;裁定轮后=窗框+mark+title 三件,窗框条
+   .mc-hero-tb/.mc-tbx 类由 overlays 批全局供给);dialog 控件样本 = §C dlg 皮规格的 .mc-dlg-demo
    kit 局部复刻,自有类零官方属性(audit 宿主扫描零接触);switch 样本随 Task 3 勘定裁除
    (官方 settings 面板 0 switch——navCell/分段钮形态,不渲染官方没有的结构)。 */
 .kit-panel .mc-dlg-demo{display:flex;flex-direction:column;gap:10px;max-width:420px;
@@ -487,14 +488,17 @@ function McKitPage() {
   // —— 浮层分区(overlays2 批 Task 4):hero 文案读 MC_HERO_COPY shim(Task 2 出口)。
   // kit 面板内无需 observer,纯陈列(相位挂载/官方藏匿由活体 heroSync 供)。孤立加载
   // (单文件 CJS 测试域)MC_HERO_COPY 缺席 → 空 copy 降级(dock mcDockState 守卫同款)。
-  // title 按 titleEm 切三段复刻活体构图(Think <em>Classic</em>,跑点什么。)——单源,无双源坑。
+  // 验收裁定轮(2026-09-03):shim 改 zh/en 双语字段,标题按 locale 取值(lang 前缀 zh → zh 否则
+  // en;与活体 heroSync 的 mcHeroTitle 同规);样本构图随裁定砍成窗框+mark+title 三件,无 badge/sub。
   const heroCopy = (typeof MC_HERO_COPY !== 'undefined' && MC_HERO_COPY) ? MC_HERO_COPY
-    : { title: '', titleEm: '', badge: '', sub: '' };
-  const heroTitle = (function () {
-    const t = heroCopy.title || ''; const em = heroCopy.titleEm || '';
-    const ix = em ? t.indexOf(em) : -1;
-    return ix >= 0 ? [t.slice(0, ix), t.slice(ix + em.length)] : [t, ''];
+    : { zh: '', en: '' };
+  const heroLang = (function () {
+    try {
+      return (document.documentElement && document.documentElement.lang)
+        || (typeof navigator !== 'undefined' && navigator.language) || '';
+    } catch (e) { return ''; }
   })();
+  const heroTitleText = String(heroLang).toLowerCase().indexOf('zh') === 0 ? heroCopy.zh : heroCopy.en;
 
   const swatches = [
     ['--mc-bg', 'bg 桌面底'], ['--mc-surface', 'surface 窗面'], ['--mc-fg', 'fg 文字'],
@@ -715,9 +719,10 @@ function McKitPage() {
                   h('div', { className: 'composer-bar' },
                     h('span', { className: 'cb-right' }, dockCtx))))))),
         // (h) 浮层分区(overlays2 批 Task 4):hero 空态静态陈列 + dialog 控件样本 + 注记行。
-        //     hero 直接复用全局 .mc-hero 原语构图(真类真样式;文案读 MC_HERO_COPY,kit 面板内
+        //     hero 直接复用全局原语构图(真类真样式;标题读 MC_HERO_COPY 按 locale 取值,kit 面板内
         //     无 observer 纯陈列——相位挂载/官方藏匿由活体 heroSync 供:body observer +
-        //     own gate html[data-mc-hero]);dialog 控件样本 = §C dlg 皮规格的 .mc-dlg-demo
+        //     own gate html[data-mc-hero]);验收裁定轮构图=窗框(.mc-hero-tb,sprite 方块)+mark+title
+        //     三件(badge/sub 已裁);dialog 控件样本 = §C dlg 皮规格的 .mc-dlg-demo
         //     kit 局部复刻,自有类零官方属性(audit 宿主扫描零接触);switch 样本随 Task 3
         //     勘定裁除(官方 settings 面板 0 switch,不渲染官方没有的结构——控制器裁定 1)。
         h('section', null,
@@ -725,17 +730,18 @@ function McKitPage() {
           h('div', { className: 'kit-frames' },
             h('div', { className: 'kit-frame' },
               h('div', { className: 'kit-frame-tag' },
-                h('span', null, 'hero 空态 · HappyMac 构图四件套(mark/title/badge/sub)· 文案读 MC_HERO_COPY · 活体挂 flowScroll 首,官方空态经自有门控属性藏匿'),
+                h('span', null, 'hero 空态 · 窗框标题栏+HappyMac mark+标题三件套(裁定轮:badge/sub 裁除,标题随 locale zh/en)· 活体挂 flowScroll 首+窗框挂 heroRoot 首,官方空态与 hero 晕经自有门控属性藏匿'),
                 h('em', null, 'hero')),
               h('div', { className: 'kit-frame-body' },
+                h('div', { className: 'mc-hero-tb' },
+                  h('span', { className: 'mc-tb-title' }, 'DeepSeek Harness'),
+                  h('button', { type: 'button', className: 'mc-tbx cl', 'aria-label': '关闭（装饰）', title: '关闭', tabIndex: -1 },
+                    h('svg', { 'aria-hidden': true }, h('use', { href: '#i-close' }))),
+                  h('button', { type: 'button', className: 'mc-tbx zm', 'aria-label': '缩放（装饰）', title: '缩放', tabIndex: -1 },
+                    h('svg', { 'aria-hidden': true }, h('use', { href: '#i-zoom' })))),
                 h('div', { className: 'mc-hero' },
                   h('svg', { className: 'mh-mark', 'aria-hidden': true }, h('use', { href: '#i-cl-HappyMac' })),
-                  h('div', { className: 'mh-title' },
-                    heroTitle[0],
-                    heroCopy.titleEm ? h('em', null, heroCopy.titleEm) : null,
-                    heroTitle[1]),
-                  h('span', { className: 'mh-badge' }, heroCopy.badge),
-                  h('p', { className: 'mh-sub' }, heroCopy.sub)))),
+                  h('div', { className: 'mh-title' }, heroTitleText)))),
             h('div', { className: 'kit-frame' },
               h('div', { className: 'kit-frame-tag' },
                 h('span', null, 'dialog 控件样本 · §C 皮规格直抄(方角钮/输入域/发丝分隔线)· 活体=官方弹窗纯 CSS 存在门控换皮,零 JS 门控'),

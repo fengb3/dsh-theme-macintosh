@@ -41,31 +41,60 @@ function mcMenuState(state, ev) {
   if (ev.t === 'open') return { open: { id: ev.id, anchor: ev.anchor || null } };
   return { open: null }; // close/esc/pick 一律关
 }
-// —— §B hero 空态(overlays 批2;原型 §9 L769-787,用户裁定:去芯片行/去模式下拉,纯静态零行为)——
-var MC_HERO_COPY = {
-  title: 'Think Classic,跑点什么。', titleEm: 'Classic',
-  badge: 'MACINTOSH · System 7 复古主题',
-  sub: '经典麦金塔工作区:白窗黑线、条纹标题栏、Finder 会话树。',
-};
+// —— §B hero 空态(overlays 批2;原型 §9 L769-787,用户裁定:去芯片行/去模式下拉,纯静态零行为;
+// 验收裁定轮 2026-09-03:构图砍成 mark+title 两件——badge/sub 整行退役;标题 i18n 双语,zh=用户
+// 裁定文案「探索未知之境」,en=主题初代 slogan「Think Classic」(用户「原版的那个 slogan」的转译,
+// 见注记 §11.3);locale 判定 documentElement.lang || navigator.language,前缀 zh → zh 否则 en;
+// mcHeroTitle 纯函数只收 lang 字符串(heroSync 侧读 DOM,测试域零 DOM)。)——
+var MC_HERO_COPY = { zh: '探索未知之境', en: 'Think Classic' };
+function mcHeroTitle(lang) {
+  var s = lang == null ? '' : String(lang).toLowerCase();
+  return s.indexOf('zh') === 0 ? MC_HERO_COPY.zh : MC_HERO_COPY.en;
+}
 function mcHeroAction(phase) { return phase === 'hero' ? 'mount' : 'unmount'; }
 var MC_HERO_CSS = [
   '.mc-hero{display:flex;flex-direction:column;align-items:center;gap:14px;padding:52px 24px 40px;text-align:center}',
   '.mc-hero .mh-mark{width:48px;height:48px;color:var(--mc-fg);filter:drop-shadow(2px 2px 0 rgba(0,0,0,.4))}',
   'html[data-theme="light"] .mc-hero .mh-mark{filter:none}',
   '.mc-hero .mh-title{font:700 34px/1.15 var(--font-display);letter-spacing:.01em;color:var(--mc-fg)}',
-  '.mc-hero .mh-title em{font-style:normal;color:var(--mc-accent)}',
-  '.mc-hero .mh-badge{display:inline-flex;align-items:center;padding:3px 10px;background:var(--mc-sel-bg);',
-  ' border:1px solid var(--mc-border-soft);border-radius:0;font:600 11px/1.6 var(--font-display);',
-  ' letter-spacing:.05em;color:var(--mc-fg)}',
-  '.mc-hero .mh-sub{max-width:420px;font:400 13px/1.8 var(--font-ui);color:var(--mc-muted)}',
   '@media (max-width:640px){.mc-hero .mh-title{font-size:26px}}',
+  // —— 窗框标题栏语汇(验收裁定轮 2026-09-03,原型 §titlebar L178 + sidebar .mc-titlebar 同族):
+  // 20px pinstripe 条纹面 + 顶缘 1px accent 线 + 13px sprite 方块(#i-close 左/#i-zoom 右,用户指认
+  // Kit Sprite 墙前两枚,三色位 var 随深浅自动反色)。hero 相(mc-hero-tb)与 dialog 卡(mc-dlg-tb)
+  // 共用面/方块类;hero 相由 heroSync 注入真 DOM(伪元素装不进 <use>,chrome ::before 伪元素版退役)。
+  '.mc-hero-tb,.mc-dlg-tb{display:flex;align-items:center;justify-content:center;height:20px;flex:none;',
+  ' font:600 12px/1 var(--font-sb);letter-spacing:.03em;color:var(--mc-fg);',
+  ' background:repeating-linear-gradient(180deg,rgba(255,255,255,.10) 0 1px,transparent 1px 3px),var(--mc-surface-2);',
+  ' border-bottom:1px solid var(--mc-border);box-shadow:inset 0 1px 0 var(--mc-accent)}',
+  'html[data-theme="light"] .mc-hero-tb,html[data-theme="light"] .mc-dlg-tb{background:',
+  ' repeating-linear-gradient(180deg,rgba(0,0,0,.20) 0 1px,transparent 1px 3px),var(--mc-surface-2)}',
+  '.mc-hero-tb{position:relative}',
+  '.mc-dlg-tb{position:absolute;top:0;left:0;right:0;z-index:1}', // dialog 卡内横贯卡顶(flex row 布局外挂,裁定5)
+  '.mc-tb-title{max-width:60%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
+  '.mc-tbx{position:absolute;top:50%;transform:translateY(-50%);width:13px;height:13px;',
+  ' display:grid;place-items:center;padding:0;border:none;background:none;cursor:pointer}',
+  '.mc-tbx.cl{left:5px}',
+  '.mc-tbx.zm{right:5px}',
+  '.mc-tbx svg{width:13px;height:13px;display:block}',
+  '.mc-tbx:active svg{opacity:.55}',
 ].join('');
 // 官方空态藏匿 CSS:own gate 属性门控(html[data-mc-hero],dock 批 composerHide 藏匿同款形态;
 // 控制器裁定——overlays 段零宿主属性片段硬编码,相位一致性由 heroSync 置/撤属性自动达成)。
 // typeof 守卫:单文件被测试以 CJS 独立加载时 MC_MAP 缺席(装配体内恒在),照 dock 先例静默回退空串。
+// 验收裁定轮四条门控追加(2026-09-03):①官方 hero 晕 SVG 藏(heroGlow,椭圆渐变真身);②chrome 批
+// 的 hero ::before 装饰条让位(真 DOM 窗框替代伪元素版,unmount/teardown 撤 gate 即回返);③composer
+// 席位 margin-top:auto 钉到滚动口底(hero 相「输入框靠屏幕最底下」裁定);④hero 本体上下 auto margin
+// 与③均分剩余空间(构图垂直居中于标题栏与输入坞之间)。
 var MC_OVERLAYS2_CSS = MC_HERO_CSS
   + (typeof MC_MAP !== 'undefined' && MC_MAP.heroOfficial
-    ? 'html[data-mc-hero] ' + MC_MAP.heroOfficial + '{display:none!important}' : '');
+    ? 'html[data-mc-hero] ' + MC_MAP.heroOfficial + '{display:none!important}' : '')
+  + (typeof MC_MAP !== 'undefined' && MC_MAP.heroGlow
+    ? 'html[data-mc-hero] ' + MC_MAP.heroGlow + '{display:none!important}' : '')
+  + (typeof MC_MAP !== 'undefined' && MC_MAP.heroRoot
+    ? 'html[data-mc-hero] ' + MC_MAP.heroRoot + '::before{display:none!important}' : '')
+  + (typeof MC_MAP !== 'undefined' && MC_MAP.composerSeat
+    ? 'html[data-mc-hero] ' + MC_MAP.composerSeat + '{margin-top:auto!important}' : '')
+  + 'html[data-mc-hero] .mc-hero{margin-top:auto!important;margin-bottom:auto!important}';
 // Task 5 定义表：项集按附录 A 勘定对齐宿主实有菜单（会话=rename/fork/archive workspace L700-716；
 // 工作区=rename/delete L459-468；新建类=workspaces.startSession/workspaces.create（二批 A 官方语义）。
 // view 两项宿主无对应服务/勘不通 → 不写 WIRING 键（mcMenuItems 自动滤除，菜单整体 no-op）。
@@ -290,8 +319,28 @@ var McMenus = {
     // §B hero:官方空态 CSS 藏 + 自绘 .mc-hero 挂 flowScroll 首;-相变/内容换场全走一个 body observer
     // (heroRoot 缺席不轮询——body observer 兼职探测,吸取 McFlow「8s 上限耗尽」教训)。
     // own gate:挂载置 html[data-mc-hero]、摘除撤之——官方空态藏匿随相位自动一致(控制器裁定 1/2)。
-    var heroEl = null, heroRoot = null;
+    // 验收裁定轮 2026-09-03:hero 相随挂 .mc-hero-tb 窗框标题栏(heroRoot 首子,sidebar .mc-titlebar
+    // 同款形态;方块= sprite #i-close/#i-zoom,chrome ::before 伪元素版经 gate CSS 让位)+composer
+    // 席位钉底(gate CSS)。窗框与 heroEl 同拍挂摘、同款 isConnected 自愈。
+    var heroEl = null, heroRoot = null, heroTb = null;
     try { heroRoot = document.querySelector(MC_MAP.heroRoot); } catch (e) {}
+    function mcHeroLang() {
+      try {
+        return (document.documentElement && document.documentElement.lang)
+          || (typeof navigator !== 'undefined' && navigator.language) || '';
+      } catch (e) { return ''; }
+    }
+    function heroTbBuild() {
+      var tb = document.createElement('div');
+      tb.className = 'mc-hero-tb';
+      // innerHTML 全静态字面量(零动态插值;方块 sprite 多色位,深浅自动反色)——sidebar build 同款形态
+      tb.innerHTML = '<span class="mc-tb-title">DeepSeek Harness</span>'
+        + '<button type="button" class="mc-tbx cl" aria-label="关闭（装饰）" title="关闭" tabindex="-1">'
+        + '<svg aria-hidden="true"><use href="#i-close"/></svg></button>'
+        + '<button type="button" class="mc-tbx zm" aria-label="缩放（装饰）" title="缩放" tabindex="-1">'
+        + '<svg aria-hidden="true"><use href="#i-zoom"/></svg></button>';
+      return tb;
+    }
     function heroSync() {
       var act = mcHeroAction(heroRoot ? heroRoot.getAttribute('data-phase') : null);
       if (act === 'mount' && (!heroEl || !heroEl.isConnected)) { // isConnected:宿主重建子树后滞留 detached 引用自愈(审查修复轮1)
@@ -300,15 +349,21 @@ var McMenus = {
         heroEl = document.createElement('div');
         heroEl.className = 'mc-hero';
         heroEl.innerHTML = '<svg class="mh-mark" aria-hidden="true"><use href="#i-cl-HappyMac"/></svg>'
-          + '<div class="mh-title">Think <em>' + MC_HERO_COPY.titleEm + '</em>,跑点什么。</div>'
-          + '<span class="mh-badge">' + MC_HERO_COPY.badge + '</span>'
-          + '<p class="mh-sub">' + MC_HERO_COPY.sub + '</p>'; // 静态字面量拼接常量,audit §3 豁免形态
+          + '<div class="mh-title">' + mcHeroTitle(mcHeroLang()) + '</div>'; // 双语常量表查值,audit §3 豁免形态
         host.insertBefore(heroEl, host.firstChild);
         try { document.documentElement.setAttribute('data-mc-hero', ''); } catch (e) {}
         flashIn(heroEl, function () {});
       } else if (act === 'unmount' && heroEl) {
         heroEl.remove(); heroEl = null;
         try { document.documentElement.removeAttribute('data-mc-hero'); } catch (e) {}
+      }
+      // 窗框标题栏(heroRoot 首子;heroEl 挂成为准——本体没挂成时条不挂,下一拍 observer 再来)
+      if (act === 'mount' && heroEl && heroRoot && (!heroTb || !heroTb.isConnected)) {
+        heroTb = heroTbBuild();
+        heroRoot.insertBefore(heroTb, heroRoot.firstChild);
+        flashIn(heroTb, function () {});
+      } else if (act === 'unmount' && heroTb) {
+        heroTb.remove(); heroTb = null;
       }
     }
     var heroObs = new MutationObserver(function () {
@@ -362,13 +417,14 @@ var McMenus = {
       try { document.removeEventListener('scroll', onScroll, { capture: true }); } catch (e) {}
       try { if (styleEl) styleEl.remove(); } catch (e) {}
       try { if (wrap) wrap.remove(); } catch (e) {}
-      // §B hero 撤净:observer 断开 + heroEl 摘除 + own gate 属性撤(藏匿门随卸载归零)
+      // §B hero 撤净:observer 断开 + heroEl/heroTb 摘除 + own gate 属性撤(藏匿门随卸载归零)
       try { heroObs.disconnect(); } catch (e) {}
       try { if (heroEl) heroEl.remove(); } catch (e) {}
+      try { if (heroTb) heroTb.remove(); } catch (e) {}
       try { document.documentElement.removeAttribute('data-mc-hero'); } catch (e) {}
       // §C dlg 皮撤净(styleEl menuPortal 同款:head 挂/teardown 摘)
       try { if (dlgEl) dlgEl.remove(); } catch (e) {}
     };
   },
 };
-if (typeof module !== 'undefined') module.exports = { McMenus: McMenus, mcMenuItems: mcMenuItems, mcMenuAlign: mcMenuAlign, mcMenuTop: mcMenuTop, mcMenuState: mcMenuState, mcMenuWsId: mcMenuWsId, mcHeroAction: mcHeroAction, MC_HERO_COPY: MC_HERO_COPY };
+if (typeof module !== 'undefined') module.exports = { McMenus: McMenus, mcMenuItems: mcMenuItems, mcMenuAlign: mcMenuAlign, mcMenuTop: mcMenuTop, mcMenuState: mcMenuState, mcMenuWsId: mcMenuWsId, mcHeroAction: mcHeroAction, mcHeroTitle: mcHeroTitle, MC_HERO_COPY: MC_HERO_COPY };
