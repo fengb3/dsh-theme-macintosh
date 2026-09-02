@@ -317,6 +317,42 @@ var McMenus = {
     });
     try { heroObs.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['data-phase', 'class'] }); } catch (e) {}
     heroSync();
+    // §C dialog/scrim 换皮:纯 CSS 存在门控(官方自开自关,JS 门控不可靠);menuPortal 皮形态复刻
+    var dlgCss = '';
+    if (MC_MAP.dlgCard) {
+      var D = MC_MAP.dlgCard;
+      dlgCss = D + '{background:var(--mc-surface)!important;border:1px solid var(--mc-border)!important;'
+        + 'border-radius:0!important;box-shadow:var(--mc-shadow-pop)!important;'
+        + 'font-family:var(--font-ui)!important;color:var(--mc-fg)!important}'
+        + D + ' *{font-family:inherit!important;border-radius:0!important}'           // 像素字+直角全域压平
+        + D + ' h1,h2,h3{font-family:var(--font-display)!important}'                    // 标题像素字
+        + D + ' button{background:var(--mc-surface-2)!important;border:1px solid var(--mc-border)!important;'
+        + 'border-radius:0!important;font:500 12px/1.6 var(--font-ui)!important;color:var(--mc-fg)!important;padding:4px 12px}'
+        + D + ' button:active{background:var(--mc-fg)!important;color:var(--mc-surface)!important}'
+        + D + ' input,textarea{background:var(--mc-surface)!important;border:1px solid var(--mc-border)!important;'
+        + 'border-radius:0!important;font:400 12px/1.6 var(--font-ui)!important;color:var(--mc-fg)!important}'
+        + D + ' hr,[class*="separator"]{background:var(--mc-border-soft)!important;height:1px}';
+      // switch 换皮两行已裁(控制器裁定 1:T1 勘定实证 settings 面板 0 switch——navCell/分段钮形态,
+      // spec §2「官方没有的结构不强造」硬前提;官方日后引入 switch 时 verify B 段会提示补皮)
+    }
+    if (MC_MAP.dlgMask) {
+      dlgCss += MC_MAP.dlgMask + '{background-image:radial-gradient(rgba(0,0,0,.55) 1px,transparent 1px)!important;'
+        + 'background-size:8px 8px!important;background-color:var(--mc-bg)!important}'; // scrim 点阵幕;z 不动(spec 裁定4)
+    }
+    // 结构档(勘定裁:dlgNav 非空才上;官方无对应结构不强造——spec §2 硬前提)。
+    // 冒烟实证(live 2026-09-02):面板 display:flex row,nav 即固定宽 flex 兄弟(188×800,旁 content
+    // 612×800)——172px+border-right 结构成立,规则照上;唯 brief 原稿 `dlgCard+' '+dlgNav` 双前缀
+    // 拼出嵌套 dialog 死选择器(live 0 命中),dlgNav 值本身已含 dlgCard 全前缀,单键即完整域定。
+    if (MC_MAP.dlgNav) {
+      dlgCss += MC_MAP.dlgNav + '{width:172px!important;flex:none!important;'
+        + 'border-right:1px solid var(--mc-border-soft)!important;font-family:var(--font-sb)!important}';
+    }
+    if (dlgCss) {
+      var dlgEl = document.createElement('style');
+      dlgEl.setAttribute('data-mc-dlgskin', '');
+      dlgEl.textContent = dlgCss;
+      document.head.appendChild(dlgEl);
+    }
     return function teardown() {
       // M3 撤桥守卫：仅当桥仍指向本 mount 的 openMenu/fire 才撤——防止先卸的旧 mount 误撤后 mount 的桥
       if (MC_MENU_OPEN === openMenu) MC_MENU_OPEN = null;
@@ -330,6 +366,8 @@ var McMenus = {
       try { heroObs.disconnect(); } catch (e) {}
       try { if (heroEl) heroEl.remove(); } catch (e) {}
       try { document.documentElement.removeAttribute('data-mc-hero'); } catch (e) {}
+      // §C dlg 皮撤净(styleEl menuPortal 同款:head 挂/teardown 摘)
+      try { if (dlgEl) dlgEl.remove(); } catch (e) {}
     };
   },
 };
