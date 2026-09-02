@@ -104,6 +104,41 @@ const heroProbe = () => pg.evaluate((sel) => {
   return r;
 }, SEL);
 
+// —— 主列窗框快照探针(裁定轮 2 R8:active 相 .mc-main-tb;须 active 相调用) ——
+const mainProbe = () => pg.evaluate(() => {
+  const root = document.querySelector('div[data-phase]');
+  const tb = document.querySelector('.mc-main-tb');
+  const r = {
+    phase: root ? root.getAttribute('data-phase') : null,
+    mainCount: document.querySelectorAll('.mc-main-tb').length,
+    headerPresent: !!document.querySelector('div[data-phase] header'),
+    crumb: document.querySelector('div[data-phase] [class*="crumbCurrent"]'),
+  };
+  if (tb) {
+    const bcs = getComputedStyle(tb);
+    const cl = tb.querySelector('.mc-tbx.cl use');
+    const zm = tb.querySelector('.mc-tbx.zm use');
+    r.tb = {
+      h: bcs.height,
+      first: tb.parentElement === root && root.firstElementChild === tb,
+      closeHref: cl ? (cl.getAttribute('href') || '') : null,
+      zoomHref: zm ? (zm.getAttribute('href') || '') : null,
+      title: (tb.querySelector('.mc-tb-title') || { textContent: '' }).textContent,
+      focusable: tb.querySelectorAll('.mc-tbx [tabindex="0"]').length, // 装饰方块不应进 tab 序
+    };
+    r.crumbText = r.crumb ? String(r.crumb.textContent || '').trim() : null;
+    // 官方 header 交互保全:标题钮+页签钮在场可点(零外科=只读镜像的前提)
+    r.headerButtons = document.querySelectorAll('div[data-phase] header button').length;
+    const crumbRect = r.crumb ? r.crumb.getBoundingClientRect() : null;
+    r.crumbVisible = crumbRect ? crumbRect.width > 0 : false;
+    const tbRect = tb.getBoundingClientRect();
+    r.tbTop = Math.round(tbRect.top);
+    const header = document.querySelector('div[data-phase] header');
+    r.headerTop = header ? Math.round(header.getBoundingClientRect().top) : null;
+  }
+  return r;
+});
+
 // —— dialog 快照探针(dlgCard 壳 + 顶栏 + scrim;须开窗态调用) ——
 const dlgProbe = () => pg.evaluate((sel) => {
   const card = document.querySelector(sel.dlgCard);
@@ -223,12 +258,26 @@ if (picked == null) {
   const hp2 = await heroProbe();
   info('A: 切进会话「' + picked + '」后 data-phase', hp2.phase);
   ok(hp2.phase !== 'hero' && hp2.heroCount === 0 && hp2.tbCount === 0 && !hp2.gate, '深色 hero: 切实有会话 → 相变+.mc-hero/窗框退场+gate 撤 (phase=' + hp2.phase + ' count=' + hp2.heroCount + ' tb=' + hp2.tbCount + ')');
+  // —— R8 主列窗框(active 相):.mc-main-tb 在场+sprite 双方块+标题镜像官方 crumb+官方 header 保全 ——
+  let mp = await mainProbe();
+  ok(mp.phase === 'active' && mp.mainCount === 1 && mp.tb && mp.tb.h === '20px' && mp.tb.first,
+    '深色 main: R8 主列窗框在场 20px 且居 root 首子 (count=' + mp.mainCount + ' h=' + (mp.tb ? mp.tb.h : null) + ' first=' + (mp.tb ? mp.tb.first : null) + ')');
+  if (mp.tb) {
+    ok(mp.tb.closeHref === '#i-close' && mp.tb.zoomHref === '#i-zoom', '深色 main: 窗框 sprite 双方块 (cl=' + mp.tb.closeHref + ' zm=' + mp.tb.zoomHref + ')');
+    ok(mp.crumbText != null && mp.tb.title === mp.crumbText, '深色 main: 标题只读镜像官方 crumb (「' + mp.tb.title + '」 vs 「' + mp.crumbText + '」)');
+    ok(mp.headerPresent && mp.headerButtons >= 4 && mp.crumbVisible, '深色 main: 官方 header 保全(钮数=' + mp.headerButtons + ' 标题钮可见=' + mp.crumbVisible + ')');
+    ok(mp.tbTop != null && mp.headerTop != null && mp.headerTop >= mp.tbTop + 18, '深色 main: 窗框在 header 上方且官方头部整体下移 (tb=' + mp.tbTop + ' header=' + mp.headerTop + ')');
+    ok(mp.tb.focusable === 0, '深色 main: 装饰方块零 tab 序 (tabindex=0 数=' + mp.tb.focusable + ')');
+    await pg.screenshot({ path: join(SHOTS, 'overlays2-dark-active.png') });
+  }
   const used = await newSessionMirror();
   ok(!!used, '深色 hero: 新建会话镜像 click 有靶(自绘优先/官方代理兜底)');
   info('A: 镜像 click 使用目标', used);
   let hp3 = await heroProbe();
   for (let i = 0; i < 20 && hp3.heroCount === 0; i++) { await pg.waitForTimeout(400); hp3 = await heroProbe(); }
   ok(hp3.heroCount === 1 && hp3.tbCount === 1 && hp3.gate && hp3.phase === 'hero', '深色 hero: 切回空会话(新建镜像) → 复挂(构图+窗框) (count=' + hp3.heroCount + ' tb=' + hp3.tbCount + ' phase=' + hp3.phase + ')');
+  const mp3 = await mainProbe(); // R8:回 hero 相 → 主列窗框退场(同根互斥共存)
+  ok(mp3.mainCount === 0, '深色 main: 切回 hero 相 → .mc-main-tb 退场 (count=' + mp3.mainCount + ')');
 }
 
 // ═══ B. dialog(深色) ═══

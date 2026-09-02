@@ -79,7 +79,7 @@ const distOverlays = distRaw != null ? stripComments(segmentRaw(distRaw, '// src
 const clientOverlays = clientRaw != null ? stripComments(segmentRaw(clientRaw, '// src/conv/overlays.js', '// src/kit.js') || '') : null;
 const srcOverlaysFile = join(ROOT, 'src', 'conv', 'overlays.js');
 const srcOverlaysText = srcText.get(srcOverlaysFile) || null;
-const OVERLAYS_WHITELIST = new Set(['menuPortal', 'menuHostItem', 'heroRoot', 'heroOfficial', 'heroGlow', 'dlgCard', 'dlgMask', 'dlgNav', 'dlgTriggerSettings', 'dlgClose']); // overlays2 批(2026-09-02)防御性登记六键名——键名非括号形态不产 token,照 dock 先例;裁定轮(2026-09-03)增 heroGlow/dlgClose 两键(键名防御性登记,同前)
+const OVERLAYS_WHITELIST = new Set(['menuPortal', 'menuHostItem', 'heroRoot', 'heroOfficial', 'heroGlow', 'dlgCard', 'dlgMask', 'dlgNav', 'dlgTriggerSettings', 'dlgClose', 'sessTitle', 'heroRow', 'heroStack']); // overlays2 批(2026-09-02)防御性登记六键名——键名非括号形态不产 token,照 dock 先例;裁定轮(2026-09-03)增 heroGlow/dlgClose 两键;裁定轮2(2026-09-03)增 sessTitle/heroRow/heroStack 三键(键名防御性登记,同前)
 // dock 段照 overlays 段同款机制：段定位 '// src/conv/dock.js' → '// src/conv/overlays.js'，
 // 白名单 DOCK_WHITELIST = composerCard + MC_MAP dock 键（骨架期零选择器；Task 4+ mount 引用时放行；
 // 验收轮1 2026-09-01 增四新键 composerCmd/composerPerm/composerModel/composerCtx——新值全为闭合

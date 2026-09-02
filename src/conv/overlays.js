@@ -62,13 +62,14 @@ var MC_HERO_CSS = [
   // 20px pinstripe 条纹面 + 顶缘 1px accent 线 + 13px sprite 方块(#i-close 左/#i-zoom 右,用户指认
   // Kit Sprite 墙前两枚,三色位 var 随深浅自动反色)。hero 相(mc-hero-tb)与 dialog 卡(mc-dlg-tb)
   // 共用面/方块类;hero 相由 heroSync 注入真 DOM(伪元素装不进 <use>,chrome ::before 伪元素版退役)。
-  '.mc-hero-tb,.mc-dlg-tb{display:flex;align-items:center;justify-content:center;height:20px;flex:none;',
+  // 裁定轮 2 增主列窗框 .mc-main-tb(active 相主列顶栏,同面同方块;三态共用一族)。
+  '.mc-hero-tb,.mc-dlg-tb,.mc-main-tb{display:flex;align-items:center;justify-content:center;height:20px;flex:none;',
   ' font:600 12px/1 var(--font-sb);letter-spacing:.03em;color:var(--mc-fg);',
   ' background:repeating-linear-gradient(180deg,rgba(255,255,255,.10) 0 1px,transparent 1px 3px),var(--mc-surface-2);',
   ' border-bottom:1px solid var(--mc-border);box-shadow:inset 0 1px 0 var(--mc-accent)}',
-  'html[data-theme="light"] .mc-hero-tb,html[data-theme="light"] .mc-dlg-tb{background:',
+  'html[data-theme="light"] .mc-hero-tb,html[data-theme="light"] .mc-dlg-tb,html[data-theme="light"] .mc-main-tb{background:',
   ' repeating-linear-gradient(180deg,rgba(0,0,0,.20) 0 1px,transparent 1px 3px),var(--mc-surface-2)}',
-  '.mc-hero-tb{position:relative}',
+  '.mc-hero-tb,.mc-main-tb{position:relative}',
   '.mc-dlg-tb{position:absolute;top:0;left:0;right:0;z-index:1}', // dialog 卡内横贯卡顶(flex row 布局外挂,裁定5)
   '.mc-tb-title{max-width:60%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
   '.mc-tbx{position:absolute;top:50%;transform:translateY(-50%);width:13px;height:13px;',
@@ -366,13 +367,58 @@ var McMenus = {
         heroTb.remove(); heroTb = null;
       }
     }
+    // —— R8 主聊天列窗口框(active 相;裁定轮 2 2026-09-03)——
+    // 勘定:active 相主列顶 = 官方 header(wSkVaW_header 经 display:contents 槽位壳成为 root 的
+    // flex 子件:titleCluster 会话标题面包屑钮+模式指示+Session log 钮+对话/轨迹/上下文三页签;
+    // 模型选择器不在 header,在输入坞域)。零外科:官方 header 原样保留全交互,只在其上方插一条
+    // Mac 窗框标题栏(.mc-main-tb,heroRoot 首子同位——root 是 flex column,header/滚动口自然
+    // 整体下移 21px)。关闭/缩放方块装饰(active 相无「关窗」官方语义,与 hero 窗框同款 tabindex
+    // -1);标题只读镜像官方 crumb(sessTitle 锚,textContent 写入零 HTML 注入面),每拍 observer
+    // 校对(切会话/行内改名随拍刷新;锚漂移回退静态 'DeepSeek Harness')。hero 相=hero 窗框,
+    // active 相=本条,同根互斥共存(heroSync/mainSync 各按 data-phase 挂摘)。
+    var mainTb = null, mainRoot = null;
+    function mcMainTitle() {
+      try {
+        var el = MC_MAP.sessTitle ? document.querySelector(MC_MAP.sessTitle) : null;
+        return el ? String(el.textContent || '').trim() : '';
+      } catch (e) { return ''; }
+    }
+    function mainTbBuild() {
+      var tb = document.createElement('div');
+      tb.className = 'mc-main-tb';
+      tb.innerHTML = '<span class="mc-tb-title"></span>' // 标题动态镜像,挂载后 textContent 填充
+        + '<button type="button" class="mc-tbx cl" aria-label="关闭（装饰）" title="关闭" tabindex="-1">'
+        + '<svg aria-hidden="true"><use href="#i-close"/></svg></button>'
+        + '<button type="button" class="mc-tbx zm" aria-label="缩放（装饰）" title="缩放" tabindex="-1">'
+        + '<svg aria-hidden="true"><use href="#i-zoom"/></svg></button>';
+      return tb;
+    }
+    function mainSync() {
+      try { mainRoot = document.querySelector(MC_MAP.heroRoot); } catch (e) { mainRoot = null; }
+      var act = !!mainRoot && mainRoot.getAttribute('data-phase') === 'active';
+      if (act && (!mainTb || !mainTb.isConnected || mainTb.parentElement !== mainRoot)) {
+        mainTb = mainTbBuild();
+        mainTb.querySelector('.mc-tb-title').textContent = mcMainTitle() || 'DeepSeek Harness';
+        mainRoot.insertBefore(mainTb, mainRoot.firstChild);
+        flashIn(mainTb, function () {});
+      } else if (!act && mainTb) {
+        mainTb.remove(); mainTb = null;
+      }
+      if (mainTb && mainTb.isConnected) { // 标题动态校对(改题/切会话 → 下一拍 observer 随刷)
+        var nt = mcMainTitle();
+        var span = mainTb.querySelector('.mc-tb-title');
+        if (span && nt && span.textContent !== nt) span.textContent = nt;
+      }
+    }
     var heroObs = new MutationObserver(function () {
       try { if (!heroRoot || !heroRoot.isConnected) heroRoot = document.querySelector(MC_MAP.heroRoot); } catch (e) {}
       heroSync();
+      mainSync(); // 裁定轮 2:同一 body observer 兼职主列窗框注入/摘除(data-phase 相变驱动)
       dlgSync(); // 裁定轮 5:同一 body observer 兼职 dialog 顶栏注入/摘除(官方开卡=childList 突变)
     });
     try { heroObs.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['data-phase', 'class'] }); } catch (e) {}
     heroSync();
+    mainSync(); // 裁定轮 2:首拍同步(active 恢复态直接落主列窗框)
     // §C dialog/scrim 换皮:纯 CSS 存在门控(官方自开自关,JS 门控不可靠);menuPortal 皮形态复刻
     var dlgCss = '';
     if (MC_MAP.dlgCard) {
@@ -470,6 +516,8 @@ var McMenus = {
       try { if (heroEl) heroEl.remove(); } catch (e) {}
       try { if (heroTb) heroTb.remove(); } catch (e) {}
       try { document.documentElement.removeAttribute('data-mc-hero'); } catch (e) {}
+      // R8 主列窗框撤净(裁定轮 2)
+      try { if (mainTb) mainTb.remove(); } catch (e) {}
       // §C dlg 皮撤净(styleEl menuPortal 同款:head 挂/teardown 摘)+顶栏 DOM 摘(裁定轮 5)
       try { if (dlgEl) dlgEl.remove(); } catch (e) {}
       try { if (dlgBar) dlgBar.remove(); } catch (e) {}

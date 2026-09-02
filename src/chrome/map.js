@@ -163,6 +163,21 @@ const MC_MAP = {
   // 类后缀 close 为语义 token,前缀哈希随构建漂移(同 heroGlow/sessionRowArrow 纪律)。
   dlgClose: '[role="dialog"][aria-labelledby] button[class*="close"]', /* DRIFT-RISK: hashed-substring */
   dlgTriggerSettings: '#root > div > div > div:first-child button[aria-haspopup="dialog"]', /* DRIFT-RISK: structural 前缀(同 sidebar* 列链)+aria 语义锚后缀;源级另有 ctx meter/feedback note 两 haspopup=dialog 钮(条件挂载、会话列内),侧栏列限定零碰撞 */
+  // sessTitle = active 相主列 header 会话标题钮(勘定 2026-09-03 probe-r2-recon2:wSkVaW_header
+  // > titleRow > titleCluster 面包屑钮 wSkVaW_crumb.wSkVaW_crumbCurrent=会话标题本体;裁定轮 2
+  // 主列注入 titlebar .mc-main-tb 的标题只读镜像此钮 textContent,零 HTML 注入面)。类后缀
+  // crumbCurrent 为语义 token,前缀哈希随构建漂移(同 heroGlow/dlgClose 纪律)。
+  sessTitle: 'div[data-phase] [class*="crumbCurrent"]', /* DRIFT-RISK: hashed-substring */
+  // heroRow = hero 相官方「工作空间+模式」双下拉行(勘定 2026-09-03 probe-r2-recon:
+  // wSkVaW_heroWorkspaceRow=pXSMma_workspace「选择工作区」+cubgiG_seat「标准模式」两钮的容器,
+  // 挂 composerStack 的 composerHero 变体内[不在 heroOfficial 藏匿域,hero 相本就可见];
+  // 裁定轮 2:gate CSS display:contents 拍平中间层,行升为滚动口 flex 子件,居中悬于 hero 之下)。
+  // 类后缀 heroWorkspaceRow 为语义 token,前缀哈希随构建漂移(同 heroGlow 纪律)。
+  heroRow: '[class*="heroWorkspaceRow"]', /* DRIFT-RISK: hashed-substring */
+  // heroStack = composerStack 的 composerHero 变体容器(heroRow 与官方卡的父;裁定轮 2 gate CSS
+  // display:contents 拍平用)。类后缀 composerHero 为语义 token(变体名),前缀哈希随构建漂移;
+  // active 相无此变体(实测零命中),gate 仅 hero 相在场,双保险零越域。
+  heroStack: '[class*="composerHero"]', /* DRIFT-RISK: hashed-substring */
   // —— menu 段(弹出菜单;探针 2026-09-01,host 0.1.1-rc.1——附录A)——
   // 宿主原生菜单 = dsh-client-ui-primitives Menu(portal:true):createPortal(list,document.body),
   // list 为 div[role="menu"] 定位浮层(position:fixed 内联 left/top,viewport 内 clamp;
