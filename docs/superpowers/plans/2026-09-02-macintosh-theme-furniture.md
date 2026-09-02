@@ -42,18 +42,18 @@ dist/client-body.js + client.js   重建产物(不手改)
 
 **Files:** `src/conv/dock.js`（mount 内）
 
-- [ ] Step 1: 订阅层——`subList/subSess/subTodos/subGoal` 四句柄 + `furnSync()`：
+- [x] Step 1: 订阅层——`subList/subSess/subTodos/subGoal` 四句柄 + `furnSync()`：
       list 快照取 current；current 变 → 重订 session 级三订阅（binding 缺席置空）；
       todos/goal 经 faceOf('todos'/'goal').getSnapshot() 读（undefined/null→null）；
       queue 经 binding.session.getSnapshot().queue → mcQueueText；签名比对变了才 renderFurn。
       全 try/catch；ctx.sessions 缺席整层不装（DOCK_DATA 三键不写）。
-- [ ] Step 2: DOCK_DATA 三键 getter 改读 furnSync 维护的快照变量（queue:{text}/todos:规范化
+- [x] Step 2: DOCK_DATA 三键 getter 改读 furnSync 维护的快照变量（queue:{text}/todos:规范化
       {done,now,text}[]/goal:mcGoalCard 形）；renderFurn：todo 行类 now 数据驱动；
       goal-card 加 gc-badge/title 轮次；开合态保持（重建前读 open，重建后回放）；
       DOCK_DATA.ctx 死分支移除。
-- [ ] Step 3: CSS 两条（.gc-badge / goal-card[data-phase="paused"]）。
-- [ ] Step 4: teardown 追加四退订。
-- [ ] Step 5: `npm test` 全绿 → Commit `feat(mc-furn): DOCK_DATA 活装——四订阅差分重绘(纯只读)`
+- [x] Step 3: CSS 两条（.gc-badge / goal-card[data-phase="paused"]）。
+- [x] Step 4: teardown 追加四退订。
+- [x] Step 5: `npm test` 全绿 → Commit `feat(mc-furn): DOCK_DATA 活装——四订阅差分重绘(纯只读)`
 
 ### Task 3: 装配重建 + kit 注记 + 刷新冒烟
 
