@@ -9,6 +9,11 @@
 //   C 确认框(遇则断): 删除确认小卡在场时同款壳断言;不可达合法 INFO(Task 3 实证官方树被
 //           McFinder 遮蔽,删除确认非破坏路径不可达——预期走 INFO 分支);
 //   D 深浅两遍: html[data-theme] 切换后 A/B 核心断言复跑(verify-toolcard 直改 dataset 先例);
+//   G 失配演练(spec §5 活体门禁硬项「破坏锚 → 官方原样 → 还原」;深色,顺序双演练,置于 kit 分区
+//           之前——kit 的 addInitScript 持久注入,reload 会重开检视页且其 hero 样本直用 .mc-hero
+//           真类,会污染演练② heroCount):①摘 style[data-mc-dlgskin] → 点设置 → 官方渲染回返
+//           (dlgCard 圆角非 0)→ Esc → reload 主题重挂皮(单例 1 还原);②摘 .mc-hero+own gate →
+//           官方空态回返 → 良性突变拨一拍 body observer → 自愈复挂+gate 复位(官方空态复藏);
 //   E 零页面错误 + 截图 shots/overlays2-{dark,light}-{hero,dlg}.png;
 //   F kit 浮层分区(verify-toolcard「kit 分区」先例补账): hero 样本构图/控件样本(无 switch)/注记行。
 // 只读纪律: 不发消息不删数据;新建会话镜像 click 为复挂验证所需(留一个空会话,不产生模型调用)。
@@ -211,6 +216,57 @@ if (dl.mask) {
 await pg.screenshot({ path: join(SHOTS, 'overlays2-light-dlg.png') });
 ok(await escClosed(), '浅色 dlg: Esc 关闭 → dlgCard 退场');
 await pg.evaluate((t) => { document.documentElement.dataset.theme = t || 'dark'; }, theme0); // 测毕还原起点相
+
+// ═══ G. 失配演练(spec §5 活体门禁硬项:破坏锚 → 官方原样 → 还原;深色,顺序双演练) ═══
+// 置于 kit 分区之前:kit 走 addInitScript 持久注入,此后每次 reload 都会重开检视页,且其 hero 样本
+// 直用 .mc-hero 真类,会污染演练②的 heroCount 断言(此处 reload 时 initScript 尚未注册,页面干净)。
+// reload 后宿主回读存档主题,起点 dataset 直改不持久 → 重钉深色(起点归一同款形态)。
+await pg.evaluate(() => { document.documentElement.dataset.theme = 'dark'; });
+await pg.waitForTimeout(600);
+info('失配演练: data-theme', await pg.evaluate(() => document.documentElement.getAttribute('data-theme')));
+
+// —— ① dialog 皮:摘 style[data-mc-dlgskin] → 官方渲染回返 → reload 让主题重挂皮(单例还原) ——
+info('失配演练① dlg: 摘 style[data-mc-dlgskin] → 点设置触发', null);
+await pg.evaluate(() => { const s = document.querySelector('style[data-mc-dlgskin]'); if (s) s.remove(); });
+await pg.evaluate((s) => { const t = document.querySelector(s); if (t) t.click(); }, SEL.trigger);
+await pg.waitForTimeout(1500);
+const dgM = await dlgProbe();
+ok(dgM.card && dgM.radius !== '0px', '失配演练① dlg: 皮摘 → 官方渲染回返(dlgCard 在场+圆角非 0, 实值 ' + dgM.radius + ')');
+ok(await escClosed(), '失配演练① dlg: Esc 关净(预备 reload 还原)');
+await pg.reload({ waitUntil: 'domcontentloaded' });
+await pg.waitForTimeout(9000); // 主题重挂节律(kit 分区 reload 同款)
+const skinN = await pg.evaluate(() => document.querySelectorAll('style[data-mc-dlgskin]').length);
+ok(skinN === 1, '失配演练① 还原: reload → 主题重挂 → style[data-mc-dlgskin] 单例回返 (count=' + skinN + ')');
+
+// —— ② hero:摘 .mc-hero+own gate → 官方空态回返 → 良性突变拨一拍 body observer → 自愈复挂 ——
+// 破坏与官方回返断言须同一 evaluate 内同步取:remount 走 observer 微任务,一旦跨 await 中间态就
+// 可能已被自愈抹掉;computed style 读取强制同步重排,摘 gate 后立即读值可信。
+let hq = await heroProbe();
+if (hq.heroCount === 0) { // reload 恢复态未落空会话 → 镜像新建归一(A 段守则同款)
+  const usedM = await newSessionMirror();
+  ok(!!usedM, '失配演练② 归一: 新建会话镜像 click 有靶');
+  for (let i = 0; i < 20 && hq.heroCount === 0; i++) { await pg.waitForTimeout(400); hq = await heroProbe(); }
+}
+ok(hq.heroCount === 1 && hq.gate, '失配演练② hero: 基线 — .mc-hero 在场+gate 置位 (count=' + hq.heroCount + ' gate=' + hq.gate + ')');
+const hM = await pg.evaluate((sel) => {
+  const h = document.querySelector('.mc-hero');
+  if (h) h.remove();
+  document.documentElement.removeAttribute('data-mc-hero');
+  const official = document.querySelector(sel.heroOfficial);
+  return {
+    heroCount: document.querySelectorAll('.mc-hero').length,
+    gate: document.documentElement.hasAttribute('data-mc-hero'),
+    officialPresent: !!official,
+    officialDisplay: official ? getComputedStyle(official).display : null,
+  };
+}, SEL);
+ok(hM.heroCount === 0 && !hM.gate, '失配演练② hero: 破坏生效 — .mc-hero 摘+gate 撤 (count=' + hM.heroCount + ')');
+ok(hM.officialPresent && hM.officialDisplay !== 'none', '失配演练② hero: gate 撤 → 官方空态回返 (present=' + hM.officialPresent + ' display=' + hM.officialDisplay + ')');
+await pg.evaluate(() => { const poke = document.createElement('div'); poke.style.display = 'none'; document.body.appendChild(poke); poke.remove(); }); // 良性突变 → observer 一拍
+let hH = await heroProbe();
+for (let i = 0; i < 10 && (hH.heroCount === 0 || !hH.gate); i++) { await pg.waitForTimeout(400); hH = await heroProbe(); }
+ok(hH.heroCount === 1 && hH.gate, '失配演练② 还原: observer 自愈 → .mc-hero 复挂+gate 置回 (count=' + hH.heroCount + ' gate=' + hH.gate + ')');
+if (hH.officialPresent) ok(hH.officialDisplay === 'none', '失配演练② 还原: gate 复位 → 官方空态复藏 (' + hH.officialDisplay + ')');
 
 // ═══ F. kit 浮层分区(verify-toolcard「kit 分区」先例;裁定 1:无 switch 样本) ═══
 await pg.addInitScript(() => { window.__MC_KIT_OPEN__ = true; });
