@@ -1,6 +1,6 @@
 // src/core/sprite.js —— SVG 符号库（源：prototype FIGMA-ASSETS 区间，逐只照搬；Watch 取 assets 快照并剥 Inkpad 元数据）
 // 多色位挂 var(--box-line/--box-face/--surface-3)，单色位 currentColor（原型即如此，未改动）
-// 品牌件：Apple/Finder/HappyMac/Watch（viewBox 0 0 2000 2000 的大件保持原样）；气球原型未收录，后续任务再补
+// 品牌件：Apple/Finder/HappyMac/Watch（viewBox 0 0 2000 2000 的大件保持原样）；气球/软盘取自原型 FIGMA-ASSETS 区间
 // 协议：顶层声明 McSprite；mount 在 apply 时把 <svg data-mc-sprite> 挂到 body 首位，返回 teardown
 const McSprite = {
   markup: `
@@ -45,6 +45,12 @@ const McSprite = {
   <symbol id="i-px-attach" viewBox="0 0 24 24"><path d="M7 5v14H5V3h14v18H9V7h6v10h-2V9h-2v10h6V5H7z" fill="currentColor"/></symbol>
   <symbol id="i-px-send" viewBox="0 0 24 24"><path d="M4 11v2h12v2h2v-2h2v-2h-2V9h-2v2H4zm10-4h2v2h-2V7zm0 0h-2V5h2v2zm0 10h2v-2h-2v2zm0 0h-2v2h2v-2z" fill="currentColor"/></symbol>
   <symbol id="i-px-stop" viewBox="0 0 24 24"><path d="M6 2h2v2H6V2Zm10 2h-2v2h-4V4H8v2H6v3H4V7H2v2h2v2h2v2H2v2h4v2H4v2H2v2h2v-2h2v3h8v-2H8V8h8v6h2v-3h2V9h2V7h-2v2h-2V6h-2V4Zm0 0V2h2v2h-2Zm-6 7h4v2h-4v-2Zm4 4h-4v2h4v-2Zm8 1h-6v6h6v-6Z" fill="currentColor"/></symbol>
+  <symbol id="i-floppy" viewBox="0 0 13 12"><path d="M11 1H1V11H12V2H11V1Z" fill="var(--surface)"/><path fill-rule="evenodd" clip-rule="evenodd" d="M11 0H1V1H0V11H1V12H13V2H12V1H11V0ZM9 4H10V1H11V2H12V11H10V8H9V7H4V8H3V11H1V1H3V4H4V5H9V4ZM9 4H4V1H7V3H8V1H9V4ZM9 11H4V8H9V11Z" fill="currentColor"/></symbol>
+  <symbol id="i-balloon" viewBox="0 0 14 14"><rect x=".5" y=".5" width="13" height="10" rx="2.5" fill="none" stroke="currentColor"/><path d="M3 10.5 L3 13.5 L6 10.5 Z" fill="currentColor"/><g fill="currentColor"><rect x="4.5" y="2" width="3" height="1"/><rect x="3.5" y="3" width="1" height="1"/><rect x="7.5" y="3" width="1" height="1"/><rect x="7.5" y="4" width="1" height="1"/><rect x="6.5" y="5" width="1" height="1"/><rect x="5.5" y="6" width="1" height="2"/><rect x="5.5" y="9" width="1" height="1"/></g></symbol>
+  <symbol id="i-px-ext" viewBox="0 0 24 24"><path d="M21 11V3h-8v2h4v2h-2v2h-2v2h-2v2H9v2h2v-2h2v-2h2V9h2V7h2v4h2zM11 5H3v16h16v-8h-2v6H5V7h6V5z" fill="currentColor"/></symbol>
+  <symbol id="i-px-goal" viewBox="0 0 24 24"><path d="M3 2h10v2h8v14H11v-2H5v6H3V2zm2 12h8v2h6V6h-8V4H5v10z" fill="currentColor"/></symbol>
+  <symbol id="i-px-list" viewBox="0 0 24 24"><path d="M2 5h20v14H2V5zm2 2v2h16V7H4zm16 4H4v2h16v-2zm0 4H4v2h16v-2z" fill="currentColor"/></symbol>
+  <symbol id="i-px-warning" viewBox="0 0 24 24"><path d="M3 3h16v2H5v14h14v2H3V3zm18 0h-2v18h2V3zM11 15h2v2h-2v-2zm2-8h-2v6h2V7z" fill="currentColor"/></symbol>
   <symbol id="i-moon" viewBox="0 0 24 24"><path d="M6 2h2v2H6V2zM4 4h4v2H4V4zM2 6h6v2H2V6zM2 8h6v2H2V8zM2 10h6v2H2v-2zM2 12h8v2H2v-2zM2 14h10v2H2v-2zM2 16h20v2H2v-2zM4 18h16v2H4v-2zM6 20h12v2H6v-2z" fill="currentColor"/></symbol>
   <symbol id="i-cl-HappyMac" viewBox="0 0 2000 2000">
     <g>

@@ -186,3 +186,178 @@ if (typeof module !== 'undefined' && module.exports) {
   module.exports = { mcToolState: mcToolState, mcToolName: mcToolName, mcToolIconName: mcToolIconName,
     mcToolArgsSummary: mcToolArgsSummary, mcViewCard: mcViewCard, mcOutputText: mcOutputText };
 }
+
+// —— CSS（原型 §7 L705-763 直抄；token 换 --mc-*；全部自有 .mc-tool* 类，audit 零宿主锚）——
+const MC_TOOL_CSS = [
+  '.mc-tool{background:var(--mc-surface);border:1px solid var(--mc-border);border-radius:var(--mc-r-card);box-shadow:var(--mc-shadow-panel);overflow:hidden;position:relative}',
+  '.mc-tool-head{display:flex;align-items:center;gap:8px;width:100%;padding:7px 9px;background:none;border:none;cursor:pointer;text-align:left;font-family:inherit}',
+  '.mc-t-ic{width:26px;height:26px;flex:none;display:grid;place-items:center;background:var(--mc-surface-2);border:1px solid var(--mc-border);border-radius:var(--mc-r-tag);color:var(--mc-fg)}',
+  '.mc-t-ic svg{width:15px;height:15px}',
+  '.mc-t-meta{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px;text-align:left}',
+  '.mc-t-name{font:600 12px/1.3 var(--font-display);letter-spacing:.02em;color:var(--mc-fg);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
+  '.mc-t-args{font:400 11px/1.5 var(--font-code);color:var(--mc-faint);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
+  '.mc-tool-head .chev{flex:none;width:9px;height:10px;color:var(--mc-muted)}',
+  '.mc-tool.open .mc-tool-head .chev{transform:rotate(90deg)}',
+  '.mc-tool-body{height:0;overflow:hidden}',
+  '.mc-tool.open .mc-tool-body{height:auto}',
+  '.mc-tb-in{padding:8px 9px 9px;border-top:1px solid var(--mc-border-soft);font:400 12px/1.8 var(--font-code);color:var(--mc-muted)}',
+  '.mc-tb-in b{color:var(--mc-fg);font-weight:500}',
+  // 运行态 — 琥珀边 + 标题条条纹扫掠(--sweep-delay 组件内 CLOCK.syncAnim 相位对齐)
+  '.mc-tool.mc-run{border-color:var(--mc-spark)}',
+  '.mc-tool.mc-run .mc-tool-head{background:repeating-linear-gradient(90deg,color-mix(in oklab,var(--mc-spark) 26%,transparent) 0 4px,transparent 4px 8px);background-size:12px 100%;animation:mc-sweep 1s steps(2,end) infinite;animation-delay:var(--sweep-delay,0ms)}',
+  // 失败态 — 红边 + 图标格转红
+  '.mc-tool.mc-fail{border-color:var(--mc-danger)}',
+  '.mc-tool.mc-fail .mc-t-ic{color:var(--mc-danger);border-color:var(--mc-danger)}',
+  // 展开体：错误首行 + 输出 pre + 宿主结构化块外壳
+  '.mc-tb-err{color:var(--mc-danger);margin:0 0 4px}',
+  '.mc-tb-out{margin:6px 0 0;padding:6px 8px;background:var(--mc-bg-deep);border:1px solid var(--mc-border-soft);border-radius:var(--mc-r-tag);font:400 11.5px/1.7 var(--font-code);color:var(--mc-muted);white-space:pre-wrap;word-break:break-word;overflow-x:auto}',
+  '.mc-tool-block{margin:2px 0}',
+  // 子调用缩进列表（原型 subcalls 语汇：左 2px 软线；内层同构卡压掉投影）
+  '.mc-subcalls{display:flex;flex-direction:column;gap:4px;margin:4px 0 2px 22px;padding-left:8px;border-left:2px solid var(--mc-border-soft)}',
+  '.mc-subcalls .mc-tool{box-shadow:none}',
+].join('\n');
+
+// —— 模块（协议 { css, slots(ctx) }；遮蔽 tool-call keyed 槽）——
+var MC_TOOL_PRIM = null;
+try { if (typeof require === 'function') MC_TOOL_PRIM = require("@deepseek-ai/dsh-client-ui-primitives"); } catch (e) { MC_TOOL_PRIM = null; }
+
+const McTool = {
+  css: MC_TOOL_CSS,
+  slots(ctx) {
+    if (!MC_TOOL_PRIM || typeof React === 'undefined') return; // primitives 缺席:不遮蔽,宿主 ToolCallTree 兜底
+    const S = ctx.slots;
+    if (!S || typeof S.register !== 'function' || typeof S.inject !== 'function') return;
+    const h = React.createElement;
+    const TerminalBlock = MC_TOOL_PRIM.TerminalBlock;
+    const DiffBlock = MC_TOOL_PRIM.DiffBlock;
+    const ReadBlock = MC_TOOL_PRIM.ReadBlock;
+    const SearchBlock = MC_TOOL_PRIM.SearchBlock;
+    const WebBlock = MC_TOOL_PRIM.WebBlock;
+    const JsonBlock = MC_TOOL_PRIM.JsonBlock;
+    let REDUCED = false;
+    try { REDUCED = window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) {}
+
+    // 开合（syscard mcFold 同款）：REDUCED/busy 直翻，否则 accToggle 四拍（几何变化在白块遮盖下）
+    function mcFold(card, flip) {
+      if (!card) { flip(); return; }
+      if (REDUCED || (card.dataset && card.dataset.busy)) { flip(); return; }
+      accToggle(card, flip);
+    }
+    // 取参 raw：运行形 block.argsRaw / 落地形 block.call?.argsRaw
+    function rawOf(block) {
+      if (!block) return '';
+      if ('kind' in block) return (block.call && block.call.argsRaw) || '';
+      return block.argsRaw || '';
+    }
+    function tryParse(raw) {
+      try { return JSON.parse(raw); } catch (e) { return undefined; }
+    }
+
+    /* McToolCard：单卡（头：图标格 + 名称/参数双行 + pill + 三角；体：结构化块 | JsonBlock+文本）。
+       running 默认展开（interactive 先例），落地自动收起（accToggle 拍内）；data-state 驱动三态 CSS。 */
+    function McToolCard(props) {
+      var block = props.block;
+      var name = mcToolName(block);
+      var state = mcToolState(block);
+      var done = block && typeof block === 'object' && ('kind' in block);
+      var openV = React.useState(state === 'running');
+      var open = openV[0], setOpen = openV[1];
+      var cardRef = React.useRef(null);
+      var headRef = React.useRef(null);
+      var pillRef = React.useRef(null);
+      var openRef = React.useRef(open);
+      openRef.current = open;
+      var prevState = React.useRef(state);
+      React.useEffect(function () { // 落地自动收起（running→settle 一拍）
+        var was = prevState.current;
+        prevState.current = state;
+        if (was === 'running' && state !== 'running' && openRef.current) mcFold(cardRef.current, function () { setOpen(false); });
+      }, [state]);
+      React.useEffect(function () { // 扫掠/脉冲相位对齐（组件内自管，syscard retry 先例）
+        try {
+          if (state === 'running' && headRef.current && CLOCK && typeof CLOCK.syncAnim === 'function') CLOCK.syncAnim(headRef.current, CLOCK.SWEEP, '--sweep-delay');
+          if (state === 'running' && pillRef.current && CLOCK && typeof CLOCK.syncAnim === 'function') CLOCK.syncAnim(pillRef.current);
+        } catch (e) {}
+      }, [state]);
+      function toggle() {
+        mcFold(cardRef.current, function () { setOpen(function (o) { return !o; }); });
+      }
+      var icon = mcToolIconName(name, state);
+      var pillCls = state === 'running' ? 'run' : state === 'error' ? 'fail' : 'done';
+      var pillText = state === 'running' ? 'running' : state === 'error' ? 'fail' : 'done';
+      var argsText = mcToolArgsSummary(name, rawOf(block), block && block.callId);
+      if (state === 'stopped') argsText += ' · 已停止';
+      return h('div', { className: 'mc-tool' + (open ? ' open' : '') + (state === 'running' ? ' mc-run' : state === 'error' ? ' mc-fail' : ''), ref: cardRef },
+        h('button', { type: 'button', className: 'mc-tool-head', ref: headRef, onClick: toggle },
+          h('span', { className: 'mc-t-ic' }, h('svg', { 'aria-hidden': true }, h('use', { href: '#' + icon }))),
+          h('span', { className: 'mc-t-meta' },
+            h('span', { className: 'mc-t-name' }, name),
+            h('span', { className: 'mc-t-args' }, argsText)),
+          h('span', { className: 'mc-pill ' + pillCls, ref: pillRef }, pillText),
+          h('svg', { className: 'chev' + (open ? ' open' : ''), 'aria-hidden': true }, h('use', { href: '#i-caretright' }))),
+        h('div', { className: 'mc-tool-body' }, h('div', { className: 'mc-tb-in' }, mcBody(block, name, state, done))));
+    }
+
+    // 展开体：wire view 结构化材料 → 宿主 Block 保真；未命中 → JsonBlock(IN) + text(OUT)
+    function mcBody(block, name, state, done) {
+      var err = (done && block.error && block.error.name) ? (block.error.name + ': ' + block.error.code) : '';
+      var callV = mcViewCard(block && block.callView);
+      var resV = done ? mcViewCard(block.resultView) : null;
+      var view = resV || callV;
+      var kids = [];
+      if (view && view.kind === 'terminal') {
+        var command = (resV && callV && callV.kind === 'terminal' && callV.title) ? callV.title
+          : (view.title || name);
+        kids.push(h(TerminalBlock, { key: 't', command: command, output: view.output, exitCode: view.exitCode,
+          signal: view.signal, running: !done && callV && callV.kind === 'terminal', maxLines: 8, className: 'mc-tool-block' }));
+        return kids;
+      }
+      if (view && view.kind === 'diff') { kids.push(h(DiffBlock, { key: 'd', diffs: view.diffs, maxLines: 8, className: 'mc-tool-block' })); return kids; }
+      if (view && view.kind === 'read') { kids.push(h(ReadBlock, { key: 'r', path: view.path, offset: view.offset, lines: view.lines, totalLines: view.totalLines, lang: view.lang, maxLines: 8, className: 'mc-tool-block' })); return kids; }
+      if (view && view.kind === 'search') {
+        kids.push(view.shape === 'matches'
+          ? h(SearchBlock, { key: 's', kind: 'matches', files: view.files, truncated: view.truncated, total: view.total, maxLines: 8, className: 'mc-tool-block' })
+          : h(SearchBlock, { key: 's', kind: 'paths', paths: view.paths, truncated: view.truncated, total: view.total, maxLines: 8, className: 'mc-tool-block' }));
+        return kids;
+      }
+      if (view && view.kind === 'web') {
+        kids.push(view.webKind === 'search'
+          ? h(WebBlock, { key: 'w', kind: 'search', sources: view.sources, answer: view.answer, truncated: view.truncated, className: 'mc-tool-block' })
+          : h(WebBlock, { key: 'w', kind: 'fetch', url: view.url, statusCode: view.statusCode, truncated: view.truncated, className: 'mc-tool-block' }));
+        return kids;
+      }
+      // generic 路径
+      if (err) kids.push(h('div', { key: 'e', className: 'mc-tb-err' }, err));
+      var raw = rawOf(block);
+      if (raw) kids.push(h(JsonBlock, { key: 'a', label: 'IN', payload: tryParse(raw) !== undefined ? tryParse(raw) : raw }));
+      var out = done ? mcOutputText(block.content) : '';
+      if (out) kids.push(h('pre', { key: 'o', className: 'mc-tb-out' }, out));
+      if (!kids.length) kids.push(h('span', { key: 'n' }, state === 'running' ? '运行中…' : '（无输出）'));
+      return kids;
+    }
+
+    /* McToolBranch：一卡 + 子调用递归缩进（subcalls 挂卡后；callId 作 React key） */
+    function McToolBranch(props) {
+      var block = props.block;
+      var sub = (block && block.subCalls) || [];
+      var kids = [h(McToolCard, { key: 'card', block: block })];
+      if (sub.length) {
+        kids.push(h('div', { key: 'sub', className: 'mc-subcalls' },
+          sub.map(function (c, i) { return h(McToolBranch, { key: (c && c.callId) || i, block: c }); })));
+      }
+      return h(React.Fragment, null, kids);
+    }
+
+    /* McToolTree：遮蔽组件——node.data.root 递归（窗口截断 root 缺席渲染 null） */
+    function McToolTree(props) {
+      var node = props.node;
+      var root = node && node.data && node.data.root;
+      if (!root) return null;
+      return h(McToolBranch, { block: root });
+    }
+
+    ctx.effect(() => S.inject('conversation.chat.node', () => S.register({
+      name: 'conversation.chat.node', key: 'tool-call', priority: -1, registrant: 'macintosh',
+    }, McToolTree)));
+  },
+};

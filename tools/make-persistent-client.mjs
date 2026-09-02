@@ -59,11 +59,12 @@ const mods = {
   McFlow: McFlow,
   McThink: McThink,
   McSysCard: McSysCard,
+  McTool: McTool,
   McDock: McDock,
   McMenus: McMenus,
   McKit: McKit,
 };
-const order = ["McTokens","McClock","McMcfx","McSprite","MC_MAP","McChrome","McSidebar","McFinder","McFlow","McThink","McSysCard","McDock","McMenus","McKit"];
+const order = ["McTokens","McClock","McMcfx","McSprite","MC_MAP","McChrome","McSidebar","McFinder","McFlow","McThink","McSysCard","McTool","McDock","McMenus","McKit"];
 
 return {
   inject: ["slots", "theme", "sessions", "workspaces"],
@@ -120,7 +121,7 @@ return {
 const out = header + body + tail;
 // 写盘断言：非空 + 关键标记齐全
 if (out.length < 1000) throw new Error('assembled output suspiciously small');
-for (const mark of ['__ModuleLoader__.load', 'dsh-theme-macintosh', '/mcx-assets/fonts/ChiKareGo.ttf', 'inject: ["slots", "theme", "sessions", "workspaces"]', 'McFinder: McFinder', 'McFlow: McFlow', 'McThink: McThink', 'McSysCard: McSysCard', 'McDock: McDock', 'McMenus: McMenus', "--dsw-specific-bubble': pair('var(--mc-accent)')", 'return {\n  inject']) {
+for (const mark of ['__ModuleLoader__.load', 'dsh-theme-macintosh', '/mcx-assets/fonts/ChiKareGo.ttf', 'inject: ["slots", "theme", "sessions", "workspaces"]', 'McFinder: McFinder', 'McFlow: McFlow', 'McThink: McThink', 'McSysCard: McSysCard', 'McTool: McTool', 'McDock: McDock', 'McMenus: McMenus', "--dsw-specific-bubble': pair('var(--mc-accent)')", 'return {\n  inject']) {
   if (!out.includes(mark)) throw new Error('marker missing in output: ' + mark);
 }
 writeFileSync(OUT, out);
