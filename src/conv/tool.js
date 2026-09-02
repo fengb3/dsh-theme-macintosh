@@ -30,7 +30,7 @@ var MC_TOOL_ICONS = {
 var MC_TOOL_ARG_KEYS = ['path', 'file_path', 'command', 'pattern', 'query', 'url',
   'objective', 'prompt', 'name', 'agent_id', 'job_id', 'description', 'title'];
 var MC_TOOL_ARG_PICK = {
-  grep: ['pattern'], glob: ['pattern'], web_search: ['query'], web_fetch: ['url'],
+  grep: ['pattern'], glob: ['pattern'], web_search: ['queries', 'query'], web_fetch: ['url'],
   bash: ['command'], pwsh: ['command'],
   read: ['path'], read_image: ['path'], write: ['path'], edit: ['path'], str_replace_editor: ['path'],
   ask_user_question: ['query', 'question'], subagent: ['prompt', 'description'],
@@ -77,6 +77,7 @@ function mcToolArgsSummary(name, argsRaw, callId) {
     for (var i = 0; i < keys.length; i++) {
       var v = obj[keys[i]];
       if (typeof v === 'string' && v) { picked = v; break; }
+      if (Array.isArray(v) && v.length && typeof v[0] === 'string') { picked = v.slice(0, 2).join(' / '); break; } // queries 类数组取首两个
     }
     if (!picked && Array.isArray(obj.todos)) picked = obj.todos.length + ' items';
   }
@@ -212,6 +213,8 @@ const MC_TOOL_CSS = [
   '.mc-tb-err{color:var(--mc-danger);margin:0 0 4px}',
   '.mc-tb-out{margin:6px 0 0;padding:6px 8px;background:var(--mc-bg-deep);border:1px solid var(--mc-border-soft);border-radius:var(--mc-r-tag);font:400 11.5px/1.7 var(--font-code);color:var(--mc-muted);white-space:pre-wrap;word-break:break-word;overflow-x:auto}',
   '.mc-tool-block{margin:2px 0}',
+  // 浅色:WebBlock 根底色为宿主硬编码深色(非 token),翻白保引用列表可读;链接色宿主自管
+  'html[data-theme="light"] .mc-tbb-web{background:var(--mc-surface);border:1px solid var(--mc-border-soft);border-radius:var(--mc-r-tag)}',
   // 子调用缩进列表（原型 subcalls 语汇：左 2px 软线；内层同构卡压掉投影）
   '.mc-subcalls{display:flex;flex-direction:column;gap:4px;margin:4px 0 2px 22px;padding-left:8px;border-left:2px solid var(--mc-border-soft)}',
   '.mc-subcalls .mc-tool{box-shadow:none}',
@@ -322,8 +325,8 @@ const McTool = {
       }
       if (view && view.kind === 'web') {
         kids.push(view.webKind === 'search'
-          ? h(WebBlock, { key: 'w', kind: 'search', sources: view.sources, answer: view.answer, truncated: view.truncated, className: 'mc-tool-block' })
-          : h(WebBlock, { key: 'w', kind: 'fetch', url: view.url, statusCode: view.statusCode, truncated: view.truncated, className: 'mc-tool-block' }));
+          ? h(WebBlock, { key: 'w', kind: 'search', sources: view.sources, answer: view.answer, truncated: view.truncated, className: 'mc-tool-block mc-tbb-web' })
+          : h(WebBlock, { key: 'w', kind: 'fetch', url: view.url, statusCode: view.statusCode, truncated: view.truncated, className: 'mc-tool-block mc-tbb-web' }));
         return kids;
       }
       // generic 路径

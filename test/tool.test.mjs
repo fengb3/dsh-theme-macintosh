@@ -56,6 +56,7 @@ test('mcToolArgsSummary 白名单键 / 截断 / 单行化 / callId 兜底', () =
   assert.equal(T.mcToolArgsSummary('read', JSON.stringify({ path: 'src/conv/tool.js', offset: 1 }), 'c1'), 'src/conv/tool.js');
   assert.equal(T.mcToolArgsSummary('bash', JSON.stringify({ command: 'node -e "1"', cwd: '.' }), 'c2'), 'node -e "1"');
   assert.equal(T.mcToolArgsSummary('grep', JSON.stringify({ pattern: 'renderSlot\\(', path: 'x' }), 'c2b'), 'renderSlot\\(');
+  assert.equal(T.mcToolArgsSummary('web_search', JSON.stringify({ queries: ['胡锡进', '孙宇晨', '第三条'] }), 'c2c'), '胡锡进 / 孙宇晨'); // 数组键取首两个
   assert.equal(T.mcToolArgsSummary('todo_write', JSON.stringify({ todos: [{ content: 'a' }, { content: 'b' }] }), 'c3'), '2 items');
   const long = 'x'.repeat(80);
   const got = T.mcToolArgsSummary('grep', JSON.stringify({ pattern: long }), 'c4');
