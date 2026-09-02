@@ -425,6 +425,13 @@ state = { view, mode, current, sessions, busy:{}, fallback:{}, queue:{}, stats:{
   命中实证（模型弹层中心命中弹层自身）。
 - **家具 slot 注册表**：`MC_DOCK_FURN`（{id,order,get}；内置 queue=0/todos=10/goal=20）+
   `MC_DOCK_API.slot(id, order, get)` 注册/注销——自绘坞支持插入新元素（官方槽能力对等）。
+- **弹层被 todo 遮挡修复（2026-09-02 用户报障续）**：`position:fixed` 现代浏览器**恒创建层叠
+  上下文**——pop 门控期官方卡（fixed,z:auto）自成上下文，卡内弹层 z:9000 被困；自绘坞在
+  composerSeat 树序靠后，同为 positioned z:auto 按树序后赢 → todo 盖住整卡（弹层上半/下半
+  露出、中段被 todo 条盖住，probe-menu-z 截图+命中实证）。修复：门控卡规则补
+  `z-index:9999!important`（抬卡即抬弹层；门控期卡体仅 1×1px 透明靶，视觉无副作用）。
+  活体复测：cmd/perm/ctx 三弹层与 todo 重叠区 elementFromPoint 全命中 MENU。门禁断言1d
+  固化（pop 门控期卡 computed z=9999）。
 
 
 

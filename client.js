@@ -2534,7 +2534,7 @@ const MC_DOCK_CSS = [
     if (typeof MC_MAP === 'undefined' || !MC_MAP.composerHide) return '';
     var C = 'html[data-mc-pop] ' + MC_MAP.composerHide;
     return [
-      C + '{display:block!important;position:fixed!important;left:-32000px;top:0;width:1px;height:1px;overflow:visible;pointer-events:none}',
+      C + '{display:block!important;position:fixed!important;left:-32000px;top:0;width:1px;height:1px;overflow:visible;pointer-events:none;z-index:9999!important}', // dock2 批补 z:fixed 恒建层叠上下文,z:auto 时整卡被树序靠后的自绘家具(todo)盖住——弹层 z:9000 被困卡内遭遮(用户报障);抬卡即抬弹层
       C + ' [role=menu],' + C + ' [role=listbox],' + C + ' [role=dialog]{position:fixed;left:var(--mc-pop-l,16px);right:auto;bottom:var(--mc-pop-b,140px);margin:0;min-width:216px;max-height:44vh;overflow-y:auto;pointer-events:auto;z-index:9000;background:var(--mc-surface);border:1px solid var(--mc-border);border-radius:0;box-shadow:var(--mc-shadow-pop);padding:4px;font:500 12px/1.6 var(--font-ui);color:var(--mc-fg)}', // 直角(验收轮3 用户裁定,弃 --mc-r-card);ctx 弹窗=role=dialog(终验勘定)并入同款定位与皮
       'html[data-mc-pop=r] ' + MC_MAP.composerHide + ' [role=menu],html[data-mc-pop=r] ' + MC_MAP.composerHide + ' [role=listbox],html[data-mc-pop=r] ' + MC_MAP.composerHide + ' [role=dialog]{left:auto;right:var(--mc-pop-r,16px)}', // 验收轮4:右半屏钮右缘对齐(右下角对准点击处,修溢出)
       C + ' [role=menuitem],' + C + ' [role=menuitemradio],' + C + ' [role=option]{display:flex;align-items:center;gap:8px;padding:5px 9px;cursor:pointer;font:inherit;line-height:1.6;color:var(--mc-muted);background:none;border:none;white-space:nowrap}',

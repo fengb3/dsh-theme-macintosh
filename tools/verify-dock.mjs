@@ -170,6 +170,19 @@ check('断言1: html[data-mc-dock-on] 属性在场', p.on);
   if (s.present) check('断言1c: 官方 input dock 槽藏匿(display:none)', s.display === 'none');
   else info('断言1c: 官方 dock 槽未渲染(空态无靶;藏匿规则不破)', null);
 }
+// 断言1d(dock2 批 z 修复):pop 门控期官方卡层叠上下文抬 z——position:fixed 恒建层叠上下文,
+// 卡 z:auto 时整卡(含 z:9000 弹层)被树序靠后的自绘家具(todo)盖住。开模型弹层 → 卡 computed z 应 9999。
+{
+  await page.click('[data-mc-dock] [data-mc-model]');
+  await page.waitForTimeout(900);
+  const z = await page.evaluate(() => {
+    const card = document.querySelector('[data-composer-card]');
+    return { gate: document.documentElement.getAttribute('data-mc-pop'), z: card ? getComputedStyle(card).zIndex : null };
+  });
+  check('断言1d: pop 门控期官方卡抬 z(z=9999,弹层不被自绘家具遮)', !!z.gate && String(z.z) === '9999');
+  await page.mouse.click(720, 300); // 点外收口(syncPopGate 撤门控)
+  await page.waitForTimeout(700);
+}
 const sendIdleDisabled = p.sendDisabled;
 const idleBusy = p.busy;
 const taHIdle = p.taH; // autogrow 基线(空稿 rows=1)
