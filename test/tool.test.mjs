@@ -20,36 +20,22 @@ test('mcToolName 兜底链 call?.name → name → callId', () => {
   assert.equal(T.mcToolName(null), '');
 });
 
-test('mcToolIconName 精确表 / mcp__ 前缀 / error 换 warning / 未知 dots', () => {
-  assert.equal(T.mcToolIconName('bash', 'ok'), 'i-px-terminal');
-  assert.equal(T.mcToolIconName('pwsh', 'running'), 'i-px-terminal');
-  assert.equal(T.mcToolIconName('read', 'ok'), 'i-doc');
-  assert.equal(T.mcToolIconName('read_image', 'ok'), 'i-doc');
-  assert.equal(T.mcToolIconName('report', 'ok'), 'i-doc');
-  assert.equal(T.mcToolIconName('write', 'ok'), 'i-floppy');
-  assert.equal(T.mcToolIconName('edit', 'ok'), 'i-px-edit');
-  assert.equal(T.mcToolIconName('str_replace_editor', 'ok'), 'i-px-edit');
-  assert.equal(T.mcToolIconName('grep', 'ok'), 'i-px-search');
-  assert.equal(T.mcToolIconName('web_search', 'ok'), 'i-px-search');
-  assert.equal(T.mcToolIconName('glob', 'ok'), 'i-folder');
-  assert.equal(T.mcToolIconName('web_fetch', 'ok'), 'i-px-ext');
-  assert.equal(T.mcToolIconName('todo_write', 'ok'), 'i-px-list');
-  assert.equal(T.mcToolIconName('ask_user_question', 'ok'), 'i-balloon');
-  assert.equal(T.mcToolIconName('subagent', 'ok'), 'i-suitcase');
-  assert.equal(T.mcToolIconName('send_message', 'ok'), 'i-px-copy');
-  assert.equal(T.mcToolIconName('interrupt_agent', 'ok'), 'i-px-stop');
-  assert.equal(T.mcToolIconName('workflow', 'ok'), 'i-px-timeline');
-  assert.equal(T.mcToolIconName('ralph', 'ok'), 'i-px-reload');
-  assert.equal(T.mcToolIconName('job_output', 'ok'), 'i-px-clock');
-  assert.equal(T.mcToolIconName('job_kill', 'ok'), 'i-px-clock');
-  assert.equal(T.mcToolIconName('create_goal', 'ok'), 'i-px-goal');
-  assert.equal(T.mcToolIconName('update_goal', 'ok'), 'i-px-goal');
-  assert.equal(T.mcToolIconName('skill', 'ok'), 'i-sparkle');
-  assert.equal(T.mcToolIconName('mcp__glm__analyze', 'ok'), 'i-px-zap');
-  assert.equal(T.mcToolIconName('read', 'error'), 'i-px-warning'); // 失败语境覆盖精确表
-  assert.equal(T.mcToolIconName('mcp__x__y', 'error'), 'i-px-warning');
-  assert.equal(T.mcToolIconName('totally_unknown', 'ok'), 'i-px-dots');
-  assert.equal(T.mcToolIconName('', 'ok'), 'i-px-dots');
+test('mcToolVariant 官方变体表照抄 / others 兜底', () => {
+  assert.equal(T.mcToolVariant('bash'), 'bash');
+  assert.equal(T.mcToolVariant('pwsh'), 'bash');
+  assert.equal(T.mcToolVariant('read'), 'read');
+  assert.equal(T.mcToolVariant('web_fetch'), 'read');
+  assert.equal(T.mcToolVariant('web_search'), 'search');
+  assert.equal(T.mcToolVariant('grep'), 'search');
+  assert.equal(T.mcToolVariant('glob'), 'search');
+  assert.equal(T.mcToolVariant('write'), 'write');
+  assert.equal(T.mcToolVariant('edit'), 'edit');
+  assert.equal(T.mcToolVariant('run_code'), 'code');
+  assert.equal(T.mcToolVariant('cordis_package_inspect'), 'read');
+  assert.equal(T.mcToolVariant('cordis_run'), 'others');
+  assert.equal(T.mcToolVariant('mcp__glm__analyze'), 'others'); // mcp 开放集合 → others(Sparkle)
+  assert.equal(T.mcToolVariant('todo_write'), 'others');        // 官方表无键 → others
+  assert.equal(T.mcToolVariant(''), 'others');
 });
 
 test('mcToolArgsSummary 白名单键 / 截断 / 单行化 / callId 兜底', () => {

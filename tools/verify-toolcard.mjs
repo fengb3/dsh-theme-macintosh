@@ -39,7 +39,10 @@ const dark = await pg.evaluate(() => {
     r.border = cs.borderTopWidth + ' ' + cs.borderTopStyle;
     r.radius = cs.borderTopLeftRadius;
     r.shadow = cs.boxShadow.indexOf('0px 0px') >= 0 || cs.boxShadow.indexOf('3px') >= 0;
+    r.iconSvg = !!first.querySelector('.mc-t-ic svg');
     r.iconUse = !!first.querySelector('.mc-t-ic use');
+    const iconSvg = first.querySelector('.mc-t-ic svg');
+    r.iconShape = iconSvg ? String(getComputedStyle(iconSvg).shapeRendering).toLowerCase() : 'n/a';
     r.icW = getComputedStyle(first.querySelector('.mc-t-ic')).width;
     r.pill = first.querySelector('.mc-pill') ? first.querySelector('.mc-pill').className.replace('mc-pill', '').trim() : '';
     const body = first.querySelector('.mc-tool-body');
@@ -56,7 +59,8 @@ if (dark.count > 0) {
   ok(dark.border === '1px solid', '深色: 卡壳 1px 实线边 (' + dark.border + ')');
   ok(dark.radius === '4px', '深色: 卡壳 4px 圆角 (' + dark.radius + ')');
   ok(dark.shadow, '深色: 硬投影在场');
-  ok(dark.iconUse, '深色: sprite 图标 use 在场');
+  ok(dark.iconSvg, '深色: 图标 svg 在场 (DSH 默认图标,非 sprite use=' + dark.iconUse + ')');
+  ok(dark.iconShape === 'crispedges', '深色: 图标像素风格渲染 (shape-rendering ' + dark.iconShape + ')');
   ok(dark.icW === '26px', '深色: 图标格 26px (' + dark.icW + ')');
   ok(dark.collapsedH === '0px', '深色: 落地卡默认收起 (body ' + dark.collapsedH + ')');
   ok(dark.metaCols === 'column', '深色: 双行 meta (flex-direction ' + dark.metaCols + ')');
@@ -128,6 +132,28 @@ if (!kit.NO) {
   ok(kit.cards >= 5, 'kit: 工具卡分区样本在场 (n=' + kit.cards + ')');
   ok(kit.names.includes('cast_glyph_v9'), 'kit: 未知工具兜底卡 (cast_glyph_v9)');
   ok(kit.fails >= 2, 'kit: fail 红边样本在场 (n=' + kit.fails + ')');
+  // —— IN 按钮闪烁（用户裁定：JsonBlock 裸 button 命中）——展开 read 样本卡 → 点 IN 钮 → 轮询闪类
+  await pg.evaluate(() => {
+    const sec = [...document.querySelectorAll('section')].find((x) => x.querySelector('.kit-h') && x.querySelector('.kit-h').textContent === '工具卡');
+    const card = sec && sec.querySelector('.mc-tool');
+    if (card) card.querySelector('.mc-tool-head').click();
+  });
+  await pg.waitForTimeout(1100);
+  await pg.evaluate(() => {
+    const sec = [...document.querySelectorAll('section')].find((x) => x.querySelector('.kit-h') && x.querySelector('.kit-h').textContent === '工具卡');
+    const btn = sec && sec.querySelector('.mc-tool.open .mc-tool-body button');
+    if (btn) btn.click();
+  });
+  let flashed = false;
+  for (let i = 0; i < 12 && !flashed; i++) {
+    flashed = await pg.evaluate(() => {
+      const sec = [...document.querySelectorAll('section')].find((x) => x.querySelector('.kit-h') && x.querySelector('.kit-h').textContent === '工具卡');
+      if (!sec) return false;
+      return !!sec.querySelector('.mc-tool.open .mc-tool-body .mc-ghost, .mc-tool.open .mc-tool-body .mc-flash, .mc-tool.open .mc-tool-body .mcfx');
+    });
+    if (!flashed) await pg.waitForTimeout(80);
+  }
+  ok(flashed, '裁定: IN 按钮(JsonBlock)点击触发 flash 闪类');
 } else { ok(false, 'kit: 工具卡分区缺失'); }
 await pg.evaluate(() => { window.__MC_KIT_OPEN__ = false; });
 

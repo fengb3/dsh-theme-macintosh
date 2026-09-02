@@ -696,7 +696,7 @@ function McKitPage() {
             MC_TOOL_DEMO ? [
               h('div', { className: 'kit-frame', key: 'samples' },
                 h('div', { className: 'kit-frame-tag' },
-                  h('span', null, '样本 · read 文本体 / edit diff 体 / bash 终端体(fail 红边) / web_search 引用体 / 未知工具 dots 兜底'),
+                  h('span', null, '样本 · read 文本体 / edit diff 体 / bash 终端体(fail 红边) / web_search 引用体 / 未知工具 Sparkle 兜底 —— 图标 = DSH 默认工具图标像素渲染(用户裁定 2026-09-02 二轮)'),
                   h('em', null, 'tool')),
                 h('div', { className: 'kit-frame-body kit-stack sm' },
                   MC_TOOL_DEMO.card(MC_KIT_TOOL_READ),

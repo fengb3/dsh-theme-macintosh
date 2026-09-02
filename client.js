@@ -2409,25 +2409,12 @@ const McSysCard = {
 // SearchBlock/WebBlock），未命中 → JsonBlock(argsRaw) + text 连缀。primitives 缺席时
 // 不注册（宿主原生渲染兜底）。纯函数经 CJS 兼容出口供测试 createRequire 使用。
 
-// —— 图标语义映射（笔记 §10.4 适配真实 wire 名；值 = sprite symbol id）——
-var MC_TOOL_ICONS = {
-  read: 'i-doc', read_image: 'i-doc', report: 'i-doc',
-  write: 'i-floppy',
-  edit: 'i-px-edit', str_replace_editor: 'i-px-edit',
-  bash: 'i-px-terminal', pwsh: 'i-px-terminal',
-  grep: 'i-px-search', web_search: 'i-px-search',
-  glob: 'i-folder',
-  web_fetch: 'i-px-ext',
-  todo_write: 'i-px-list',
-  ask_user_question: 'i-balloon',
-  subagent: 'i-suitcase',
-  send_message: 'i-px-copy',
-  interrupt_agent: 'i-px-stop',
-  workflow: 'i-px-timeline',
-  ralph: 'i-px-reload',
-  job_output: 'i-px-clock', job_list: 'i-px-clock', job_kill: 'i-px-clock',
-  get_goal: 'i-px-goal', create_goal: 'i-px-goal', update_goal: 'i-px-goal',
-  skill: 'i-sparkle',
+// —— 官方变体表（dsh-client-ui-tool TOOL_VARIANTS 照抄；用户裁定：图标全用 DSH 默认）——
+var MC_TOOL_VARIANTS = {
+  bash: 'bash', pwsh: 'bash', read: 'read', web_fetch: 'read', web_search: 'search',
+  grep: 'search', glob: 'search', write: 'write', edit: 'edit', run_code: 'code',
+  cordis_package_inspect: 'read', cordis_runtime_inspect: 'read',
+  cordis_run: 'others', cordis_stop: 'others', cordis_undefine: 'others',
 };
 
 // 参数摘要取值键：按工具名优先键表（grep 取 pattern 非 path 之类），未列名走扁表白名单
@@ -2460,13 +2447,10 @@ function mcToolName(block) {
   } else if (typeof block.name === 'string' && block.name) return block.name;
   return block.callId == null ? '' : String(block.callId);
 }
-// 图标：error 态换 warning（真失败才叹号）→ 精确表 → mcp__ 前缀 zap → 未知 dots（中性）
-function mcToolIconName(name, state) {
-  if (state === 'error') return 'i-px-warning';
+// 变体：官方 classifyTool 照抄（精确表 → others 兜底；mcp__*/未知全部 others = 官方 Sparkle 图标）
+function mcToolVariant(name) {
   var n = String(name || '');
-  if (Object.prototype.hasOwnProperty.call(MC_TOOL_ICONS, n)) return MC_TOOL_ICONS[n];
-  if (n.indexOf('mcp__') === 0) return 'i-px-zap';
-  return 'i-px-dots';
+  return Object.prototype.hasOwnProperty.call(MC_TOOL_VARIANTS, n) ? MC_TOOL_VARIANTS[n] : 'others';
 }
 // 参数摘要：白名单键值（单行化 + 60 字符截断）→ argsRaw 单行化 → callId
 function mcToolArgsSummary(name, argsRaw, callId) {
@@ -2588,7 +2572,7 @@ function mcOutputText(content, cap) {
 }
 
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { mcToolState: mcToolState, mcToolName: mcToolName, mcToolIconName: mcToolIconName,
+  module.exports = { mcToolState: mcToolState, mcToolName: mcToolName, mcToolVariant: mcToolVariant,
     mcToolArgsSummary: mcToolArgsSummary, mcViewCard: mcViewCard, mcOutputText: mcOutputText };
 }
 
@@ -2597,7 +2581,7 @@ const MC_TOOL_CSS = [
   '.mc-tool{background:var(--mc-surface);border:1px solid var(--mc-border);border-radius:var(--mc-r-card);box-shadow:var(--mc-shadow-panel);overflow:hidden;position:relative}',
   '.mc-tool-head{display:flex;align-items:center;gap:8px;width:100%;padding:7px 9px;background:none;border:none;cursor:pointer;text-align:left;font-family:inherit}',
   '.mc-t-ic{width:26px;height:26px;flex:none;display:grid;place-items:center;background:var(--mc-surface-2);border:1px solid var(--mc-border);border-radius:var(--mc-r-tag);color:var(--mc-fg)}',
-  '.mc-t-ic svg{width:15px;height:15px}',
+  '.mc-t-ic svg{width:15px;height:15px;shape-rendering:crispEdges}', // DSH 默认图标像素风格渲染(用户裁定)
   '.mc-t-meta{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px;text-align:left}',
   '.mc-t-name{font:600 12px/1.3 var(--font-display);letter-spacing:.02em;color:var(--mc-fg);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
   '.mc-t-args{font:400 11px/1.5 var(--font-code);color:var(--mc-faint);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
@@ -2645,6 +2629,17 @@ const McTool = {
     const SearchBlock = MC_TOOL_PRIM.SearchBlock;
     const WebBlock = MC_TOOL_PRIM.WebBlock;
     const JsonBlock = MC_TOOL_PRIM.JsonBlock;
+    const StateDot = MC_TOOL_PRIM.StateDot;
+    // 官方默认工具图标（dsh-client-ui-tool VARIANT_ICONS 同源，组件取自 primitives）
+    const MC_TOOL_ICON_COMP = {
+      search: MC_TOOL_PRIM.IconSearchOutline16,
+      read: MC_TOOL_PRIM.IconBrowseOutline16,
+      bash: MC_TOOL_PRIM.IconApiOutline14,
+      write: MC_TOOL_PRIM.IconEditOutline16,
+      edit: MC_TOOL_PRIM.IconEditOutline16,
+      code: MC_TOOL_PRIM.IconCodeOutline16,
+      others: MC_TOOL_PRIM.IconSparkle16,
+    };
     let REDUCED = false;
     try { REDUCED = window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) {}
 
@@ -2686,16 +2681,29 @@ const McTool = {
       function toggle() {
         mcFold(cardRef.current, function () { setOpen(function (o) { return !o; }); });
       }
-      // 展开体内宿主折叠面板（DisclosureRow 系：[data-expandable]/[aria-expanded]）点击 →
-      // 方向判定（捕获阶段读 pre-click 态）+ 库 flash：展开 flashIn / 收起 flashOut（用户裁定⑤）。
+      // 展开体内折叠面板点击 → 方向判定 + 库 flash：展开 flashIn / 收起 flashOut（用户裁定⑤）。
       // 宿主自身 handler 照常切换（不拦截），我们只在切换后补白块闪烁；REDUCED 不挂。
+      // 命中面：DisclosureRow 系（[data-expandable]/[aria-expanded]）+ JsonBlock IN 裸钮
+      // （button，方向读 ▸/▾ 文案前缀——二轮补：该钮无 aria/data 钩子，首轮委托漏网）。
+      function mcPanelOpen(head) {
+        var a = head.getAttribute('aria-expanded');
+        if (a === 'true') return true;
+        if (a === 'false') return false;
+        var ds = head.getAttribute('data-state');
+        if (ds === 'open') return true;
+        if (ds === 'closed') return false;
+        var txt = (head.textContent || '').replace(/^\s+/, '');
+        if (txt.charAt(0) === '▾') return true;
+        if (txt.charAt(0) === '▸') return false;
+        return false;
+      }
       function onBodyCapture(ev) {
         var t = ev.target;
         if (!t || !t.closest) return;
         var head = null;
-        try { head = t.closest('[data-expandable],[aria-expanded]'); } catch (e) { return; }
+        try { head = t.closest('[data-expandable],[aria-expanded],button'); } catch (e) { return; }
         if (!head || !bodyRef.current || !bodyRef.current.contains(head)) return;
-        var wasOpen = head.getAttribute('aria-expanded') === 'true';
+        var wasOpen = mcPanelOpen(head);
         var panel = head.closest('[data-expandable]') || head.parentElement || head;
         if (REDUCED || !CLOCK || typeof CLOCK.next !== 'function') return;
         CLOCK.next(function () {
@@ -2706,14 +2714,22 @@ const McTool = {
           } catch (e) {}
         }, 100);
       }
-      var icon = mcToolIconName(name, state);
+      var variant = mcToolVariant(name);
+      // leading：官方 leadingFor 照抄——error→StateDot(error)/stopped→StateDot(warning)，其余变体图标
+      var leading = null;
+      if (state === 'error' && StateDot) leading = h(StateDot, { state: 'error' });
+      else if (state === 'stopped' && StateDot) leading = h(StateDot, { state: 'warning' });
+      else {
+        var Ic = MC_TOOL_ICON_COMP[variant] || MC_TOOL_ICON_COMP.others;
+        if (Ic) leading = h(Ic, { size: 14 });
+      }
       var pillCls = state === 'running' ? 'run' : state === 'error' ? 'fail' : 'done';
       var pillText = state === 'running' ? 'running' : state === 'error' ? 'fail' : 'done';
       var argsText = mcToolArgsSummary(name, rawOf(block), block && block.callId);
       if (state === 'stopped') argsText += ' · 已停止';
       return h('div', { className: 'mc-tool' + (open ? ' open' : '') + (state === 'running' ? ' mc-run' : state === 'error' ? ' mc-fail' : ''), ref: cardRef },
         h('button', { type: 'button', className: 'mc-tool-head', ref: headRef, onClick: toggle },
-          h('span', { className: 'mc-t-ic' }, h('svg', { 'aria-hidden': true }, h('use', { href: '#' + icon }))),
+          h('span', { className: 'mc-t-ic' }, leading),
           h('span', { className: 'mc-t-meta' },
             h('span', { className: 'mc-t-name' }, name),
             h('span', { className: 'mc-t-args' }, argsText)),
@@ -4635,7 +4651,7 @@ function McKitPage() {
             MC_TOOL_DEMO ? [
               h('div', { className: 'kit-frame', key: 'samples' },
                 h('div', { className: 'kit-frame-tag' },
-                  h('span', null, '样本 · read 文本体 / edit diff 体 / bash 终端体(fail 红边) / web_search 引用体 / 未知工具 dots 兜底'),
+                  h('span', null, '样本 · read 文本体 / edit diff 体 / bash 终端体(fail 红边) / web_search 引用体 / 未知工具 Sparkle 兜底 —— 图标 = DSH 默认工具图标像素渲染(用户裁定 2026-09-02 二轮)'),
                   h('em', null, 'tool')),
                 h('div', { className: 'kit-frame-body kit-stack sm' },
                   MC_TOOL_DEMO.card(MC_KIT_TOOL_READ),

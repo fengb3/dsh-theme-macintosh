@@ -144,3 +144,14 @@ dist/client-body.js + client.js 重建产物（不手改）
 - 验证：npm test 61/61 + audit 绿；verify-toolcard GREEN（新增裁定断言：全部首登折叠/展开体
   直角化 tb·inner·block 全 0px/像素字体 Fusion Pixel 压平）。
 - 待活体：面板闪烁的实会话观察（当前窗口无 DisclosureRow 折叠面板样本，归用户活体验收)。
+## 用户裁定补丁（2026-09-02 三轮，两条）
+
+1. **IN 按钮闪烁补漏**：JsonBlock 的 IN 钮是裸 `button`（无 aria-expanded/data-expandable，
+   方向读 ▸/▾ 文案前缀）——首轮委托选择器 `[data-expandable],[aria-expanded]` 漏网。
+   修：委托扩 `button` + `mcPanelOpen` 方向判定（aria-expanded → data-state → ▸/▾ → false）。
+2. **图标全换 DSH 默认 + 像素渲染**：mcToolIconName 语义表退役，改 `mcToolVariant`
+   （官方 TOOL_VARIANTS 照抄，余→others）；图标组件 = primitives 七只 outline 图标
+   （VARIANT_ICONS 同源）；leading 照抄 leadingFor（error→StateDot error/stopped→warning）；
+   像素渲染 = `.mc-t-ic svg{shape-rendering:crispEdges}`。
+- 验证：npm test 61/61 + audit 绿（variant 测试改写）；verify-toolcard GREEN 25 断言
+  （新增：图标 svg+crispedges、IN 钮点击 flash 闪类轮询命中）。commit 后 push。

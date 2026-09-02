@@ -463,14 +463,16 @@ state = { view, mode, current, sessions, busy:{}, fallback:{}, queue:{}, stats:{
   开合态）；running 头条纹扫掠 `--sweep-delay` 组件内 CLOCK.syncAnim
   相位对齐（syscard retry 先例）；开合 accToggle 四拍；出场 flash 由 McFlow 观察器在
   flowItem 行级供给（每张工具卡是独立 tool-call 节点 = 独立 flowItem，免费获得出场闪）。
-- **图标语义映射**（§10.4 表适配真实 wire 名）：read/read_image→i-doc、write→i-floppy、
-  edit/str_replace_editor→i-px-edit、bash/pwsh→i-px-terminal、grep/web_search→i-px-search、
-  glob→i-folder、web_fetch→i-px-ext、todo_write→i-px-list、ask_user_question→i-balloon、
-  subagent→i-suitcase、send_message→i-px-copy、interrupt_agent→i-px-stop、
-  workflow→i-px-timeline、ralph→i-px-reload、job_*→i-px-clock、*_goal→i-px-goal、
-  skill→i-sparkle、mcp__ 前缀→i-px-zap、error 态一律 i-px-warning（真失败才叹号）、
-  未知→i-px-dots。**sprite 补六只**：i-floppy/i-balloon（原型 FIGMA-ASSETS 区间逐抄）+
-  i-px-ext/i-px-goal/i-px-list/i-px-warning（pixelarticons 源文件照搬）。
+- **图标 = DSH 默认工具图标 + 像素渲染（用户裁定 2026-09-02 三轮，替换原 sprite 语义映射表）**：
+  变体表 TOOL_VARIANTS 照抄为 mcToolVariant（bash/pwsh→bash、read/web_fetch→read、
+  web_search/grep/glob→search、write、edit、run_code→code、cordis_inspect 系→read、余→others）；
+  图标组件 = primitives 的 IconSearchOutline16/IconBrowseOutline16/IconApiOutline14/
+  IconEditOutline16/IconCodeOutline16/IconSparkle16（VARIANT_ICONS 同源）；leading 照抄官方
+  leadingFor：error→StateDot(error)、stopped→StateDot(warning)。像素渲染 = 
+  `.mc-t-ic svg{shape-rendering:crispEdges}`。sprite 六只新图标保留（kit/他处备用）。
+  委托命中面三轮补：JsonBlock IN 钮是裸 button（无 aria/data 钩子，方向读 ▸/▾ 文案前缀），
+  委托选择器扩 `button` 并加 mcPanelOpen 方向判定。
+
 - **参数摘要**：按工具名优先键表（grep→pattern 非 path；web_search 实际键是 `queries`
   数组，取首两个 ' / ' 连接），白名单兜底；非法 JSON → argsRaw 单行化；空形参 → callId。
 - **浅色陷阱**：WebBlock 根底色为宿主**硬编码深色**（非 token），浅色不翻转——
