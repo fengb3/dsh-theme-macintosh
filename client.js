@@ -27,10 +27,12 @@ const McTokens = {
   --mc-desktop-pattern:url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAYAAADED76LAAAACXBIWXMAAAWJAAAFiQFtaJ36AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAA2SURBVHgB1Y+xDQAgDMNacURvykVZ+SprPitiYYIDmDxYsuQk2QBCUtyYtvslN0dVzV8LZ30Buytmvd+9eVsAAAAASUVORK5CYII=");
   /* titlebar close/zoom box 多色位（sprite 引用原型名 --box-line/--box-face，别名见下） */
   --mc-box-line:#9d9dcf; --mc-box-face:#31314f;
-  /* 硬投影——原型 §4：深 .85 / 浅 .72（此前两处装反） */
-  --mc-shadow-panel:3px 3px 0 0 rgba(0,0,0,.85);
-  --mc-shadow-pop:3px 3px 0 0 rgba(0,0,0,.7);
-  --mc-shadow-field:2px 2px 0 0 rgba(0,0,0,.35);
+  /* 硬投影——全员实心纯黑（panel/pop/field/win 四位一律不透明，裁定 2026-09-03） */
+  --mc-shadow-panel:3px 3px 0 0 #000;
+  --mc-shadow-pop:3px 3px 0 0 #000;
+  --mc-shadow-field:2px 2px 0 0 #000;
+  /* 主窗实心硬投影——不透明纯黑，偏移与面板投影同规 3px，深浅共用 */
+  --mc-shadow-win:3px 3px 0 0 #000;
   /* 标题栏条纹 / 滚动条 */
   --mc-title-stripe:rgba(255,255,255,.26);
   --mc-scroll-track:#4a4a4a; --mc-scroll-box:#717171;
@@ -57,9 +59,9 @@ html[data-theme="light"]{
   --mc-spark:#a8720e; --mc-success:#2e7d32; --mc-danger:#c23a34; --mc-danger-ink:#ffffff;
   --mc-border-soft:rgba(10,10,10,.5);
   --mc-box-line:#545487; --mc-box-face:#dadaff;
-  --mc-shadow-panel:3px 3px 0 0 rgba(0,0,0,.72);
+  --mc-shadow-panel:3px 3px 0 0 #000;
   --mc-shadow-pop:3px 3px 0 0 #000;
-  --mc-shadow-field:2px 2px 0 0 rgba(0,0,0,.5);
+  --mc-shadow-field:2px 2px 0 0 #000;
   --mc-title-stripe:rgba(0,0,0,.5);
   --mc-scroll-track:#e0e0e0; --mc-scroll-box:#c0c0c0;
   /* --mc-desktop-pattern 刻意不覆盖：浅色沿用同一噪点瓦片，靠 --mc-bg 底色区分 */
@@ -498,6 +500,11 @@ const MC_MAP = {
   appRootRail: '#root > div > div[data-sidebar-collapsed]', /* stable: official data-attr */
   // mainColumn = 会话根（header + 滚动口 + composer 都在其内，正好是"主窗"区域）
   mainColumn: 'div[data-phase]',
+  // mainColumnCell = 主列所在网格格位 centerCol（AppFrame grid 第二列，宿主 overflow:hidden）。
+  // 实测（2026-09-03）：会话根与该格矩形完全重合，box-shadow 画在会话根上外溢即被格位裁掉
+  // → 主窗投影必须落在格位上（同侧栏列先例：投影画在列元素上、缝隙里可见）。
+  // :has 核锚 data-phase（全页唯一 data-*）：宿主若改列序，投影仍跟随真实主窗列。
+  mainColumnCell: '#root > div > div > div:has(> div > div[data-phase])', /* DRIFT-RISK: structural 前缀;:has 核锚 data-phase stable */
   // sessionHeader = ConversationSessionHeader 的 <header>；无 data-* → 会话根内结构位
   sessionHeader: 'div[data-phase] > header', /* DRIFT-RISK: structural */
   scrollport: '[data-conversation-scroll]',
@@ -576,7 +583,16 @@ const MC_MAP = {
   // data-active 锚、折叠图标 span 锚全部无消费者;重绘卡自有 .mc-* 类零宿主锚)
   turnTailBar: '[data-turn-tail]',                            // stable(L9715-9752)
   // —— 终审 F2 收编（2026-08-31）：此前 flow 规则里直写的宿主选择器一律进管制表（spec §1 唯一管制点）——
-  pendingSteering: '[data-pending-steering]',  // stable(steering 待定态虚线廓，spec §4 行3)
+  pendingSteering: '[data-pending-steering]',  // stable(busy 追加消息嫁接锚；样式与正式用户消息一致，裁定 2026-09-03)
+  // —— pending 嫁接细分键(2026-09-03 live 勘误:host PendingSteeringBubble 实构 = userRow >
+  //    userStack[图集包装 div(无图常空) → *_bubble 正文 → *_referenceSummary 引用行] + 行末
+  //    *_actions 图标行(p-xYUq_actions,内含宿主复制图标钮);旧嫁接按「首子即气泡」落位全错——
+  //    空 wrapper 误穿 .mc-user-bubble、真气泡误穿 .mc-user-ref、图标钮行漏网)——
+  pendingBubble: '[class*="_bubble"]',               // DRIFT-RISK: hashed-substring(gdEzaW_bubble;JS 定位正文气泡,嫁 .mc-user-bubble)
+  pendingRefSummary: '[class*="_referenceSummary"]', // DRIFT-RISK: hashed-substring(gdEzaW_referenceSummary;JS 定位引用行,嫁 .mc-user-ref)
+  pendingActions: '[class*="_actions"]',             // DRIFT-RISK: hashed-substring(p-xYUq_actions;CSS 藏宿主图标操作行=复制图标钮)
+  pendingRefChip: '[data-ref-chip]',                 // stable(宿主 chip 语义锚;pending 内对齐 .mc-user-chip 语汇)
+  pendingSkillChip: '[data-ref-chip="skill"]',       // stable(/命令 chip;pending 内拍平为正文——正式消息已不 chip 化,裁定 2026-09-03)
   statusRow: '[role="status"]',                // stable(TurnStatus 宿主状态行；使用时限定 flowColumn 内，spec §4 行10)
   commandCard: '[data-variant="others"]',      // stable(command 卡壳锚，spec §4 行9「[data-variant="others"][data-state]」)
   dataState: '[data-state=',                   // 属性前缀键（任意取值形态；command 三态）
@@ -701,9 +717,13 @@ const McChrome = {
     // 缝隙做在 grid 容器上（padding 四周 12px + 列间 gap 12px）——官方 grid 行高固定 100vh，
     // 给列加 margin 只会溢出屏幕（实测 bottom=914>900），容器 padding 才能真正收进视口。
     `${MC_MAP.appRoot}{background:transparent;box-sizing:border-box;padding:12px;gap:12px}`,
-    // 主列 = 会话窗（.win 语汇）：surface 底 + 1px 边 + 3px 硬投影；桌面两大窗 = 直角（原型 .desk > .win）。
+    // 主列 = 会话窗（.win 语汇）：surface 底 + 1px 边；桌面两大窗 = 直角（原型 .desk > .win）。
     // 刻意不收 overflow —— 宿主自管滚动（centerCol overflow:hidden + data-conversation-scroll）
-    `${MC_MAP.mainColumn}{background:var(--mc-surface);border:1px solid var(--mc-border);border-radius:0;box-shadow:var(--mc-shadow-panel)}`,
+    `${MC_MAP.mainColumn}{background:var(--mc-surface);border:1px solid var(--mc-border);border-radius:0}`,
+    // 主窗实心硬投影落在网格格位（centerCol）上：会话根与格位矩形完全重合，投影画在会话根上
+    // 会被格位 overflow:hidden 裁得不可见（对照侧栏列——同层才可见，实测 2026-09-03）。
+    // 纯黑不透明、偏移同规 3px（与侧栏/面板投影等距），深浅共用。
+    `${MC_MAP.mainColumnCell}{box-shadow:var(--mc-shadow-win)}`,
     // 会话头部条 = 装饰 titlebar（pinstripe 条纹面 + 顶缘 accent 高亮线，原型 §3 .titlebar 语汇；
     // close/zoom 方块与交互属三期结构级，此处只做 CSS 染色）。浅色条纹加深、深色条纹提亮。
     `${MC_MAP.sessionHeader}{background:repeating-linear-gradient(180deg,rgba(255,255,255,.10) 0 1px,transparent 1px 3px),var(--mc-surface-2);border-bottom:1px solid var(--mc-border);box-shadow:inset 0 1px 0 var(--mc-accent)}`,
@@ -717,8 +737,14 @@ const McChrome = {
       `border-bottom:1px solid var(--mc-border);box-shadow:inset 0 1px 0 var(--mc-accent)}`,
     `html[data-theme="light"] div[data-phase="hero"]::before,html[data-theme="light"] div[data-phase="inert"]::before{background:` +
       MC_TBOX.bg(MC_TBOX.closeLight, MC_TBOX.zoomLight, 'rgba(0,0,0,.20)') + '}',
-    // 滚动口：最小干预 —— 只给深一档底色（窗内"文档区"），滚动条走 tokens 已有的全局 15px 经典款
-    `${MC_MAP.scrollport}{background:var(--mc-bg-deep)}`,
+    // 滚动口：窗内"文档区"与侧栏同底（用户裁定 2026-09-03：flow 底色=侧栏底色 rail-1，
+    // 深 #383838/浅 #fff，勿再用更深档）。滚动条走 tokens 已有的全局 15px 经典款
+    `${MC_MAP.scrollport}{background:var(--mc-rail-1)}`,
+    // 输入坞席位：宿主自带 36px 透明→bg-base 淡入渐变（终点色与文档区不同色=深色脏带）——
+    // 铲平为文档区同色实底（像素风硬切语汇，用户裁定 2026-09-03 删渐变）。
+    // 宿主规则 .root[data-phase=active] .composerSeat=(0,3,0) → 复用 appRoot(#root 前缀,ID 列)
+    // 拼后代选择器压杀；两段选择器均经 MC_MAP 插值（管制纪律）。
+    `${MC_MAP.appRoot} div${MC_MAP.composerSeat}{background:var(--mc-rail-1)}`,
     // composer 卡：surface 底 + 1px 边 + 小一级硬投影（方角，.mc-field 语汇）
     `${MC_MAP.composerCard}{background:var(--mc-surface);border:1px solid var(--mc-border);box-shadow:var(--mc-shadow-field);border-radius:0}`,
     // 15px 经典滚动条：只染会话滚动口（宿主侧栏刻意隐藏滚动条，勿全局强推）
@@ -1732,10 +1758,20 @@ var McFlow = {
       MC_MAP.bubbleUser + '{color:var(--mc-accent-ink);border:1px solid var(--mc-border);border-radius:8px;padding:7px 12px;font:400 14px/1.7 var(--font-ui)}',
       MC_MAP.bubbleUser + ':active{border-color:var(--mc-fg)}',
       MC_MAP.userGallery + '{border:1px solid var(--mc-border);border-radius:var(--mc-r-card)}',
+      // pending 嫁接补刀(2026-09-03 live 勘误):气泡全集以 pendingSteering 锚定——attr+class(0,2,0)
+      // 稳压 gdEzaW_bubble 单类(padding 10px 16px/radius 22px/font-size 16px),免 style 标签顺序悬;
+      // 空 images 包装 :empty 藏(免多占一条 6px gap);宿主 *_actions 图标行整行藏(复制图标钮退役,
+      // 统一 .mc-user-copy 文字钮=正式消息同款,裁定 2026-09-03);chip 对齐 .mc-user-chip 语汇
+      // (skill chip 拍平为正文,同 mcProjectUserText 不 chip 化裁定;svg 图标藏=正式 chip 无图标)。
+      MC_MAP.pendingSteering + ' .mc-user-bubble{max-width:520px;padding:7px 12px;background:var(--mc-accent);color:var(--mc-accent-ink);border:1px solid var(--mc-border);border-radius:8px;font:400 14px/1.7 var(--font-ui);white-space:pre-wrap;word-break:break-word;text-align:left}',
+      MC_MAP.pendingSteering + ' .mc-user-attach:empty{display:none}',
+      MC_MAP.pendingSteering + ' > ' + MC_MAP.pendingActions + '{display:none}',
+      MC_MAP.pendingSteering + ' ' + MC_MAP.pendingRefChip + '{font:500 12px var(--font-mono);color:inherit}',
+      MC_MAP.pendingSteering + ' ' + MC_MAP.pendingRefChip + ' svg{display:none}',
+      MC_MAP.pendingSteering + ' ' + MC_MAP.pendingSkillChip + '{font:inherit;color:inherit}',
       // 验收六轮:refChip 宿主 chip 覆写随用户行重写退役(McUserNodeView 自有 .mc-user-chip)
-      // 六轮续:pending steering 重绘改观察器嫁接(见 skinPending)——结构位皮肤规则退役,
-      // 只留 .mc-pending 虚线待定廓(嫁接标记)
-      '.mc-pending{outline:1px dashed var(--mc-faint);outline-offset:2px;border-radius:8px}',
+      // 六轮续:pending steering 重绘改观察器嫁接(见 skinPending)——结构位皮肤规则退役。
+      // 裁定 2026-09-03(用户):busy 追加消息与正式用户消息样式完全一致,虚线待定廓 .mc-pending 退役
       // 验收七轮:注入条/压缩条/重试条 CSS 皮肤随 syscard 重绘退役(McSysCard 遮蔽 context/
       // compaction/manual-compaction/model-retry 四槽,自有 .mc-inject/.mc-comp/.mc-retry 类)——
       // 原 §7 虚线条 + 表单图标 + leading 槽清理 + §8 重试八角点/chevron 规则与 T4 压缩图标位一并下岗;
@@ -1814,27 +1850,46 @@ var McFlow = {
     function enterFlash(el) { flashIn(el, function () {}); }
     // 六轮续:pending steering 重绘(嫁接)——宿主收件箱直渲染 PendingSteeringBubble(L5877),
     // 无 keyed 槽可遮蔽 → 观察器把自有类直接嫁到宿主结构上,吃到与 McUserNodeView 同一套 CSS:
-    // 行→.mc-user-row 栈→flex 右对齐 气泡→.mc-user-bubble 图集→.mc-user-attach 引用→.mc-user-ref,
-    // 标记 .mc-pending(虚线待定廓,host data-pending-steering 保留作锚)。幂等:已嫁接即跳过
+    // 行→.mc-user-row 栈→flex 右对齐 气泡→.mc-user-bubble 图集→.mc-user-attach 引用→.mc-user-ref
+    // (host data-pending-steering 保留作锚)。裁定 2026-09-03(用户):不再标 .mc-pending 虚线廓,
+    // 并在气泡后插 .mc-user-copy 复制钮——busy 追加消息=正式用户消息,样式逐位一致。幂等:已嫁接即跳过
     // 验收轮5终裁(用户):产物行整体不显示——重绘机器(skinDeliver/dlNames/dlPaint)退役,
     // 藏匿由 CSS 无条件规则独担(见 MC_FLOW css 段 deliverRoot 行)
+    // 2026-09-03 live 勘误:嫁接改按哈希类后缀定位(MC_MAP.pendingBubble/pendingRefSummary)——
+    // 宿主实构 stack 子序 = [图集包装 div(data-slot,无图常空) → *_bubble 正文 → *_referenceSummary]，
+    // 旧「首子即气泡」把空 wrapper 误穿 .mc-user-bubble、真气泡误穿 .mc-user-ref(12px 弱文)。
+    // 复制钮插 bubble 之后(正式消息序:bubble → copy → ref);宿主 *_actions 图标行(复制图标钮)
+    // 由 CSS 藏(裁定 2026-09-03:图标钮退役,统一 .mc-user-copy 文字钮)。幂等:已嫁接即跳过
     function skinPending(el) {
       try {
         if (el.classList.contains('mc-user-row')) return;
-        el.classList.add('mc-user-row', 'mc-pending');
-        var stack = el.firstElementChild; // 宿主 userStack
+        var stack = el.firstElementChild; // 宿主 userStack(gdEzaW_userStack 自带 flex column align-end)
         if (!stack) return;
+        var bub = null;
+        for (var c = stack.firstElementChild; c; c = c.nextElementSibling) {
+          if (c.matches(MC_MAP.pendingBubble)) { bub = c; c.classList.add('mc-user-bubble'); }
+          else if (c.matches(MC_MAP.pendingRefSummary)) c.classList.add('mc-user-ref');
+          else c.classList.add('mc-user-attach'); // 图集包装 div(无图常空 → CSS :empty 藏)
+        }
+        if (!bub) return; // 正文气泡未挂(宿主分拍)——不标 marker,留待重处理
+        el.classList.add('mc-user-row');
         stack.style.display = 'flex';
         stack.style.flexDirection = 'column';
         stack.style.alignItems = 'flex-end';
         stack.style.gap = '6px';
-        var bub = null;
-        for (var c = stack.firstElementChild; c; c = c.nextElementSibling) {
-          if (c.hasAttribute('data-align')) { c.classList.add('mc-user-attach'); continue; }
-          if (!bub) { bub = c; c.classList.add('mc-user-bubble'); }
-          else c.classList.add('mc-user-ref');
+        if (!stack.querySelector('.mc-user-copy')) {
+          var cp = document.createElement('button'); // McUserNodeView 同款复制钮(裁定 2026-09-03)
+          cp.type = 'button';
+          cp.className = 'mc-user-copy';
+          cp.textContent = '复制';
+          cp.addEventListener('click', function () {
+            try { navigator.clipboard.writeText(bub.textContent); } catch (e) {}
+            cp.textContent = '已复制';
+            CLOCK.next(function () { cp.textContent = '复制'; }, 1200);
+          });
+          stack.insertBefore(cp, bub.nextSibling);
         }
-        if (bub && !REDUCED) flashIn(bub, function () {});
+        if (!REDUCED) flashIn(bub, function () {});
       } catch (e) { /* 宿主结构漂移即回退官方样式,不破版 */ }
     }
     // 验收四轮:think 摘要/正文观察器(thinkStream/thinkBodyStream)随宿主 ReasoningRow 覆写
@@ -2095,7 +2150,9 @@ const McThink = {
        官方 UserMessageNodeView(L5393-5408)平移:content 块拆 text/images/rest;气泡为
        自有 .mc-user-bubble(原型 .msg.user .bubble L318-321 语汇),出场走 lib flashIn
        挂在气泡自身——白块=inset:0=气泡面积,不再整行铺白(此前观察器挂 flowItem 之弊);
-       @引用//命令 chip 为自有 .mc-user-chip 类(audit §5 安全)。 */
+       @引用 chip 为自有 .mc-user-chip 类(audit §5 安全)。裁定 2026-09-03(用户):斜杠命令
+       不再入 chip——12px mono 小字号正是「输入 /命令 后气泡字体变小、字体不对」的来源,
+       命令正文一律走 MessageText 常规 14px 气泡字体(chip 只留 @file/@folder/@session)。 */
     function mcProjectUserText(h, MessageText, text, referenceLabels) {
       var ranges = [];
       var labels = [];
@@ -2104,7 +2161,7 @@ const McThink = {
         var lab = '@' + labels[li], st2 = text.indexOf(lab);
         while (st2 >= 0) { ranges.push({ start: st2, end: st2 + lab.length, label: lab, kind: 'session' }); st2 = text.indexOf(lab, st2 + lab.length); }
       }
-      var re = /(^|\s)(\/[\w-]+|@"[^"\n]+"|@[^\s]+)/gu, m;
+      var re = /(^|\s)(@"[^"\n]+"|@[^\s]+)/gu, m;
       while ((m = re.exec(text)) !== null) {
         var ts = m.index + (m[1] ? m[1].length : 0);
         var raw = m[2] || '';
@@ -3000,11 +3057,11 @@ const MC_DOCK_CSS = [
     var C = 'html[data-mc-pop] ' + MC_MAP.composerHide;
     return [
       C + '{display:block!important;position:fixed!important;left:-32000px;top:0;width:1px;height:1px;overflow:visible;pointer-events:none;z-index:9999!important}', // dock2 批补 z:fixed 恒建层叠上下文,z:auto 时整卡被树序靠后的自绘家具(todo)盖住——弹层 z:9000 被困卡内遭遮(用户报障);抬卡即抬弹层
-      C + ' [role=menu],' + C + ' [role=listbox],' + C + ' [role=dialog]{position:fixed;left:var(--mc-pop-l,16px);right:auto;bottom:var(--mc-pop-b,140px);margin:0;min-width:216px;max-height:44vh;overflow-y:auto;pointer-events:auto;z-index:9000;background:var(--mc-surface);border:1px solid var(--mc-border);border-radius:0;box-shadow:var(--mc-shadow-pop);padding:4px;font:500 12px/1.6 var(--font-ui);color:var(--mc-fg)}', // 直角(验收轮3 用户裁定,弃 --mc-r-card);ctx 弹窗=role=dialog(终验勘定)并入同款定位与皮
+      C + ' [role=menu],' + C + ' [role=listbox],' + C + ' [role=dialog]{position:fixed;left:var(--mc-pop-l,16px);right:auto;bottom:var(--mc-pop-b,140px);margin:0;min-width:216px;max-height:44vh!important;overflow-y:auto;pointer-events:auto;z-index:9000;background:var(--mc-surface);border:1px solid var(--mc-border);border-radius:0;box-shadow:var(--mc-shadow-pop);padding:4px;font:500 12px/1.6 var(--font-ui);color:var(--mc-fg)}', // 直角(验收轮3 用户裁定,弃 --mc-r-card);ctx 弹窗=role=dialog(终验勘定)并入同款定位与皮;max-height 带 !important——命令 listbox 挂载即带内联 max-height:0(藏匿态量高,probe-slash5 勘定),不压则整层不可见
       'html[data-mc-pop=r] ' + MC_MAP.composerHide + ' [role=menu],html[data-mc-pop=r] ' + MC_MAP.composerHide + ' [role=listbox],html[data-mc-pop=r] ' + MC_MAP.composerHide + ' [role=dialog]{left:auto;right:var(--mc-pop-r,16px)}', // 验收轮4:右半屏钮右缘对齐(右下角对准点击处,修溢出)
-      C + ' [role=menuitem],' + C + ' [role=menuitemradio],' + C + ' [role=option]{display:flex;align-items:center;gap:8px;padding:5px 9px;cursor:pointer;font:inherit;line-height:1.6;color:var(--mc-muted);background:none;border:none;white-space:nowrap}',
+      C + ' [role=menuitem],' + C + ' [role=menuitemradio],' + C + ' [role=option]{display:flex;align-items:center;gap:8px;padding:5px 9px;cursor:pointer;font:inherit;line-height:1.6;color:var(--mc-muted);background:none;border:none;white-space:nowrap;border-radius:0}', // 裁定 2026-09-03:选项一律直角(宿主 active 项圆角 10px 漏出,probe-slash5 勘定)
       C + ' [role=menuitem]:active,' + C + ' [role=menuitemradio]:active,' + C + ' [role=option]:active{background:var(--mc-fg);color:var(--mc-surface)}',
-      C + ' [aria-checked=true],' + C + ' [aria-selected=true]{background:var(--mc-accent);color:var(--mc-accent-ink)}',
+      C + ' [aria-checked=true],' + C + ' [aria-selected=true]{background:var(--mc-accent);color:var(--mc-accent-ink);border-radius:0}',
       C + ' [role=separator],' + C + ' hr{height:1px;margin:4px 5px;background:var(--mc-border-soft)}',
       C + ' [role=menu] *,' + C + ' [role=listbox] *,' + C + ' [role=dialog] *{font-family:inherit}', // 冒烟视觉勘定:宿主 span 自带字体令 CJK 回退不一致,全继承统一
     ].join('\n');
@@ -3127,15 +3184,48 @@ var McDock = {
         '<label class="mc-field"><textarea rows="1" placeholder="Message the agent…"></textarea></label>' +
         '<div class="composer-bar">' + bar + '</div></div>';
       var ta = cmp.querySelector('textarea');
-      ta.addEventListener('input', function () {
+      // 斜杠命令对齐(裁定 2026-09-03):击键实时镜像入官方框——官方 onChange 自侦行首 "/"
+      // 自挂命令 listbox;插入命令后追加正文不重弹、行中 "/" 不触发(probe-slash4 勘定)。
+      // IME 组字期跳过(input.isComposing),组字收尾 compositionend 补一拍。
+      function mirrorOfficial() {
+        try { if (!dead && off.field) mcMirrorValue(off.field, ta.value); } catch (er) {}
+      }
+      ta.addEventListener('input', function (e) {
+        if (!e || !e.isComposing) mirrorOfficial();
         state = mcDockState(state, { t: 'input', has: !!ta.value.trim() });
         ta.style.height = 'auto'; // 验收轮1 自增高:塌到 auto 取 scrollHeight,40vh 封顶(无 transition 瞬切合规)
         ta.style.height = Math.min(ta.scrollHeight, Math.round(window.innerHeight * 0.4)) + 'px';
         paint();
       });
+      ta.addEventListener('compositionend', function () { mirrorOfficial(); });
       ta.addEventListener('keydown', function (e) { // 原型 §9.2:Enter 无 Shift=发送(idle=官方钮/busy=官方入队)
         if (e.isComposing) return; // 裁定:IME 组字期 Enter=选字确认,不得发送(中文交互主场景;Task 5 fix-1)
-        try { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); doSend(); } } catch (er) {}
+        try {
+          // 菜单在场(门控开):↓/↑/Esc 转发官方框走官方键盘语义(移高亮/收层保文,probe-self/4 勘定
+          // 恒可用);Enter 弃转发(官方 Enter 语义不稳,probe-purekd 勘定)——改读 active 项名直写
+          // "/name "(官方插入同格式),值变即收菜单,选值经关层回流拍回镜像框。
+          var de = document.documentElement;
+          if (de.hasAttribute('data-mc-pop') &&
+            (e.key === 'ArrowDown' || e.key === 'ArrowUp' || e.key === 'Enter' || e.key === 'Escape')) {
+            e.preventDefault();
+            if (e.key !== 'Enter') {
+              var lbox = off.card ? off.card.querySelector('[role=listbox]') : null;
+              if (lbox && off.field) {
+                // listbox(命令菜单):↓/↑/Esc 全走官方键盘语义(移高亮/收层保文,probe-self/4 勘定)
+                off.field.dispatchEvent(new window.KeyboardEvent('keydown',
+                  { key: e.key, code: e.code, keyCode: e.keyCode, which: e.which, bubbles: true, cancelable: true }));
+              } else if (e.key === 'Escape' && popTrigger) {
+                var pb2 = q(popTrigger); if (pb2) pb2.click(); // [role=menu] 无焦点 Esc 盲——镜像开层钮 toggle 关
+              }
+              return;
+            }
+            var lb = off.card ? off.card.querySelector('[role=listbox]') : null;
+            var act = lb ? lb.querySelector('[role=option][aria-selected=true] span') : null;
+            if (act && act.textContent && off.field) mcMirrorValue(off.field, '/' + act.textContent + ' ');
+            return;
+          }
+          if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); doSend(); }
+        } catch (er) {}
       });
       cmp.querySelector('[data-mc-send]').addEventListener('click', function () { doSend(); });
       cmp.querySelector('[data-mc-stop]').addEventListener('click', function () {
@@ -3149,6 +3239,7 @@ var McDock = {
         return function () {
           try {
             var b = q(sel); if (!b) return;
+            popTrigger = sel; // 收层通道记忆(点外/Esc 镜像 toggle 关)
             var r = anchor.getBoundingClientRect();
             var useRight = r.left + r.width / 2 > window.innerWidth / 2;
             document.documentElement.style.setProperty('--mc-pop-b', Math.max(8, window.innerHeight - r.top + 8) + 'px');
@@ -3162,7 +3253,23 @@ var McDock = {
         };
       }
       var bCmd = cmp.querySelector('[data-mc-cmd]');
-      if (bCmd) bCmd.addEventListener('click', openOfficialPop(bCmd, MC_MAP.composerCmd));
+      // 裁定 2026-09-03(用户):命令钮点击=斜杠模拟开门,弃官方钮镜像点击(probe-realclick/btnsel 勘定:
+      // 官方 onChange 自挂态的 listbox 真点击可选值;官方钮镜像点击开的菜单真 pointerdown 即收层、
+      // 不选值)。写入 "/" 并镜像官方——门控由 syncPopGate 斜杠路径自动开层,选中后关层回流拍回。
+      // 代价:点击时替换现有草稿(官方斜杠触发仅认行首 "/",probe-slash4 勘定)。
+      if (bCmd) bCmd.addEventListener('click', function () {
+        try {
+          var ta3 = cmp.querySelector('textarea');
+          if (!ta3 || !off.field) return;
+          ta3.value = '/';
+          ta3.style.height = 'auto';
+          ta3.style.height = Math.min(ta3.scrollHeight, Math.round(window.innerHeight * 0.4)) + 'px';
+          state = mcDockState(state, { t: 'input', has: true });
+          paint();
+          mirrorOfficial();
+          try { ta3.focus(); ta3.setSelectionRange(1, 1); } catch (er) {}
+        } catch (er) {}
+      });
       var bPerm = cmp.querySelector('[data-mc-perm]');
       if (bPerm) bPerm.addEventListener('click', openOfficialPop(bPerm, MC_MAP.composerPerm));
       var bModel = cmp.querySelector('[data-mc-model]');
@@ -3190,6 +3297,7 @@ var McDock = {
     // 或 esc()(esc 纪律);全部写入先比对后赋值——MO 盯 aria-label/title,同值回写会自激观察器。
     var lastCtxPct = 0; // 官方 ctx 钮仅 busy 挂载(aria-label 实时 %)——自绘环常驻(原型形态),pct 取最近观测值回填
     var popSeen = false; // 验收轮2:官方弹层「见过至少一拍」标记——菜单挂载前不算卸载,防开层当拍误收门(syncPopGate)
+    var popTrigger = null; // 弹层开层钮选择器(openOfficialPop 回填;Esc/点外收层时镜像 toggle 关——[role=menu] 无焦点不可自收)
     function syncBar() {
       try {
         if (dead || !cmp) return;
@@ -3253,12 +3361,47 @@ var McDock = {
     function syncPopGate() {
       try {
         var de = document.documentElement;
-        if (!de.hasAttribute('data-mc-pop')) { popMenuEl = null; return; }
+        if (!de.hasAttribute('data-mc-pop') && !off.card) { popMenuEl = null; return; }
         var menu = off.card ? off.card.querySelector('[role=menu],[role=listbox],[role=dialog]') : null;
         if (menu) {
           popSeen = true;
+          if (!de.hasAttribute('data-mc-pop')) {
+            // 斜杠路径开门(裁定 2026-09-03;probe-slash 勘定):官方 onChange 自挂 listbox,非按钮
+            // 镜像驱动——锚到自绘输入框上方(官方卡藏匿中自身定位不可信;锚位回填同 openOfficialPop 先例)
+            var tael = cmp ? cmp.querySelector('textarea') : null;
+            if (tael) {
+              var tr = tael.getBoundingClientRect();
+              de.style.setProperty('--mc-pop-b', Math.max(8, window.innerHeight - tr.top + 8) + 'px');
+              de.style.setProperty('--mc-pop-l', Math.max(8, Math.min(tr.left, Math.max(8, window.innerWidth - 224))) + 'px');
+            }
+            de.setAttribute('data-mc-pop', 'l');
+          }
           if (menu !== popMenuEl) { // 新菜单元素(首开/二段式换卡)→ 出场三拍;React 若中途擦类只是闪不完整,无害
             popMenuEl = menu;
+            // 命令 listbox 全接管盾 v5(probe-self/purekd 勘定:官方收层+清 query 拴在 mousedown;
+            // Enter 语义不稳——同型合成事件时选时清;而 ↓/↑ 移高亮与「直写值收菜单」恒定可用)。
+            // pointerdown+mousedown capture 相双静默(pd+sp,官方对指针交互失明,菜单不中场折损);
+            // click capture 相接管:读目标项首子 span(=itemName,结构勘定 probe-clean)自拼 "/name "
+            // 直写官方框(=官方插入同格式;值变即收菜单,关层回流拍回镜像框)。只挂 listbox(命令菜单);
+            // model/perm 类 [role=menu] 历史真点击正常,不加干预。
+            if (menu.getAttribute('role') === 'listbox' && !menu._mcFocusShield) {
+              menu._mcFocusShield = 1;
+              menu.addEventListener('pointerdown', function (ev) {
+                try { ev.preventDefault(); ev.stopPropagation(); } catch (er) {}
+              }, true);
+              menu.addEventListener('mousedown', function (ev) {
+                try { ev.preventDefault(); ev.stopPropagation(); } catch (er) {}
+              }, true);
+              menu.addEventListener('click', function (ev) {
+                try {
+                  var tgt = ev.target && ev.target.closest ? ev.target.closest('[role=option]') : null;
+                  if (!tgt || !off.field) return;
+                  ev.preventDefault(); ev.stopPropagation();
+                  var nm = tgt.querySelector('span');
+                  if (nm && nm.textContent) mcMirrorValue(off.field, '/' + nm.textContent + ' ');
+                } catch (er) {}
+              }, true);
+            }
             try { flashIn(menu, function () {}); } catch (e) {}
           }
           var r = menu.getBoundingClientRect();
@@ -3268,6 +3411,20 @@ var McDock = {
         if (popSeen) {
           popSeen = false; popMenuEl = null;
           de.removeAttribute('data-mc-pop');
+          try {
+            // 命令回流(裁定 2026-09-03):官方菜单点选/Enter 把 "/命令 " 写进官方框(隐藏)——关层拍
+            // 回流镜像框并聚焦(命令钮/斜杠两路径共用;非命令菜单不动官方框,空值/相等即无操作)
+            var ta2 = cmp ? cmp.querySelector('textarea') : null;
+            var ov = off.field ? off.field.value : '';
+            if (!dead && ta2 && ov && ov !== ta2.value) {
+              ta2.value = ov;
+              ta2.style.height = 'auto';
+              ta2.style.height = Math.min(ta2.scrollHeight, Math.round(window.innerHeight * 0.4)) + 'px';
+              state = mcDockState(state, { t: 'input', has: !!ta2.value.trim() });
+              paint();
+              try { ta2.focus(); ta2.setSelectionRange(ov.length, ov.length); } catch (e2) {}
+            }
+          } catch (e) {}
           try {
             if (popRect && popRect.w > 20 && popRect.h > 10) {
               var ghost = document.createElement('div');
@@ -3335,7 +3492,26 @@ var McDock = {
           }, 600);
           return;
         }
-        mcMirrorValue(off.field, ''); // 官方未收(宿主改版等):撤镜像防幽灵稿,本地草稿保留可重试
+        // 官方未 preventDefault(用户报障 2026-09-03:busy 态命令执行/入队存在不 pd 的形态——命令已
+        // 发而本地稿滞留)。不即撤镜像,600ms 观察窗判收讫:官方自清稿=已消费 → 同步清本地稿;
+        // 官方仍留文=真拒收 → 撤镜像防幽灵稿,本地草稿保留可重试(原语义)。两分支均限定
+        // 「值仍=已发文本」——观察窗内用户续打的新稿(ta/官方已被镜像改写)不误伤。
+        var sent = text;
+        try { if (qTimer) CLOCK.clear(qTimer); } catch (e) {}
+        qTimer = CLOCK.next(function consumeWatch() {
+          qTimer = null;
+          try {
+            if (dead || !off.field) return;
+            if (off.field.value === '') { // 官方自清 = 命令已执行/消息已入队
+              var taW = cmp.querySelector('textarea');
+              if (taW && taW.value === sent) { taW.value = ''; taW.style.height = ''; }
+              state = mcDockState(state, { t: 'input', has: false });
+              paint();
+              return;
+            }
+            if (off.field.value === sent) mcMirrorValue(off.field, ''); // 真拒收:撤镜像防幽灵稿(草稿保留可重试)
+          } catch (e) {}
+        }, 600);
       } catch (er) {}
     }
     function paint() { // 三态渲染(原型 §9.2;accToggle 状态切换)
@@ -3566,6 +3742,23 @@ var McDock = {
     }
     function onDocClose(e) { // 点外收 ctx-pop(浮层互斥,原型 §9.4;验收轮3:收口同样走 flashOut 闪退)
       try {
+        // 官方弹层点外收层(裁定 2026-09-03):[role=menu] 类无焦点不可自收(Esc 亦盲)——点外镜像
+        // 开层钮 toggle 关;命令 listbox 走官方 Esc 键语义(保文收层,probe4 勘定)。坞内点击不收
+        // (开层钮自身 toggle、输入框续打字过滤均属正常交互)。
+        var de0 = document.documentElement;
+        if (de0.hasAttribute('data-mc-pop') && off.card) {
+          var mn = off.card.querySelector('[role=menu],[role=listbox],[role=dialog]');
+          var inMenu = mn && (mn === e.target || mn.contains(e.target));
+          var inDock = cmp && (cmp === e.target || cmp.contains(e.target));
+          if (mn && !inMenu && !inDock) {
+            if (mn.getAttribute('role') === 'listbox' && off.field) {
+              off.field.dispatchEvent(new window.KeyboardEvent('keydown',
+                { key: 'Escape', code: 'Escape', bubbles: true, cancelable: true }));
+            } else if (popTrigger) {
+              var pb = q(popTrigger); if (pb) pb.click();
+            }
+          }
+        }
         var scopes = [furn, cmp];
         for (var i = 0; i < scopes.length; i++) {
           var pop = scopes[i] && scopes[i].querySelector('[data-mc-ctxpop]');

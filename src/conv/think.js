@@ -196,7 +196,9 @@ const McThink = {
        官方 UserMessageNodeView(L5393-5408)平移:content 块拆 text/images/rest;气泡为
        自有 .mc-user-bubble(原型 .msg.user .bubble L318-321 语汇),出场走 lib flashIn
        挂在气泡自身——白块=inset:0=气泡面积,不再整行铺白(此前观察器挂 flowItem 之弊);
-       @引用//命令 chip 为自有 .mc-user-chip 类(audit §5 安全)。 */
+       @引用 chip 为自有 .mc-user-chip 类(audit §5 安全)。裁定 2026-09-03(用户):斜杠命令
+       不再入 chip——12px mono 小字号正是「输入 /命令 后气泡字体变小、字体不对」的来源,
+       命令正文一律走 MessageText 常规 14px 气泡字体(chip 只留 @file/@folder/@session)。 */
     function mcProjectUserText(h, MessageText, text, referenceLabels) {
       var ranges = [];
       var labels = [];
@@ -205,7 +207,7 @@ const McThink = {
         var lab = '@' + labels[li], st2 = text.indexOf(lab);
         while (st2 >= 0) { ranges.push({ start: st2, end: st2 + lab.length, label: lab, kind: 'session' }); st2 = text.indexOf(lab, st2 + lab.length); }
       }
-      var re = /(^|\s)(\/[\w-]+|@"[^"\n]+"|@[^\s]+)/gu, m;
+      var re = /(^|\s)(@"[^"\n]+"|@[^\s]+)/gu, m;
       while ((m = re.exec(text)) !== null) {
         var ts = m.index + (m[1] ? m[1].length : 0);
         var raw = m[2] || '';

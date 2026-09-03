@@ -62,10 +62,20 @@ var McFlow = {
       MC_MAP.bubbleUser + '{color:var(--mc-accent-ink);border:1px solid var(--mc-border);border-radius:8px;padding:7px 12px;font:400 14px/1.7 var(--font-ui)}',
       MC_MAP.bubbleUser + ':active{border-color:var(--mc-fg)}',
       MC_MAP.userGallery + '{border:1px solid var(--mc-border);border-radius:var(--mc-r-card)}',
+      // pending 嫁接补刀(2026-09-03 live 勘误):气泡全集以 pendingSteering 锚定——attr+class(0,2,0)
+      // 稳压 gdEzaW_bubble 单类(padding 10px 16px/radius 22px/font-size 16px),免 style 标签顺序悬;
+      // 空 images 包装 :empty 藏(免多占一条 6px gap);宿主 *_actions 图标行整行藏(复制图标钮退役,
+      // 统一 .mc-user-copy 文字钮=正式消息同款,裁定 2026-09-03);chip 对齐 .mc-user-chip 语汇
+      // (skill chip 拍平为正文,同 mcProjectUserText 不 chip 化裁定;svg 图标藏=正式 chip 无图标)。
+      MC_MAP.pendingSteering + ' .mc-user-bubble{max-width:520px;padding:7px 12px;background:var(--mc-accent);color:var(--mc-accent-ink);border:1px solid var(--mc-border);border-radius:8px;font:400 14px/1.7 var(--font-ui);white-space:pre-wrap;word-break:break-word;text-align:left}',
+      MC_MAP.pendingSteering + ' .mc-user-attach:empty{display:none}',
+      MC_MAP.pendingSteering + ' > ' + MC_MAP.pendingActions + '{display:none}',
+      MC_MAP.pendingSteering + ' ' + MC_MAP.pendingRefChip + '{font:500 12px var(--font-mono);color:inherit}',
+      MC_MAP.pendingSteering + ' ' + MC_MAP.pendingRefChip + ' svg{display:none}',
+      MC_MAP.pendingSteering + ' ' + MC_MAP.pendingSkillChip + '{font:inherit;color:inherit}',
       // 验收六轮:refChip 宿主 chip 覆写随用户行重写退役(McUserNodeView 自有 .mc-user-chip)
-      // 六轮续:pending steering 重绘改观察器嫁接(见 skinPending)——结构位皮肤规则退役,
-      // 只留 .mc-pending 虚线待定廓(嫁接标记)
-      '.mc-pending{outline:1px dashed var(--mc-faint);outline-offset:2px;border-radius:8px}',
+      // 六轮续:pending steering 重绘改观察器嫁接(见 skinPending)——结构位皮肤规则退役。
+      // 裁定 2026-09-03(用户):busy 追加消息与正式用户消息样式完全一致,虚线待定廓 .mc-pending 退役
       // 验收七轮:注入条/压缩条/重试条 CSS 皮肤随 syscard 重绘退役(McSysCard 遮蔽 context/
       // compaction/manual-compaction/model-retry 四槽,自有 .mc-inject/.mc-comp/.mc-retry 类)——
       // 原 §7 虚线条 + 表单图标 + leading 槽清理 + §8 重试八角点/chevron 规则与 T4 压缩图标位一并下岗;
@@ -144,27 +154,46 @@ var McFlow = {
     function enterFlash(el) { flashIn(el, function () {}); }
     // 六轮续:pending steering 重绘(嫁接)——宿主收件箱直渲染 PendingSteeringBubble(L5877),
     // 无 keyed 槽可遮蔽 → 观察器把自有类直接嫁到宿主结构上,吃到与 McUserNodeView 同一套 CSS:
-    // 行→.mc-user-row 栈→flex 右对齐 气泡→.mc-user-bubble 图集→.mc-user-attach 引用→.mc-user-ref,
-    // 标记 .mc-pending(虚线待定廓,host data-pending-steering 保留作锚)。幂等:已嫁接即跳过
+    // 行→.mc-user-row 栈→flex 右对齐 气泡→.mc-user-bubble 图集→.mc-user-attach 引用→.mc-user-ref
+    // (host data-pending-steering 保留作锚)。裁定 2026-09-03(用户):不再标 .mc-pending 虚线廓,
+    // 并在气泡后插 .mc-user-copy 复制钮——busy 追加消息=正式用户消息,样式逐位一致。幂等:已嫁接即跳过
     // 验收轮5终裁(用户):产物行整体不显示——重绘机器(skinDeliver/dlNames/dlPaint)退役,
     // 藏匿由 CSS 无条件规则独担(见 MC_FLOW css 段 deliverRoot 行)
+    // 2026-09-03 live 勘误:嫁接改按哈希类后缀定位(MC_MAP.pendingBubble/pendingRefSummary)——
+    // 宿主实构 stack 子序 = [图集包装 div(data-slot,无图常空) → *_bubble 正文 → *_referenceSummary]，
+    // 旧「首子即气泡」把空 wrapper 误穿 .mc-user-bubble、真气泡误穿 .mc-user-ref(12px 弱文)。
+    // 复制钮插 bubble 之后(正式消息序:bubble → copy → ref);宿主 *_actions 图标行(复制图标钮)
+    // 由 CSS 藏(裁定 2026-09-03:图标钮退役,统一 .mc-user-copy 文字钮)。幂等:已嫁接即跳过
     function skinPending(el) {
       try {
         if (el.classList.contains('mc-user-row')) return;
-        el.classList.add('mc-user-row', 'mc-pending');
-        var stack = el.firstElementChild; // 宿主 userStack
+        var stack = el.firstElementChild; // 宿主 userStack(gdEzaW_userStack 自带 flex column align-end)
         if (!stack) return;
+        var bub = null;
+        for (var c = stack.firstElementChild; c; c = c.nextElementSibling) {
+          if (c.matches(MC_MAP.pendingBubble)) { bub = c; c.classList.add('mc-user-bubble'); }
+          else if (c.matches(MC_MAP.pendingRefSummary)) c.classList.add('mc-user-ref');
+          else c.classList.add('mc-user-attach'); // 图集包装 div(无图常空 → CSS :empty 藏)
+        }
+        if (!bub) return; // 正文气泡未挂(宿主分拍)——不标 marker,留待重处理
+        el.classList.add('mc-user-row');
         stack.style.display = 'flex';
         stack.style.flexDirection = 'column';
         stack.style.alignItems = 'flex-end';
         stack.style.gap = '6px';
-        var bub = null;
-        for (var c = stack.firstElementChild; c; c = c.nextElementSibling) {
-          if (c.hasAttribute('data-align')) { c.classList.add('mc-user-attach'); continue; }
-          if (!bub) { bub = c; c.classList.add('mc-user-bubble'); }
-          else c.classList.add('mc-user-ref');
+        if (!stack.querySelector('.mc-user-copy')) {
+          var cp = document.createElement('button'); // McUserNodeView 同款复制钮(裁定 2026-09-03)
+          cp.type = 'button';
+          cp.className = 'mc-user-copy';
+          cp.textContent = '复制';
+          cp.addEventListener('click', function () {
+            try { navigator.clipboard.writeText(bub.textContent); } catch (e) {}
+            cp.textContent = '已复制';
+            CLOCK.next(function () { cp.textContent = '复制'; }, 1200);
+          });
+          stack.insertBefore(cp, bub.nextSibling);
         }
-        if (bub && !REDUCED) flashIn(bub, function () {});
+        if (!REDUCED) flashIn(bub, function () {});
       } catch (e) { /* 宿主结构漂移即回退官方样式,不破版 */ }
     }
     // 验收四轮:think 摘要/正文观察器(thinkStream/thinkBodyStream)随宿主 ReasoningRow 覆写
