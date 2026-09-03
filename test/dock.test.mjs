@@ -1,7 +1,7 @@
 // test/dock.test.mjs
 import { test } from 'node:test'; import assert from 'node:assert/strict';
 import { loadSrc } from './load-src.mjs';
-const { mcDockState, mcTodoSegments, mcTodoMeta, mcCtxArc, mcMirrorValue, mcQueueText, mcGoalCard } = loadSrc('src/conv/dock.js');
+const { mcDockState, mcTodoSegments, mcTodoMeta, mcCtxArc, mcMirrorValue, mcQueueText, mcGoalCard, mcPopClickInside } = loadSrc('src/conv/dock.js');
 
 test('mcDockState: busy 最高优先;idle 按 has 分 ready/idle', () => {
   assert.deepEqual(mcDockState(null, { t: 'busy' }), { mode: 'busy', has: false });
@@ -105,4 +105,35 @@ test('mcGoalCard: complete/缺席→null;徽标与轮次', () => {
   assert.equal(mcGoalCard(G('blocked', 7, 7, { code: 'round-limit', message: '轮上限受阻' })).why, '轮上限受阻');
   assert.equal(mcGoalCard(G('active', 0, 5)).rounds, ''); // 未开跑无轮次
   assert.equal(mcGoalCard(G('active', 2, 0)).rounds, ''); // M 缺席无轮次
+});
+
+// —— 弹层点内判定(bug 2026-09-03:模型菜单 pane 切换点击被误判点外,镜像 toggle 关关掉弹窗) ——
+test('mcPopClickInside: target 在菜单内(contains)→true', () => {
+  const cell = { name: 'cell' };
+  const menu = { contains: (n) => n === cell };
+  assert.equal(mcPopClickInside(menu, { target: cell, composedPath: () => [cell, menu] }), true);
+  assert.equal(mcPopClickInside(menu, { target: cell }), true); // composedPath 缺席退 contains
+});
+
+test('mcPopClickInside: detached target(React 换血移除)但 composedPath 含菜单→true(本 bug 修复面)', () => {
+  const cell = { name: 'cell' }; // 已被 React 从 menu 移除:contains 恒 false
+  const menu = { contains: () => false };
+  const ev = { target: cell, composedPath: () => [cell, menu, { name: 'root' }] };
+  assert.equal(mcPopClickInside(menu, ev), true);
+});
+
+test('mcPopClickInside: 真点外(connected 且 path 不含菜单)→false', () => {
+  const outside = { name: 'outside' };
+  const menu = { contains: () => false };
+  assert.equal(mcPopClickInside(menu,
+    { target: outside, composedPath: () => [outside, { name: 'body' }] }), false);
+});
+
+test('mcPopClickInside: 边界——menu/ev 缺席、target 缺席、composedPath 抛异常', () => {
+  const menu = { contains: () => false };
+  assert.equal(mcPopClickInside(null, { target: {} }), false);
+  assert.equal(mcPopClickInside(menu, null), false);
+  assert.equal(mcPopClickInside(menu, { target: null, composedPath: () => [] }), false);
+  // composedPath 抛异常(环境桩)→ 静默退 contains,不炸
+  assert.equal(mcPopClickInside(menu, { target: {}, composedPath: () => { throw new Error('x'); } }), false);
 });

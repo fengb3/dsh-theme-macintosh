@@ -828,7 +828,9 @@ var McDock = {
         var de0 = document.documentElement;
         if (de0.hasAttribute('data-mc-pop') && off.card) {
           var mn = off.card.querySelector('[role=menu],[role=listbox],[role=dialog]');
-          var inMenu = mn && (mn === e.target || mn.contains(e.target));
+          // mcPopClickInside:pane 切换点击的 target 会被 React 同步移出 menu(detached,
+          // contains 恒 false)——composedPath 兜住(2026-09-03 模型菜单误关修复)
+          var inMenu = mcPopClickInside(mn, e);
           var inDock = cmp && (cmp === e.target || cmp.contains(e.target));
           if (mn && !inMenu && !inDock) {
             if (mn.getAttribute('role') === 'listbox' && off.field) {
@@ -999,4 +1001,18 @@ function mcMirrorValue(ta, text) {
     return true;
   } catch (e) { return false; }
 }
-if (typeof module !== 'undefined') module.exports = { McDock: McDock, mcDockState: mcDockState, mcTodoSegments: mcTodoSegments, mcTodoMeta: mcTodoMeta, mcCtxArc: mcCtxArc, mcMirrorValue: mcMirrorValue, mcQueueText: mcQueueText, mcGoalCard: mcGoalCard };
+// 弹层「点内」判定(bug 2026-09-03:模型菜单一级项点击 → React onClick 同步换血,被点 cell
+// 在 click 冒泡到 document 前已被移出 menu → contains(detached) 恒 false → onDocClose 误判
+// 点外 → 镜像 toggle 关把弹窗关掉,无法切换模型)。修复:事件分发期间 composedPath() 仍保留
+// 完整祖先链(含 menu),据此兜住 detached target;contains 直连优先,path 兜底,双缺席→false。
+function mcPopClickInside(menu, ev) {
+  if (!menu || !ev) return false;
+  var t = ev.target;
+  try { if (menu === t || (t && menu.contains && menu.contains(t))) return true; } catch (e) {}
+  try {
+    var path = ev.composedPath ? ev.composedPath() : null;
+    if (path && path.indexOf) { if (path.indexOf(menu) !== -1) return true; }
+  } catch (e) {}
+  return false;
+}
+if (typeof module !== 'undefined') module.exports = { McDock: McDock, mcDockState: mcDockState, mcTodoSegments: mcTodoSegments, mcTodoMeta: mcTodoMeta, mcCtxArc: mcCtxArc, mcMirrorValue: mcMirrorValue, mcQueueText: mcQueueText, mcGoalCard: mcGoalCard, mcPopClickInside: mcPopClickInside };
