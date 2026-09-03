@@ -234,5 +234,38 @@ const MC_MAP = {
   goalInput:   '[data-goal-bar] input[aria-label="目标内容"]',
   goalSave:    '[data-goal-bar] button[aria-label="保存目标"]',
   goalCancel:  '[data-goal-bar] button[aria-label="取消编辑"]',
+  // —— ask 段(问题卡/审批卡;dsh-client-ui-user-questions lib/client.js 直读 + probe-ask.mjs 自治探针勘定 2026-09-03)——
+  // 双卡同槽链 conversation.composer:pending 时官方卡仍挂载(被 dock 藏匿门控盖住),问题 frame 渲染于
+  // composerSeat 内部(probe:seatContainsFrame=true)→ 藏坞门控纯 CSS :has(McAsk 段),全批零 JS。
+  askFrame:     '[data-question-key]',                        // stable(问题 frame 根)
+  askCard:      '[data-question-key] section[aria-labelledby^="question-"]', // stable 前缀+aria 前缀(labelledby id 前缀 question-)
+  askScroll:    '[data-question-scroll]',                     // stable(卡体;折叠态卸载——E 段实证)
+  askFoldOn:    'button[aria-label^="收起问题卡片"]',          // i18n zh DRIFT-RISK(展开态;点击收起)
+  askFoldOff:   'button[aria-label^="展开问题卡片"]',          // i18n zh DRIFT-RISK(折叠态;同时卡壳加 Mbwy4a_cardMinimized 类)
+  askCancel:    'button[aria-label^="放弃整组问题"]',          // i18n zh DRIFT-RISK(关闭叉镜像钮)
+  askPrev:      'button[aria-label^="上一题"]',                // i18n zh DRIFT-RISK(页脚翻页)
+  askNext:      'button[aria-label^="下一题"]',                // 同上
+  askEyebrow:   '[class*="eyebrow"]',   // DRIFT-RISK hashed-substring(语义 token 后缀;实勘勘误 2026-09-03:交接档 §1.2 双下划线 _x_ 形态全错——本包自有类实形=Mbwy4a_progress 单下划线后缀,verify-ask DIAG 实证;下同族均此)
+  askTitle:     'h2',                     // 卡内唯一 h2(结构锚)
+  askOpts:      ':is([role="radiogroup"], [role="group"])', // role 语义锚 stable;:is() 单一复合形态(逗号劈裂复合选择器勘误 2026-09-03 verify-ask D5/F1:裸逗号组拼进 C OPTS X 复合规则时后半段脱域,::before/反色全落空)
+  askOptRdo:    '[role="radio"]',         // role 语义锚 stable(单选行;aria-checked 翻转)
+  askOptChk:    '[role="checkbox"]',      // role 语义锚 stable(多选行)
+  askOptOn:     '[aria-checked="true"]',  // 带引号形态;dock 段无引号形态 deliberate 区分(避免 DOCK_WHITELIST 纠缠)
+  askNumber:    '[class*="number"]',      // DRIFT-RISK(序号圆点;裁定项:单选隐数字,活体复核备选=数字进方框)
+  askCheckbox:  '[class*="checkbox"]',    // DRIFT-RISK(多选方框 span;官方勾 svg 藏)
+  askBadge:     '[class*="badge"]',       // DRIFT-RISK(推荐徽标)
+  askDetail:    '[class*="detail"]',      // DRIFT-RISK(题干补充 md)
+  askCustomRow: '[class*="customRow"]',   // DRIFT-RISK(自定义回答行)
+  askField:     '[class*="field"]',       // DRIFT-RISK(自由输入场)
+  askProgress:  '[class*="progress"]',    // DRIFT-RISK(「1 / 1」页码;实形 Mbwy4a_progress,DIAG 实证)
+  askFeedback:  '[class*="feedback"]',    // DRIFT-RISK(错误行;另有 role=status 冗余锚可用)
+  btnOutline:   '[class*="_outline_"]',   // primitives Button(哈希构建 kz6gm,双侧下划线形态=源码 CSS-module 命名 _outline_kz6gm_56,与 Mbwy4a 族异构——此族交接档形态正确;dlgClose/uV2eYG 记因同源)
+  btnPrimary:   '[class*="_primary_"]',
+  planFrame:    '[data-plan-review-key]', // stable(审批卡 frame 根)
+  planCard:     '[data-plan-review-key] section[aria-label]', // stable 前缀+aria 语义锚
+  planScroll:   '[data-plan-review-scroll]', // stable(审批卡正文滚动区)
+  planStrip:    '[class*="strip"]',       // DRIFT-RISK(审批卡警示条;Mbwy4a 族勘误同 askEyebrow)
+  planDot:      '[class*="dot"]',         // DRIFT-RISK(警示条圆点)
+  planDiscuss:  '[class*="discuss"]',     // DRIFT-RISK(「去聊天里说」幽灵钮)
 };
 

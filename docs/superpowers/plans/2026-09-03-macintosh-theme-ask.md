@@ -3,6 +3,13 @@
 > **状态（2026-09-03 下班前落档）**：探针勘定 **ALL GREEN**，路线与键组已定案；
 > **实现零动工**（src/test/kit/装配均未改）。本文档 = 交接真相源，下次开工按 §5 清单顺序执行即可，无需复勘。
 > 复勘命令：`node tools/probe-ask.mjs`（自治全链路，用户零操作）。
+>
+> **✅ 实现 appended（2026-09-03 晚）**：§5 清单 1-7/9 已全部落地并验证——test 7 例红→绿、
+> map/sprite/ask.js/装配/kit 分区/verify-ask.mjs 26 断言 ALL GREEN、audit M5 意外碰撞按段
+> 白名单先例处置（sidebar 段 `[aria-label]`，记因入 audit.mjs 与 dev-notes §12.5）。
+> **§1.2 勘误**：Mbwy4a 族类名实形 = 单下划线后缀（`Mbwy4a_progress`），非 `_x_` 双侧形态
+> （primitives kz6gm 族才是 `_outline_kz6gm_56` 形）——map 键已按语义 token 后缀全修。
+> **剩余**：仅 §5 步骤 8 活体验收（用户亲手点全链 + 单选隐数字裁定项）。
 
 ## 0. 背景与路线裁定
 

@@ -748,6 +748,43 @@ subcalls：左 2px 软线缩进 + sc-row（ok=绿 i-check / run=琥珀 clock）�
   宽溢出右缘 9px（各宽度恒在，窄窗最显眼）——dock 皮 width:auto 压掉（stretch 由 flex column 兜）。
 - 门禁：`node tools/verify-responsive.mjs`（resize 驱动 20 断言，只读不发消息）。
 
+### 12.5 ask 批换皮差异注记（模块11 问题卡/审批卡 2026-09-03）
+
+- **槽链接管机制**：官方 `@deepseek-ai/dsh-client-ui-user-questions` 经
+  `ctx.slots.inject("conversation.composer", ...)` 注入，`selectQuestion` 在问题 pending 时
+  **接管 composer 席位**——问题 frame 渲染于 `composerSeat` 内部（probe:seatContainsFrame=true），
+  与原型「ask-card 接管输入坞」概念宿主官方同构。**路线 = 换皮不重建**：官方卡 React 受控 +
+  wire boundary（`PendingQuestion.answer/cancel` → `wait.respond`），分页/跳过/折叠/作答官方
+  行为原样保留，主题层纯 CSS 零 JS（`src/conv/ask.js` mount 为 noop）。
+- **藏坞门控 = 存在门控（CSS `:has` 派生）**：pending 时官方卡仍挂载、自绘坞同框共存
+  （截图坐实）→ `[data-composer-seat]:has(问卡锚/审批卡锚) [data-mc-dock]{display:none!important}`，
+  作答后 frame 卸载坞自动归位（F.settled dockBack:true 实证）。与 hero（observer 相位 +
+  属性门控）/dialog（head 常驻 style）异构，三态门控不混用。
+- **锚点 DRIFT 记因（两处勘误，均 verify-ask 活体实证）**：
+  1. **Mbwy4a 族类名实形 = 单下划线后缀**（`Mbwy4a_progress`/`Mbwy4a_eyebrow`/`Mbwy4a_number`），
+     交接档 §1.2 的 `_progress_` 双侧下划线形态**全错**（源码 CSS-module 引用形误当 DOM 形）；
+     map 键一律改语义 token 后缀形态 `[class*="progress"]`（同 dlgClose/heroGlow 纪律，
+     前缀哈希随构建漂移、后缀语义稳）。
+  2. **primitives kz6gm 族才是双侧下划线**（`_outline_kz6gm_56`/`_primary_kz6gm_38`）——
+     两族哈希方案异构，`btnOutline`/`btnPrimary` 键保留 `_x_` 形态。
+  3. **复合选择器逗号劈裂**：`askOpts` 初版值 `[role="radiogroup"], [role="group"]` 拼进
+     `C OPTS X` 复合规则时逗号把规则劈成两半（后半段脱域、::before/反色全落空）——
+     改 `:is([role="radiogroup"], [role="group"])` 单一复合形态。**凡 map 值拟作复合选择器
+     中段者必须 :is() 化**。
+  4. aria 前缀锚（收起/展开问题卡片、放弃整组问题、上一题/下一题）= i18n zh DRIFT-RISK，
+     官方换语言即失配（失配 = 回退官方样式不破版）。
+- **audit M5 意外碰撞处置先例**：`planCard` 语义锚 `section[aria-label]` 拆出裸 `[aria-label]`
+  token，与 sidebar 既存 `:not([aria-label])` 页脚规则同形碰撞——sidebar 照 overlays/dock/
+  finder/tool 四段先例改**段扫描 + SIDEBAR_WHITELIST**（`[aria-label]` 存在性判定放行，记因入 audit.mjs）。
+- **探针方法论（交接档 §1.3 照录 + 两轮扑空教训）**：`ask_user_question` 阻塞回合，后台
+  pwsh 进程被压在阻塞调用之后——同回合「起探针 + 发题」时序必错；**v3 自治版（新会话
+  自问自答）为唯一推荐形态**（verify-ask 同款链路）。headless profile 是独立 harness 进程，
+  其 pending 不保证浮到 web 宿主 GUI。
+- **裁定项（活体拍板）**：单选隐数字（`Mbwy4a_number` display:none + ::before 像素环代形）
+  是否可接受,备选 = 数字保留进方框。
+- 门禁：`node tools/verify-ask.mjs`（自治链路 26 断言：藏坞/卡皮/环勾 mask/反色/折叠双态/
+  归位/kit 分区；每次运行发一条真实 agent 指令 + 留一次性会话在侧栏,主人可删）。
+
 ---
 
 ## 13 · 移植核对清单（正式页开发收尾用）

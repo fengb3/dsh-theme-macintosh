@@ -404,6 +404,7 @@ const McSprite = {
   <symbol id="i-px-list" viewBox="0 0 24 24"><path d="M2 5h20v14H2V5zm2 2v2h16V7H4zm16 4H4v2h16v-2zm0 4H4v2h16v-2z" fill="currentColor"/></symbol>
   <symbol id="i-px-menu" viewBox="0 0 24 24"><path d="M3 6h18v2H3V6zm0 5h18v2H3v-2zm0 5h18v2H3v-2z" fill="currentColor"/></symbol>
   <symbol id="i-px-warning" viewBox="0 0 24 24"><path d="M3 3h16v2H5v14h14v2H3V3zm18 0h-2v18h2V3zM11 15h2v2h-2v-2zm2-8h-2v6h2V7z" fill="currentColor"/></symbol>
+  <symbol id="i-px-x" viewBox="0 0 24 24"><path d="M5 5h2v2H5V5zM17 5h2v2h-2V5zM7 7h2v2H7V7zM15 7h2v2h-2V7zM9 9h2v2H9V9zM13 9h2v2h-2V9zM11 11h2v2h-2v-2zM9 13h2v2H9v-2zM13 13h2v2h-2v-2zM7 15h2v2H7v-2zM15 15h2v2h-2v-2zM5 17h2v2H5v-2zM17 17h2v2h-2v-2z" fill="currentColor"/></symbol>
   <symbol id="i-moon" viewBox="0 0 24 24"><path d="M6 2h2v2H6V2zM4 4h4v2H4V4zM2 6h6v2H2V6zM2 8h6v2H2V8zM2 10h6v2H2v-2zM2 12h8v2H2v-2zM2 14h10v2H2v-2zM2 16h20v2H2v-2zM4 18h16v2H4v-2zM6 20h12v2H6v-2z" fill="currentColor"/></symbol>
   <symbol id="i-cl-HappyMac" viewBox="0 0 2000 2000">
     <g>
@@ -693,6 +694,39 @@ const MC_MAP = {
   goalInput:   '[data-goal-bar] input[aria-label="目标内容"]',
   goalSave:    '[data-goal-bar] button[aria-label="保存目标"]',
   goalCancel:  '[data-goal-bar] button[aria-label="取消编辑"]',
+  // —— ask 段(问题卡/审批卡;dsh-client-ui-user-questions lib/client.js 直读 + probe-ask.mjs 自治探针勘定 2026-09-03)——
+  // 双卡同槽链 conversation.composer:pending 时官方卡仍挂载(被 dock 藏匿门控盖住),问题 frame 渲染于
+  // composerSeat 内部(probe:seatContainsFrame=true)→ 藏坞门控纯 CSS :has(McAsk 段),全批零 JS。
+  askFrame:     '[data-question-key]',                        // stable(问题 frame 根)
+  askCard:      '[data-question-key] section[aria-labelledby^="question-"]', // stable 前缀+aria 前缀(labelledby id 前缀 question-)
+  askScroll:    '[data-question-scroll]',                     // stable(卡体;折叠态卸载——E 段实证)
+  askFoldOn:    'button[aria-label^="收起问题卡片"]',          // i18n zh DRIFT-RISK(展开态;点击收起)
+  askFoldOff:   'button[aria-label^="展开问题卡片"]',          // i18n zh DRIFT-RISK(折叠态;同时卡壳加 Mbwy4a_cardMinimized 类)
+  askCancel:    'button[aria-label^="放弃整组问题"]',          // i18n zh DRIFT-RISK(关闭叉镜像钮)
+  askPrev:      'button[aria-label^="上一题"]',                // i18n zh DRIFT-RISK(页脚翻页)
+  askNext:      'button[aria-label^="下一题"]',                // 同上
+  askEyebrow:   '[class*="eyebrow"]',   // DRIFT-RISK hashed-substring(语义 token 后缀;实勘勘误 2026-09-03:交接档 §1.2 双下划线 _x_ 形态全错——本包自有类实形=Mbwy4a_progress 单下划线后缀,verify-ask DIAG 实证;下同族均此)
+  askTitle:     'h2',                     // 卡内唯一 h2(结构锚)
+  askOpts:      ':is([role="radiogroup"], [role="group"])', // role 语义锚 stable;:is() 单一复合形态(逗号劈裂复合选择器勘误 2026-09-03 verify-ask D5/F1:裸逗号组拼进 C OPTS X 复合规则时后半段脱域,::before/反色全落空)
+  askOptRdo:    '[role="radio"]',         // role 语义锚 stable(单选行;aria-checked 翻转)
+  askOptChk:    '[role="checkbox"]',      // role 语义锚 stable(多选行)
+  askOptOn:     '[aria-checked="true"]',  // 带引号形态;dock 段无引号形态 deliberate 区分(避免 DOCK_WHITELIST 纠缠)
+  askNumber:    '[class*="number"]',      // DRIFT-RISK(序号圆点;裁定项:单选隐数字,活体复核备选=数字进方框)
+  askCheckbox:  '[class*="checkbox"]',    // DRIFT-RISK(多选方框 span;官方勾 svg 藏)
+  askBadge:     '[class*="badge"]',       // DRIFT-RISK(推荐徽标)
+  askDetail:    '[class*="detail"]',      // DRIFT-RISK(题干补充 md)
+  askCustomRow: '[class*="customRow"]',   // DRIFT-RISK(自定义回答行)
+  askField:     '[class*="field"]',       // DRIFT-RISK(自由输入场)
+  askProgress:  '[class*="progress"]',    // DRIFT-RISK(「1 / 1」页码;实形 Mbwy4a_progress,DIAG 实证)
+  askFeedback:  '[class*="feedback"]',    // DRIFT-RISK(错误行;另有 role=status 冗余锚可用)
+  btnOutline:   '[class*="_outline_"]',   // primitives Button(哈希构建 kz6gm,双侧下划线形态=源码 CSS-module 命名 _outline_kz6gm_56,与 Mbwy4a 族异构——此族交接档形态正确;dlgClose/uV2eYG 记因同源)
+  btnPrimary:   '[class*="_primary_"]',
+  planFrame:    '[data-plan-review-key]', // stable(审批卡 frame 根)
+  planCard:     '[data-plan-review-key] section[aria-label]', // stable 前缀+aria 语义锚
+  planScroll:   '[data-plan-review-scroll]', // stable(审批卡正文滚动区)
+  planStrip:    '[class*="strip"]',       // DRIFT-RISK(审批卡警示条;Mbwy4a 族勘误同 askEyebrow)
+  planDot:      '[class*="dot"]',         // DRIFT-RISK(警示条圆点)
+  planDiscuss:  '[class*="discuss"]',     // DRIFT-RISK(「去聊天里说」幽灵钮)
 };
 
 
@@ -4635,11 +4669,143 @@ var McResponsive = {
 };
 if (typeof module !== 'undefined') module.exports = { McResponsive: McResponsive, mcDrawerAction: mcDrawerAction, mcDrawerMaskOn: mcDrawerMaskOn, mcDrawerEscAllowed: mcDrawerEscAllowed };
 
+// src/conv/ask.js —— 层3 模块11：问题卡/审批卡换皮（ask 批,交接档 2026-09-03-macintosh-theme-ask.md）
+// 路线 = 换皮不重建（§0 裁定）：官方卡 React 受控 + wire boundary（PendingQuestion.answer/cancel →
+// wait.respond），自绘接管零收益且脆——分页/跳过/折叠/作答全部官方行为原样保留,本批纯 CSS 零 JS。
+// 关键勘定（probe-ask.mjs v3 自治探针 ALL GREEN）：双卡同槽链 conversation.composer,pending 时
+// 官方卡仍挂载、自绘坞同框共存（seatContainsFrame=true）→ 藏坞门控纯 CSS :has,作答后坞自动归位。
+// 纪律：本文件在 audit check5 无豁免 → 零宿主选择器字面量,全部经 MC_MAP 键名运行时拼接
+// （mask data-URI 与 [data-mc-dock] 自有命名空间不入 token）;无 :hover、无 transition、无定时器。
+// 皮配方对齐 overlays dialog 窗框（§2 定案,用户口头批准）：surface 底/1px 边/直角/pop 投影 +
+// C * 全域压平;单选选中整行反色（fg 底 surface 字,最 System 7）;状态钩子带引号形态
+// [aria-checked="true"]（与 dock 段无引号形态 deliberate 区分,避免 DOCK_WHITELIST 纠缠）。
+// —— mask data-URI 帮手（sidebar.js 内联先例函数化;silhouette only,fill 恒黑）——
+function mcAskPath(d, eo) {
+  return "%3Cpath d='" + d + "' fill='black'" + (eo ? " fill-rule='evenodd'" : '') + "/%3E";
+}
+function mcAskUri(inner, w, h) {
+  return "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 " + w + ' ' + h + "'%3E" + inner + "%3C/svg%3E\") center/contain no-repeat";
+}
+// 像素字形 d 常量（silhouette;ring/chk 取 sprite i-rdo*/i-chk-on 同源路径,tri/caret 为其右指剪影）
+var ASK_TRI_D = 'M0 0h1v1h1v1h1v1h1v1h1v1h1v1h-1v1h-1v1h-1v1h-1v1h-1v1H0z'; // 右指像素三角(viewBox 6×11;折叠钮展开态 rotate(90) 指下/prev scaleX(-1) 指左)
+var ASK_RDO_D = 'M8 0H4V1H2V2H1V4H0V8H1V10H2V11H4V12H8V11H10V10H11V8H12V4H11V2H10V1H8V0ZM8 1V2H10V4H11V8H10V10H8V11H4V10H2V8H1V4H2V2H4V1H8Z'; // 像素环(evenodd 挖孔)
+var ASK_RDO_ON_D = ASK_RDO_D + 'M8 3H4V4H3V8H4V9H8V8H9V4H8V3Z'; // 环+心(evenodd 三层:外1孔0心1)
+var ASK_CHK_D = 'M1 1H2V2H1V1ZM3 3H2V2H3V3ZM4 4H3V3H4V4ZM5 5H4V4H5V5ZM7 5H5V7H4V8H3V9H2V10H1V11H2V10H3V9H4V8H5V7H7V8H8V9H9V10H10V11H11V10H10V9H9V8H8V7H7V5ZM8 4V5H7V4H8ZM9 3V4H8V3H9ZM10 2V3H9V2H10ZM10 2V1H11V2H10Z'; // 勾格(i-chk-on 勾部;边框另以 stroke rect 片段补)
+// —— gate 纯函数（三态:双卡/单卡/空;席位锚缺席不产死规则）——
+// 藏坞门控:composerSeat 内出现问卡/审批卡 frame → 藏自绘坞(官方卡接管席位);作答后 frame 卸载,坞自动归位。
+function mcAskGateCss(seat, askFrame, planFrame) {
+  if (!seat) return '';
+  var rules = [];
+  if (askFrame) rules.push(seat + ':has(' + askFrame + ') [data-mc-dock]{display:none!important}');
+  if (planFrame) rules.push(seat + ':has(' + planFrame + ') [data-mc-dock]{display:none!important}');
+  return rules.join('\n');
+}
+// —— 皮 builder 纯函数（M=MC_MAP 形状;测试以哨兵 mock 逐键断言）——
+function mcAskCss(M) {
+  if (!M || !M.askCard || !M.planCard) return ''; // 核心锚缺席(空 map/半装配)→ 空串,不产垃圾规则
+  var mTri = mcAskUri(mcAskPath(ASK_TRI_D), 6, 11);
+  var mRdo = mcAskUri(mcAskPath(ASK_RDO_D, true), 12, 12);
+  var mRdoOn = mcAskUri(mcAskPath(ASK_RDO_ON_D, true), 12, 12);
+  var mChkOn = mcAskUri("%3Crect x='.5' y='.5' width='11' height='11' fill='none' stroke='black'/%3E" + mcAskPath(ASK_CHK_D), 12, 12);
+  var mPxX = mcAskUri(mcAskPath('M5 5h2v2H5V5zM17 5h2v2h-2V5zM7 7h2v2H7V7zM15 7h2v2h-2V7zM9 9h2v2H9V9zM13 9h2v2h-2V9zM11 11h2v2h-2v-2zM9 13h2v2H9v-2zM13 13h2v2h-2v-2zM7 15h2v2H7v-2zM15 15h2v2h-2v-2zM5 17h2v2H5v-2zM17 17h2v2h-2v-2z'), 24, 24);
+  var L = [];
+  // gate（见上;两卡同款）
+  L.push(mcAskGateCss(M.composerSeat, M.askFrame, M.planFrame));
+  // —— 卡壳(问卡+审批卡共用配方;C * 全域压平)——
+  L.push(M.askCard + ',' + M.planCard + '{background:var(--mc-surface)!important;border:1px solid var(--mc-border)!important;'
+    + 'border-radius:0!important;box-shadow:var(--mc-shadow-pop)!important;position:relative;font-family:var(--font-ui)}');
+  L.push(M.askCard + ' *,' + M.planCard + ' *{font-family:inherit!important;border-radius:0!important}');
+  // 卡体滚动区基础 md 皮(问卡题干域+审批卡正文域同语)
+  L.push(M.askCard + ' ' + M.askScroll + '{font:400 12.5px/1.7 var(--font-ui)!important;color:var(--mc-fg)!important}');
+  L.push(M.planCard + ' ' + M.planScroll + '{font:400 12.5px/1.7 var(--font-ui)!important;color:var(--mc-fg)!important}');
+  // —— 题头:eyebrow 小字 faint / title 像素显示字(右让位 44px 给折叠+关闭双钮)——
+  L.push(M.askCard + ' ' + M.askEyebrow + '{font:400 10.5px var(--font-ui)!important;color:var(--mc-faint)!important}');
+  L.push(M.askCard + ' ' + M.askTitle + '{font:600 13px var(--font-display)!important;color:var(--mc-fg)!important;padding-right:44px!important}');
+  // 折叠钮:官方 svg 藏,钮本体 mask i-tri(展开态[收起]rotate(90) 指下/折叠态[展开]0deg 指右;DRIFT:i18n zh 锚)
+  L.push(M.askCard + ' ' + M.askFoldOn + ',' + M.askCard + ' ' + M.askFoldOff + ','
+    + M.askCard + ' ' + M.askCancel + '{width:18px!important;height:18px!important;padding:0!important;border:none!important;'
+    + 'background:currentColor!important;color:var(--mc-muted)!important;cursor:pointer}');
+  L.push(M.askCard + ' ' + M.askFoldOn + ' svg,' + M.askCard + ' ' + M.askFoldOff + ' svg,'
+    + M.askCard + ' ' + M.askCancel + ' svg{display:none!important}');
+  L.push(M.askCard + ' ' + M.askFoldOn + '{-webkit-mask:' + mTri + ';mask:' + mTri + ';transform:rotate(90deg)}');
+  L.push(M.askCard + ' ' + M.askFoldOff + '{-webkit-mask:' + mTri + ';mask:' + mTri + ';transform:none}');
+  L.push(M.askCard + ' ' + M.askCancel + '{-webkit-mask:' + mPxX + ';mask:' + mPxX + ';color:var(--mc-fg)!important}');
+  // —— 选项行:role 语义锚;行内环/勾自绘,官方序号/勾件一律藏 ——
+  // 单选:隐数字(裁定项,活体复核备选=数字进方框)+ ::before 12px 环 mask;选中整行反色(fg 底 surface 字)
+  L.push(M.askCard + ' ' + M.askOpts + ' ' + M.askOptRdo + ',' + M.askCard + ' ' + M.askOpts + ' ' + M.askOptChk
+    + '{position:relative!important;padding-left:30px!important;text-align:left!important}');
+  L.push(M.askCard + ' ' + M.askOpts + ' ' + M.askNumber + '{display:none!important}');
+  L.push(M.askCard + ' ' + M.askOpts + ' ' + M.askOptRdo + '::before{content:\'\';position:absolute;left:9px;top:50%;width:12px;height:12px;'
+    + 'margin-top:-6px;background:currentColor;-webkit-mask:' + mRdo + ';mask:' + mRdo + ';color:var(--mc-muted)}');
+  L.push(M.askCard + ' ' + M.askOpts + ' ' + M.askOptRdo + M.askOptOn + '{background:var(--mc-fg)!important;color:var(--mc-surface)!important}');
+  L.push(M.askCard + ' ' + M.askOpts + ' ' + M.askOptRdo + M.askOptOn + ' *{color:inherit!important}');
+  L.push(M.askCard + ' ' + M.askOpts + ' ' + M.askOptRdo + M.askOptOn + '::before{color:var(--mc-surface);'
+    + '-webkit-mask:' + mRdoOn + ';mask:' + mRdoOn + '}');
+  // 多选:官方勾 svg 藏,_checkbox_ span 化 12px 边框方框;选中整底 i-chk-on mask(边框+勾一体)
+  L.push(M.askCard + ' ' + M.askOpts + ' ' + M.askOptChk + ' ' + M.askCheckbox + '{position:absolute;left:9px;top:50%;width:12px;height:12px;'
+    + 'margin-top:-6px;box-sizing:border-box;border:1px solid currentColor;background:none;color:var(--mc-muted)}');
+  L.push(M.askCard + ' ' + M.askOpts + ' ' + M.askOptChk + ' ' + M.askCheckbox + ' *{display:none!important}');
+  L.push(M.askCard + ' ' + M.askOpts + ' ' + M.askOptChk + M.askOptOn + ' ' + M.askCheckbox + '{border:none;background:currentColor;color:var(--mc-surface);'
+    + '-webkit-mask:' + mChkOn + ';mask:' + mChkOn + '}');
+  L.push(M.askCard + ' ' + M.askOpts + ' ' + M.askOptChk + M.askOptOn + '{background:var(--mc-fg)!important;color:var(--mc-surface)!important}');
+  L.push(M.askCard + ' ' + M.askOpts + ' ' + M.askOptChk + M.askOptOn + ' *{color:inherit!important}');
+  // 行内件:推荐徽标 1px 边框小方标(行内 label 无独立锚,字重保持官方——DRIFT 记因);题干补充 md 小字 faint
+  L.push(M.askCard + ' ' + M.askOpts + ' ' + M.askBadge + '{border:1px solid var(--mc-border)!important;background:none!important;'
+    + 'font:400 10px var(--font-ui)!important;color:var(--mc-muted)!important;padding:1px 4px!important}');
+  L.push(M.askCard + ' ' + M.askDetail + '{font:400 12.5px/1.7 var(--font-ui)!important;color:var(--mc-muted)!important}');
+  // 自定义回答行/自由输入场:1px 边框 + surface-2 底;textarea/input 透明底 12.5px/1.7
+  L.push(M.askCard + ' ' + M.askCustomRow + ',' + M.askCard + ' ' + M.askField
+    + '{border:1px solid var(--mc-border)!important;background:var(--mc-surface-2)!important}');
+  L.push(M.askCard + ' ' + M.askField + ' textarea,' + M.askCard + ' ' + M.askField + ' input'
+    + '{background:transparent!important;border:none!important;font:400 12.5px/1.7 var(--font-ui)!important;color:var(--mc-fg)!important}');
+  // —— 页脚:progress 页码 faint / feedback 错误 danger / 翻页钮 18×18 caretright mask(prev scaleX(-1),disabled .35)——
+  L.push(M.askCard + ' ' + M.askProgress + '{font:400 11px var(--font-ui)!important;color:var(--mc-faint)!important}');
+  L.push(M.askCard + ' ' + M.askFeedback + '{font:400 11px var(--font-ui)!important;color:var(--mc-danger)!important}');
+  L.push(M.askCard + ' ' + M.askPrev + ',' + M.askCard + ' ' + M.askNext
+    + '{width:18px!important;height:18px!important;padding:0!important;border:none!important;'
+    + 'background:currentColor!important;color:var(--mc-muted)!important;'
+    + '-webkit-mask:' + mTri + ';mask:' + mTri + ';cursor:pointer}');
+  L.push(M.askCard + ' ' + M.askPrev + '{transform:scaleX(-1)}');
+  L.push(M.askCard + ' ' + M.askPrev + ':disabled,' + M.askCard + ' ' + M.askNext + ':disabled{opacity:.35}');
+  // primitives Button(跳过/提交/下一题/审批三钮):直角化 + field 投影;primary = fg 底 surface 字(kit .btn sm 同语)
+  L.push(M.askCard + ' ' + M.btnOutline + ',' + M.planCard + ' ' + M.btnOutline + ','
+    + M.askCard + ' ' + M.btnPrimary + ',' + M.planCard + ' ' + M.btnPrimary
+    + '{border-radius:0!important;box-shadow:var(--mc-shadow-field)!important;border:1px solid var(--mc-border)!important;'
+    + 'background:var(--mc-surface)!important;color:var(--mc-fg)!important;font:400 12px var(--font-ui)!important}');
+  L.push(M.askCard + ' ' + M.btnPrimary + ',' + M.planCard + ' ' + M.btnPrimary
+    + '{background:var(--mc-fg)!important;color:var(--mc-surface)!important;border-color:var(--mc-fg)!important}');
+  L.push(M.askCard + ' ' + M.btnPrimary + ':disabled,' + M.planCard + ' ' + M.btnPrimary + ':disabled{opacity:.35}');
+  // —— 审批卡:警示条 warn 底 + bg-deep 像素字;圆点直角(* 压平已盖,显式记因);去聊天里说幽灵化——
+  L.push(M.planCard + ' ' + M.planStrip + '{background:var(--mc-warn)!important;color:var(--mc-bg-deep)!important;'
+    + 'font:600 11px var(--font-display)!important}');
+  L.push(M.planCard + ' ' + M.planStrip + ' *{color:inherit!important}');
+  L.push(M.planCard + ' ' + M.planDot + '{border-radius:0!important}');
+  L.push(M.planCard + ' ' + M.planDiscuss + '{background:none!important;border:1px solid var(--mc-border)!important;'
+    + 'box-shadow:none!important;color:var(--mc-muted)!important}');
+  return L.join('\n');
+}
+// —— 装配出口(typeof MC_MAP 守卫同 dock/responsive:CJS 单测装载无 MC_MAP → 空串,纯函数仍可测)——
+var MC_ASK_CSS = (typeof MC_MAP === 'undefined' ? '' : mcAskCss(MC_MAP));
+// 纯 CSS 批:mount 为 noop(占协议位;门控/换皮全在 CSS 层,官方行为零干预)
+var McAsk = {
+  css: MC_ASK_CSS,
+  mount: function () { return function () {}; },
+};
+if (typeof module !== 'undefined') module.exports = { mcAskGateCss: mcAskGateCss, mcAskCss: mcAskCss, McAsk: McAsk };
+
 // src/kit.js —— 检视页骨架（默认关闭零足迹；控制台 window.__MC_KIT_OPEN__ = true 打开）
 // 布局类全部 kit- 前缀，样式不外泄 kit 根之外；组件类直接复用 mc- 原语
 // 会话流分区（T8）：原型 §5 类定义 scoped 到 .kit-panel（Ruling 3，非宿主选择器不进
 // MC_MAP）+ ReasoningDemo 五帧流式驱动（§8.2 状态机 kit 化，延时全走 CLOCK.next）
 // 纯顶层声明，无模块系统语法；与 tokens/clock/mcfx/sprite 拼进同一作用域
+// 问题卡分区 mask 帮手(ask 批):ask.js 同域出口(mcAskUri/mcAskPath/ASK_*_D,ORDER 先于本模块);
+// 仅 kit 演示消费——真卡走 McAsk CSS,两处字形同源防漂移
+const MC_KIT_ASK_MASK = {
+  tri: mcAskUri(mcAskPath(ASK_TRI_D), 6, 11),
+  rdo: mcAskUri(mcAskPath(ASK_RDO_D, true), 12, 12),
+  rdoOn: mcAskUri(mcAskPath(ASK_RDO_ON_D, true), 12, 12),
+  chkOn: mcAskUri("%3Crect x='.5' y='.5' width='11' height='11' fill='none' stroke='black'/%3E" + mcAskPath(ASK_CHK_D), 12, 12),
+};
 const McKit = {
   css: `/* ===== kit 检视页专属布局（全部 kit- 前缀，不外泄） ===== */
 .kit-scrim{position:fixed;inset:0;z-index:95;overflow-y:auto;box-sizing:border-box;
@@ -4666,6 +4832,40 @@ const McKit = {
 .kit-resp-drawer{width:220px;border:1px solid var(--mc-border);background:var(--mc-surface);box-shadow:var(--mc-shadow-win,2px 2px 0 0 #000)}
 .kit-resp-drawer-tb{height:20px;display:flex;align-items:center;justify-content:center;font:600 11px/1 var(--font-display);letter-spacing:.04em;color:var(--mc-fg);background:var(--mc-surface-2);border-bottom:1px solid var(--mc-border)}
 .kit-resp-drawer-row{padding:5px 9px;font:400 12px/1.6 var(--font-ui);color:var(--mc-muted);border-bottom:1px solid var(--mc-border-soft)}
+/* 问题卡分区(ask 批):换皮静态样本(自有演示类 .kit-ask-*;真卡=官方 DOM+McAsk CSS 运行时换皮,
+   活体验收)——mask 帮手经装配同域引用 ask.js 出口(MC_HERO_COPY shim 先例,ORDER McAsk 先于 McKit) */
+.kit-ask-card{position:relative;display:flex;flex-direction:column;gap:8px;max-width:430px;padding:14px;
+  background:var(--mc-surface);border:1px solid var(--mc-border);box-shadow:var(--mc-shadow-pop)}
+.kit-ask-cap{font:400 10.5px/1.4 var(--font-ui);color:var(--mc-faint)}
+.kit-ask-tt{margin:0;padding-right:44px;font:600 13px/1.4 var(--font-display);color:var(--mc-fg)}
+.kit-ask-opt{position:relative;display:block;width:100%;text-align:left;padding:6px 8px 6px 30px;border:none;
+  background:none;cursor:pointer;font:400 12.5px/1.6 var(--font-ui);color:var(--mc-fg)}
+.kit-ask-opt::before{content:'';position:absolute;left:9px;top:50%;width:12px;height:12px;margin-top:-6px;
+  background:currentColor;color:var(--mc-muted);-webkit-mask:${MC_KIT_ASK_MASK.rdo};mask:${MC_KIT_ASK_MASK.rdo}}
+.kit-ask-opt.on{background:var(--mc-fg);color:var(--mc-surface)}
+.kit-ask-opt.on::before{color:var(--mc-surface);-webkit-mask:${MC_KIT_ASK_MASK.rdoOn};mask:${MC_KIT_ASK_MASK.rdoOn}}
+.kit-ask-chk{position:absolute;left:9px;top:50%;width:12px;height:12px;margin-top:-6px;box-sizing:border-box;
+  border:1px solid var(--mc-muted);background:none}
+.kit-ask-opt.on .kit-ask-chk{border:none;background:currentColor;color:var(--mc-surface);
+  -webkit-mask:${MC_KIT_ASK_MASK.chkOn};mask:${MC_KIT_ASK_MASK.chkOn}}
+.kit-ask-field{border:1px solid var(--mc-border);background:var(--mc-surface-2);padding:6px 8px}
+.kit-ask-field textarea{display:block;width:100%;box-sizing:border-box;border:none;background:transparent;resize:none;
+  font:400 12.5px/1.7 var(--font-ui);color:var(--mc-fg)}
+.kit-ask-foot{display:flex;align-items:center;gap:8px}
+.kit-ask-nav{width:18px;height:18px;padding:0;border:none;background:currentColor;color:var(--mc-muted);cursor:pointer;
+  -webkit-mask:${MC_KIT_ASK_MASK.tri};mask:${MC_KIT_ASK_MASK.tri}}
+.kit-ask-nav.prev{transform:scaleX(-1)}
+.kit-ask-nav:disabled{opacity:.35;cursor:default}
+.kit-ask-progress{font:400 11px var(--font-ui);color:var(--mc-faint);margin-left:auto}
+.kit-ask-strip{display:flex;align-items:center;gap:6px;padding:4px 8px;background:var(--mc-warn);color:var(--mc-bg-deep);
+  font:600 11px/1.5 var(--font-display)}
+.kit-ask-dot{width:6px;height:6px;flex:none;background:currentColor}
+.kit-ask-plan{padding:6px 8px;font:400 12.5px/1.7 var(--font-ui);color:var(--mc-fg);background:var(--mc-surface-2);border:1px solid var(--mc-border)}
+.kit-ask-btn{padding:4px 10px;border:1px solid var(--mc-border);background:var(--mc-surface);color:var(--mc-fg);
+  font:400 12px/1.4 var(--font-ui);cursor:pointer;box-shadow:var(--mc-shadow-field)}
+.kit-ask-btn.primary{background:var(--mc-fg);color:var(--mc-surface);border-color:var(--mc-fg)}
+.kit-ask-ghost{padding:4px 10px;border:1px solid var(--mc-border);background:none;color:var(--mc-muted);
+  font:400 12px/1.4 var(--font-ui);cursor:pointer}
 .kit-grid{display:flex;flex-wrap:wrap;gap:10px}
 .kit-chip{display:inline-flex;align-items:center;gap:8px;height:28px;padding:0 10px;
   border:1px solid var(--mc-border);border-radius:var(--mc-r-tag);background:var(--mc-surface-2);
@@ -5432,6 +5632,51 @@ function McKitPage() {
                 h('em', null, 'resp')),
               h('div', { className: 'kit-frame-body' },
                 h('div', { className: 'kit-note' }, '原型 §12 转译：结构档断点 820 → 1023（宿主折叠实测）；硬切无 transition；抽屉=官方展开通道 overlay 化（tclose 同通道，零克隆）'))))),
+        // (h3) 问题卡分区（ask 批）：换皮静态样本（自有演示类 .kit-ask-*;真卡=官方 DOM+McAsk CSS
+        // 运行时换皮,零 JS 接管——官方 React 受控分页/跳过/折叠/作答原样保留,活体验收）。
+        h('section', null,
+          h('h3', { className: 'kit-h' }, '问题卡'),
+          h('div', { className: 'kit-frames' },
+            h('div', { className: 'kit-frame', key: 'ask' },
+              h('div', { className: 'kit-frame-tag' },
+                h('span', null, '问题卡 · 窗框直角+pop 投影/单选选中整行反色(fg 底 surface 字,最 System 7)/多选方框整底 i-chk-on/自由输入 surface-2 场/pagination 翻页 18×18——单选隐数字为裁定项(备选:数字进方框,活体拍板)'),
+                h('em', null, 'ask')),
+              h('div', { className: 'kit-frame-body' },
+                h('div', { className: 'kit-ask-card' },
+                  h('div', { className: 'kit-ask-cap' }, 'QUESTION'),
+                  h('h4', { className: 'kit-ask-tt' }, '探针:主题 ask 卡勘定'),
+                  h('button', { type: 'button', className: 'kit-ask-opt on' }, 'A 勘定正常(推荐)'),
+                  h('button', { type: 'button', className: 'kit-ask-opt' }, 'B 需要重试'),
+                  h('button', { type: 'button', className: 'kit-ask-opt on' },
+                    h('span', { className: 'kit-ask-chk', 'aria-hidden': 'true' }), '多选:回滚预案'),
+                  h('button', { type: 'button', className: 'kit-ask-opt' },
+                    h('span', { className: 'kit-ask-chk', 'aria-hidden': 'true' }), '多选:灰度发布'),
+                  h('div', { className: 'kit-ask-field' },
+                    h('textarea', { rows: '2', placeholder: '自定义回答…' })),
+                  h('div', { className: 'kit-ask-foot' },
+                    h('button', { type: 'button', className: 'kit-ask-nav prev', 'aria-label': '上一题(样本)', disabled: true }),
+                    h('button', { type: 'button', className: 'kit-ask-nav', 'aria-label': '下一题(样本)' }),
+                    h('span', { className: 'kit-ask-progress' }, '1 / 2'))))),
+            h('div', { className: 'kit-frame', key: 'plan' },
+              h('div', { className: 'kit-frame-tag' },
+                h('span', null, '计划审批卡 · 同槽同包双卡之二——警示条 warn 底 bg-deep 像素字/正文滚动区基础 md 皮/审批三钮走共享 btn 键(primary=fg 底 surface 字)/「去聊天里说」幽灵化'),
+                h('em', null, 'ask·plan')),
+              h('div', { className: 'kit-frame-body' },
+                h('div', { className: 'kit-ask-card' },
+                  h('div', { className: 'kit-ask-cap' }, 'PLAN REVIEW'),
+                  h('div', { className: 'kit-ask-strip' },
+                    h('span', { className: 'kit-ask-dot', 'aria-hidden': 'true' }), '计划将改动 3 个文件,退出前请审批'),
+                  h('div', { className: 'kit-ask-plan' }, '1. map.js 追加 ask 段键组\n2. 实装 src/conv/ask.js(纯 CSS)\n3. verify-ask 自治门禁'),
+                  h('div', { className: 'kit-ask-foot' },
+                    h('button', { type: 'button', className: 'kit-ask-ghost' }, '去聊天里说'),
+                    h('button', { type: 'button', className: 'kit-ask-btn' }, '拒绝'),
+                    h('button', { type: 'button', className: 'kit-ask-btn primary' }, '批准'))))),
+            h('div', { className: 'kit-frame', key: 'gate' },
+              h('div', { className: 'kit-frame-tag' },
+                h('span', null, '藏坞门控 · pending 时问卡 frame 渲染于 composerSeat 内部(probe:seatContainsFrame=true),自绘坞同框共存→:has 问卡锚 纯 CSS 藏坞零 JS,作答后坞自动归位(F.settled dockBack:true 实证)'),
+                h('em', null, 'ask·gate')),
+              h('div', { className: 'kit-frame-body' },
+                h('div', { className: 'kit-note' }, '门控形态:存在门控(CSS :has 派生)——与 hero(:has 相位)/dialog(head 常驻)同族;锚点三层=stable data-*/aria 前缀(i18n DRIFT-RISK)/primitives 哈希子串,记因见 component-dev-notes §12.5'))))),
         // (g) 工具卡分区（toolcard 批）：MC_TOOL_DEMO 桥真卡渲染（primitives 缺席 → 降级说明）
         h('section', null,
           h('h3', { className: 'kit-h' }, '工具卡'),
@@ -5626,9 +5871,10 @@ const mods = {
   McDock: McDock,
   McMenus: McMenus,
   McResponsive: McResponsive,
+  McAsk: McAsk,
   McKit: McKit,
 };
-const order = ["McTokens","McClock","McMcfx","McSprite","MC_MAP","McChrome","McSidebar","McFinder","McFlow","McThink","McSysCard","McTool","McDock","McMenus","McResponsive","McKit"];
+const order = ["McTokens","McClock","McMcfx","McSprite","MC_MAP","McChrome","McSidebar","McFinder","McFlow","McThink","McSysCard","McTool","McDock","McMenus","McResponsive","McAsk","McKit"];
 
 return {
   inject: ["slots", "theme", "sessions", "workspaces"],

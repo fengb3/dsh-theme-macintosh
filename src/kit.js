@@ -3,6 +3,14 @@
 // 会话流分区（T8）：原型 §5 类定义 scoped 到 .kit-panel（Ruling 3，非宿主选择器不进
 // MC_MAP）+ ReasoningDemo 五帧流式驱动（§8.2 状态机 kit 化，延时全走 CLOCK.next）
 // 纯顶层声明，无模块系统语法；与 tokens/clock/mcfx/sprite 拼进同一作用域
+// 问题卡分区 mask 帮手(ask 批):ask.js 同域出口(mcAskUri/mcAskPath/ASK_*_D,ORDER 先于本模块);
+// 仅 kit 演示消费——真卡走 McAsk CSS,两处字形同源防漂移
+const MC_KIT_ASK_MASK = {
+  tri: mcAskUri(mcAskPath(ASK_TRI_D), 6, 11),
+  rdo: mcAskUri(mcAskPath(ASK_RDO_D, true), 12, 12),
+  rdoOn: mcAskUri(mcAskPath(ASK_RDO_ON_D, true), 12, 12),
+  chkOn: mcAskUri("%3Crect x='.5' y='.5' width='11' height='11' fill='none' stroke='black'/%3E" + mcAskPath(ASK_CHK_D), 12, 12),
+};
 const McKit = {
   css: `/* ===== kit 检视页专属布局（全部 kit- 前缀，不外泄） ===== */
 .kit-scrim{position:fixed;inset:0;z-index:95;overflow-y:auto;box-sizing:border-box;
@@ -29,6 +37,40 @@ const McKit = {
 .kit-resp-drawer{width:220px;border:1px solid var(--mc-border);background:var(--mc-surface);box-shadow:var(--mc-shadow-win,2px 2px 0 0 #000)}
 .kit-resp-drawer-tb{height:20px;display:flex;align-items:center;justify-content:center;font:600 11px/1 var(--font-display);letter-spacing:.04em;color:var(--mc-fg);background:var(--mc-surface-2);border-bottom:1px solid var(--mc-border)}
 .kit-resp-drawer-row{padding:5px 9px;font:400 12px/1.6 var(--font-ui);color:var(--mc-muted);border-bottom:1px solid var(--mc-border-soft)}
+/* 问题卡分区(ask 批):换皮静态样本(自有演示类 .kit-ask-*;真卡=官方 DOM+McAsk CSS 运行时换皮,
+   活体验收)——mask 帮手经装配同域引用 ask.js 出口(MC_HERO_COPY shim 先例,ORDER McAsk 先于 McKit) */
+.kit-ask-card{position:relative;display:flex;flex-direction:column;gap:8px;max-width:430px;padding:14px;
+  background:var(--mc-surface);border:1px solid var(--mc-border);box-shadow:var(--mc-shadow-pop)}
+.kit-ask-cap{font:400 10.5px/1.4 var(--font-ui);color:var(--mc-faint)}
+.kit-ask-tt{margin:0;padding-right:44px;font:600 13px/1.4 var(--font-display);color:var(--mc-fg)}
+.kit-ask-opt{position:relative;display:block;width:100%;text-align:left;padding:6px 8px 6px 30px;border:none;
+  background:none;cursor:pointer;font:400 12.5px/1.6 var(--font-ui);color:var(--mc-fg)}
+.kit-ask-opt::before{content:'';position:absolute;left:9px;top:50%;width:12px;height:12px;margin-top:-6px;
+  background:currentColor;color:var(--mc-muted);-webkit-mask:${MC_KIT_ASK_MASK.rdo};mask:${MC_KIT_ASK_MASK.rdo}}
+.kit-ask-opt.on{background:var(--mc-fg);color:var(--mc-surface)}
+.kit-ask-opt.on::before{color:var(--mc-surface);-webkit-mask:${MC_KIT_ASK_MASK.rdoOn};mask:${MC_KIT_ASK_MASK.rdoOn}}
+.kit-ask-chk{position:absolute;left:9px;top:50%;width:12px;height:12px;margin-top:-6px;box-sizing:border-box;
+  border:1px solid var(--mc-muted);background:none}
+.kit-ask-opt.on .kit-ask-chk{border:none;background:currentColor;color:var(--mc-surface);
+  -webkit-mask:${MC_KIT_ASK_MASK.chkOn};mask:${MC_KIT_ASK_MASK.chkOn}}
+.kit-ask-field{border:1px solid var(--mc-border);background:var(--mc-surface-2);padding:6px 8px}
+.kit-ask-field textarea{display:block;width:100%;box-sizing:border-box;border:none;background:transparent;resize:none;
+  font:400 12.5px/1.7 var(--font-ui);color:var(--mc-fg)}
+.kit-ask-foot{display:flex;align-items:center;gap:8px}
+.kit-ask-nav{width:18px;height:18px;padding:0;border:none;background:currentColor;color:var(--mc-muted);cursor:pointer;
+  -webkit-mask:${MC_KIT_ASK_MASK.tri};mask:${MC_KIT_ASK_MASK.tri}}
+.kit-ask-nav.prev{transform:scaleX(-1)}
+.kit-ask-nav:disabled{opacity:.35;cursor:default}
+.kit-ask-progress{font:400 11px var(--font-ui);color:var(--mc-faint);margin-left:auto}
+.kit-ask-strip{display:flex;align-items:center;gap:6px;padding:4px 8px;background:var(--mc-warn);color:var(--mc-bg-deep);
+  font:600 11px/1.5 var(--font-display)}
+.kit-ask-dot{width:6px;height:6px;flex:none;background:currentColor}
+.kit-ask-plan{padding:6px 8px;font:400 12.5px/1.7 var(--font-ui);color:var(--mc-fg);background:var(--mc-surface-2);border:1px solid var(--mc-border)}
+.kit-ask-btn{padding:4px 10px;border:1px solid var(--mc-border);background:var(--mc-surface);color:var(--mc-fg);
+  font:400 12px/1.4 var(--font-ui);cursor:pointer;box-shadow:var(--mc-shadow-field)}
+.kit-ask-btn.primary{background:var(--mc-fg);color:var(--mc-surface);border-color:var(--mc-fg)}
+.kit-ask-ghost{padding:4px 10px;border:1px solid var(--mc-border);background:none;color:var(--mc-muted);
+  font:400 12px/1.4 var(--font-ui);cursor:pointer}
 .kit-grid{display:flex;flex-wrap:wrap;gap:10px}
 .kit-chip{display:inline-flex;align-items:center;gap:8px;height:28px;padding:0 10px;
   border:1px solid var(--mc-border);border-radius:var(--mc-r-tag);background:var(--mc-surface-2);
@@ -795,6 +837,51 @@ function McKitPage() {
                 h('em', null, 'resp')),
               h('div', { className: 'kit-frame-body' },
                 h('div', { className: 'kit-note' }, '原型 §12 转译：结构档断点 820 → 1023（宿主折叠实测）；硬切无 transition；抽屉=官方展开通道 overlay 化（tclose 同通道，零克隆）'))))),
+        // (h3) 问题卡分区（ask 批）：换皮静态样本（自有演示类 .kit-ask-*;真卡=官方 DOM+McAsk CSS
+        // 运行时换皮,零 JS 接管——官方 React 受控分页/跳过/折叠/作答原样保留,活体验收）。
+        h('section', null,
+          h('h3', { className: 'kit-h' }, '问题卡'),
+          h('div', { className: 'kit-frames' },
+            h('div', { className: 'kit-frame', key: 'ask' },
+              h('div', { className: 'kit-frame-tag' },
+                h('span', null, '问题卡 · 窗框直角+pop 投影/单选选中整行反色(fg 底 surface 字,最 System 7)/多选方框整底 i-chk-on/自由输入 surface-2 场/pagination 翻页 18×18——单选隐数字为裁定项(备选:数字进方框,活体拍板)'),
+                h('em', null, 'ask')),
+              h('div', { className: 'kit-frame-body' },
+                h('div', { className: 'kit-ask-card' },
+                  h('div', { className: 'kit-ask-cap' }, 'QUESTION'),
+                  h('h4', { className: 'kit-ask-tt' }, '探针:主题 ask 卡勘定'),
+                  h('button', { type: 'button', className: 'kit-ask-opt on' }, 'A 勘定正常(推荐)'),
+                  h('button', { type: 'button', className: 'kit-ask-opt' }, 'B 需要重试'),
+                  h('button', { type: 'button', className: 'kit-ask-opt on' },
+                    h('span', { className: 'kit-ask-chk', 'aria-hidden': 'true' }), '多选:回滚预案'),
+                  h('button', { type: 'button', className: 'kit-ask-opt' },
+                    h('span', { className: 'kit-ask-chk', 'aria-hidden': 'true' }), '多选:灰度发布'),
+                  h('div', { className: 'kit-ask-field' },
+                    h('textarea', { rows: '2', placeholder: '自定义回答…' })),
+                  h('div', { className: 'kit-ask-foot' },
+                    h('button', { type: 'button', className: 'kit-ask-nav prev', 'aria-label': '上一题(样本)', disabled: true }),
+                    h('button', { type: 'button', className: 'kit-ask-nav', 'aria-label': '下一题(样本)' }),
+                    h('span', { className: 'kit-ask-progress' }, '1 / 2'))))),
+            h('div', { className: 'kit-frame', key: 'plan' },
+              h('div', { className: 'kit-frame-tag' },
+                h('span', null, '计划审批卡 · 同槽同包双卡之二——警示条 warn 底 bg-deep 像素字/正文滚动区基础 md 皮/审批三钮走共享 btn 键(primary=fg 底 surface 字)/「去聊天里说」幽灵化'),
+                h('em', null, 'ask·plan')),
+              h('div', { className: 'kit-frame-body' },
+                h('div', { className: 'kit-ask-card' },
+                  h('div', { className: 'kit-ask-cap' }, 'PLAN REVIEW'),
+                  h('div', { className: 'kit-ask-strip' },
+                    h('span', { className: 'kit-ask-dot', 'aria-hidden': 'true' }), '计划将改动 3 个文件,退出前请审批'),
+                  h('div', { className: 'kit-ask-plan' }, '1. map.js 追加 ask 段键组\n2. 实装 src/conv/ask.js(纯 CSS)\n3. verify-ask 自治门禁'),
+                  h('div', { className: 'kit-ask-foot' },
+                    h('button', { type: 'button', className: 'kit-ask-ghost' }, '去聊天里说'),
+                    h('button', { type: 'button', className: 'kit-ask-btn' }, '拒绝'),
+                    h('button', { type: 'button', className: 'kit-ask-btn primary' }, '批准'))))),
+            h('div', { className: 'kit-frame', key: 'gate' },
+              h('div', { className: 'kit-frame-tag' },
+                h('span', null, '藏坞门控 · pending 时问卡 frame 渲染于 composerSeat 内部(probe:seatContainsFrame=true),自绘坞同框共存→:has 问卡锚 纯 CSS 藏坞零 JS,作答后坞自动归位(F.settled dockBack:true 实证)'),
+                h('em', null, 'ask·gate')),
+              h('div', { className: 'kit-frame-body' },
+                h('div', { className: 'kit-note' }, '门控形态:存在门控(CSS :has 派生)——与 hero(:has 相位)/dialog(head 常驻)同族;锚点三层=stable data-*/aria 前缀(i18n DRIFT-RISK)/primitives 哈希子串,记因见 component-dev-notes §12.5'))))),
         // (g) 工具卡分区（toolcard 批）：MC_TOOL_DEMO 桥真卡渲染（primitives 缺席 → 降级说明）
         h('section', null,
           h('h3', { className: 'kit-h' }, '工具卡'),

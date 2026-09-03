@@ -52,6 +52,7 @@ const McSprite = {
   <symbol id="i-px-list" viewBox="0 0 24 24"><path d="M2 5h20v14H2V5zm2 2v2h16V7H4zm16 4H4v2h16v-2zm0 4H4v2h16v-2z" fill="currentColor"/></symbol>
   <symbol id="i-px-menu" viewBox="0 0 24 24"><path d="M3 6h18v2H3V6zm0 5h18v2H3v-2zm0 5h18v2H3v-2z" fill="currentColor"/></symbol>
   <symbol id="i-px-warning" viewBox="0 0 24 24"><path d="M3 3h16v2H5v14h14v2H3V3zm18 0h-2v18h2V3zM11 15h2v2h-2v-2zm2-8h-2v6h2V7z" fill="currentColor"/></symbol>
+  <symbol id="i-px-x" viewBox="0 0 24 24"><path d="M5 5h2v2H5V5zM17 5h2v2h-2V5zM7 7h2v2H7V7zM15 7h2v2h-2V7zM9 9h2v2H9V9zM13 9h2v2h-2V9zM11 11h2v2h-2v-2zM9 13h2v2H9v-2zM13 13h2v2h-2v-2zM7 15h2v2H7v-2zM15 15h2v2h-2v-2zM5 17h2v2H5v-2zM17 17h2v2h-2v-2z" fill="currentColor"/></symbol>
   <symbol id="i-moon" viewBox="0 0 24 24"><path d="M6 2h2v2H6V2zM4 4h4v2H4V4zM2 6h6v2H2V6zM2 8h6v2H2V8zM2 10h6v2H2v-2zM2 12h8v2H2v-2zM2 14h10v2H2v-2zM2 16h20v2H2v-2zM4 18h16v2H4v-2zM6 20h12v2H6v-2z" fill="currentColor"/></symbol>
   <symbol id="i-cl-HappyMac" viewBox="0 0 2000 2000">
     <g>
