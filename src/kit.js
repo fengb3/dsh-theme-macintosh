@@ -53,7 +53,7 @@ const McKit = {
   border:1px solid var(--mc-muted);background:none}
 .kit-ask-opt.on .kit-ask-chk{border:none;background:currentColor;color:var(--mc-surface);
   -webkit-mask:${MC_KIT_ASK_MASK.chkOn};mask:${MC_KIT_ASK_MASK.chkOn}}
-.kit-ask-field{border:1px solid var(--mc-border);background:var(--mc-surface-2);padding:6px 8px}
+.kit-ask-field{flex:1;min-width:0;padding:2px 0}
 .kit-ask-field textarea{display:block;width:100%;box-sizing:border-box;border:none;background:transparent;resize:none;
   font:400 12.5px/1.7 var(--font-ui);color:var(--mc-fg)}
 .kit-ask-foot{display:flex;align-items:center;gap:8px}

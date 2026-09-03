@@ -786,6 +786,12 @@ subcalls：左 2px 软线缩进 + sc-row（ok=绿 i-check / run=琥珀 clock）�
   7. **plan 模式入口未勘定**：composer 访问模式菜单（仅可查看/可写入工作区/完全权限）与
      agent 预设下拉（标准/PTC/极简/创造/豆包语音/猫娘/Web UI Design）均非 plan 模式入口
      （probe-ask-diag3/4 实勘）——审批卡活体触发走用户通道,入口锚定留待后续探针。
+  8. **自定义行 = 选项之一**（验收轮2 2026-09-03 用户裁定）：线框/surface-2 场退役（field 域
+     零规则,官方 field>* font:inherit 自足;askField 键撤,无死键纪律）——单选形态给 ::before
+     像素环（:not(:has(checkbox)) 区分单/多形态,多选行内已有官方空 span 勾）、激活态
+     customRowActive 换实心环;多选勾统 12px 方框,选中 checkboxChecked 整底 chk-on。几何实测
+     （probe-ask-diag5）：框与 optionLabel 中心完全同心（24px 行高 vs 12px 框 margin-top:6px）,
+     「错位」观感真身 = 自定义行官方 20px 大框列线参差,统 12px 后齐。
 - **audit M5 意外碰撞处置先例**：`planCard` 语义锚 `section[aria-label]` 拆出裸 `[aria-label]`
   token，与 sidebar 既存 `:not([aria-label])` 页脚规则同形碰撞——sidebar 照 overlays/dock/
   finder/tool 四段先例改**段扫描 + SIDEBAR_WHITELIST**（`[aria-label]` 存在性判定放行，记因入 audit.mjs）。

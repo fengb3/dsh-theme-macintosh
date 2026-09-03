@@ -84,11 +84,19 @@ function mcAskCss(M) {
   L.push(M.askCard + ' ' + M.askOpts + ' ' + M.askBadge + '{border:1px solid var(--mc-border)!important;background:none!important;'
     + 'font:400 10px var(--font-ui)!important;color:var(--mc-muted)!important;padding:1px 4px!important}');
   L.push(M.askCard + ' ' + M.askDetail + '{font:400 12.5px/1.7 var(--font-ui)!important;color:var(--mc-muted)!important}');
-  // 自定义回答行/自由输入场:1px 边框 + surface-2 底;textarea/input 透明底 12.5px/1.7
-  L.push(M.askCard + ' ' + M.askCustomRow + ',' + M.askCard + ' ' + M.askField
-    + '{border:1px solid var(--mc-border)!important;background:var(--mc-surface-2)!important}');
-  L.push(M.askCard + ' ' + M.askField + ' textarea,' + M.askCard + ' ' + M.askField + ' input'
-    + '{background:transparent!important;border:none!important;font:400 12.5px/1.7 var(--font-ui)!important;color:var(--mc-fg)!important}');
+  // —— 自定义回答行 = 选项之一(用户裁定 2026-09-03 验收轮2:线框退役,不像表单件像选项)——
+  // 单选形态(行内无勾 span,:has 区分):::before 像素环占位,激活(customRowActive)换实心环;
+  // 多选形态:行内官方空 span 勾(源码 Mbwy4a_checkbox 空盒,全靠 ::before 画框)统成 12px 方框,
+  // 选中(checkboxChecked)整底 i-chk-on。field 域零规则=官方透明 inline 场(线框/表面底全退役)。
+  L.push(M.askCard + ' ' + M.askCustomRow + ':not(:has(' + M.askCheckbox + '))::before{content:\'\';flex:0 0 12px;width:12px;height:12px;'
+    + 'margin-top:6px;box-sizing:border-box;background:currentColor;-webkit-mask:' + mRdo + ';mask:' + mRdo + ';color:var(--mc-muted)}');
+  L.push(M.askCard + ' ' + M.askCustomRow + M.askCustomOn + ':not(:has(' + M.askCheckbox + '))::before{color:var(--mc-fg);'
+    + '-webkit-mask:' + mRdoOn + ';mask:' + mRdoOn + '}');
+  L.push(M.askCard + ' ' + M.askCustomRow + ' ' + M.askCheckbox + '{flex:0 0 12px;width:12px;height:12px;'
+    + 'margin-top:6px;box-sizing:border-box;border:1px solid currentColor;background:none;color:var(--mc-muted);padding:0}');
+  L.push(M.askCard + ' ' + M.askCustomRow + ' ' + M.askCheckbox + '::before{content:none!important}');
+  L.push(M.askCard + ' ' + M.askCustomRow + ' ' + M.askCheckbox + M.askChkChecked + '{border:none;background:currentColor;color:var(--mc-fg);'
+    + '-webkit-mask:' + mChkOn + ';mask:' + mChkOn + '}');
   // —— 页脚:progress 页码 faint / feedback 错误 danger / 翻页钮 18×18 caretright mask(prev scaleX(-1),disabled .35)——
   L.push(M.askCard + ' ' + M.askProgress + '{font:400 11px var(--font-ui)!important;color:var(--mc-faint)!important}');
   L.push(M.askCard + ' ' + M.askFeedback + '{font:400 11px var(--font-ui)!important;color:var(--mc-danger)!important}');

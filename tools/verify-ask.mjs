@@ -80,6 +80,8 @@ const D = await pg.evaluate(() => {
   const prog = document.querySelector('[data-question-key] [class*="progress"]');
   const num = radio ? radio.querySelector('[class*="number"]') : null;
   const eyebrow = document.querySelector('[data-question-key] [class*="eyebrow"]');
+  const custom = document.querySelector('[data-question-key] [class*="customRow"]');
+  const fieldEl = document.querySelector('[data-question-key] [class*="field"]');
   // 类名清单转储(常驻 INFO:Mbwy4a 族实形留档,防交接档形态勘误再犯)
   const clsInv = card ? [...new Set([...card.querySelectorAll('*')].map((x) => String(x.className).trim()).filter(Boolean))].slice(0, 40) : [];
   return {
@@ -97,6 +99,9 @@ const D = await pg.evaluate(() => {
     progress: prog ? (prog.textContent || '').trim() : 'absent',
     numberDisplay: num ? cs(num).display : 'absent',
     eyebrowIn: eyebrow ? true : false,
+    customRing: custom ? (cs(custom, '::before').maskImage || cs(custom, '::before').webkitMaskImage || '') : 'absent',
+    customBorder: custom ? cs(custom).borderTopColor : 'absent',
+    fieldBg: fieldEl ? cs(fieldEl).backgroundColor : 'absent',
     clsInv: clsInv.join(' | ').slice(0, 600),
     fgResolved: fg,
   };
@@ -115,6 +120,8 @@ ok(D.foldSvgHidden === true, 'D10 官方 svg 藏 (mask 代形)');
 ok(D.progress !== 'absent' && D.progress.length > 0, 'D11 progress 页码在场 (' + D.progress + ')');
 ok(D.numberDisplay === 'none', 'D12 单选隐数字(display:' + D.numberDisplay + ';裁定项,活体复核)');
 ok(D.eyebrowIn, 'D13 eyebrow 题头小字锚命中');
+ok(D.customRing.indexOf('data:image/svg+xml') >= 0, 'D14 自定义行选项化: ::before 像素环 (' + D.customRing.slice(0, 40) + '…)');
+ok(D.customBorder === 'rgba(0, 0, 0, 0)' && D.fieldBg === 'rgba(0, 0, 0, 0)', 'D15 自定义行线框退役 (border=' + D.customBorder + ' fieldBg=' + D.fieldBg + ')');
 await pg.screenshot({ path: join(SHOTS, 'ask-verify-pending.png') });
 
 // —— E. 折叠态: 点收起 → scroll 卸载 + tri 回 0°(label 翻转同钮) → 复原 ——

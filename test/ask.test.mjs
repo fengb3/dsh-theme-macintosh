@@ -28,8 +28,9 @@ const M = {
   askPrev: 'K-askPrev', askNext: 'K-askNext', askEyebrow: 'K-askEyebrow', askTitle: 'K-askTitle',
   askOpts: 'K-askOpts', askOptRdo: 'K-askOptRdo', askOptChk: 'K-askOptChk', askOptOn: 'K-askOptOn',
   askNumber: 'K-askNumber', askCheckbox: 'K-askCheckbox', askBadge: 'K-askBadge', askDetail: 'K-askDetail',
-  askCustomRow: 'K-askCustomRow', askField: 'K-askField', askProgress: 'K-askProgress',
+  askCustomRow: 'K-askCustomRow', askProgress: 'K-askProgress',
   askFeedback: 'K-askFeedback', btnOutline: 'K-btnOutline', btnPrimary: 'K-btnPrimary',
+  askChkChecked: 'K-askChkChecked', askCustomOn: 'K-askCustomOn',
   planFrame: 'K-planFrame', planCard: 'K-planCard', planScroll: 'K-planScroll',
   planStrip: 'K-planStrip', planDot: 'K-planDot', planDiscuss: 'K-planDiscuss',
 };
