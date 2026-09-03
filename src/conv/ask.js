@@ -59,20 +59,22 @@ function mcAskCss(M) {
   L.push(M.askCard + ' ' + M.askFoldOn + '{-webkit-mask:' + mTri + ';mask:' + mTri + ';transform:rotate(90deg)}');
   L.push(M.askCard + ' ' + M.askFoldOff + '{-webkit-mask:' + mTri + ';mask:' + mTri + ';transform:none}');
   L.push(M.askCard + ' ' + M.askCancel + '{-webkit-mask:' + mPxX + ';mask:' + mPxX + ';color:var(--mc-fg)!important}');
-  // —— 选项行:role 语义锚;行内环/勾自绘,官方序号/勾件一律藏 ——
-  // 单选:隐数字(裁定项,活体复核备选=数字进方框)+ ::before 12px 环 mask;选中整行反色(fg 底 surface 字)
-  L.push(M.askCard + ' ' + M.askOpts + ' ' + M.askOptRdo + ',' + M.askCard + ' ' + M.askOpts + ' ' + M.askOptChk
-    + '{position:relative!important;padding-left:30px!important;text-align:left!important}');
+  // —— 选项行:role 语义锚;官方 option 本就 display:flex+align-items:flex-start(源码勘定
+  // 2026-09-03),框件 margin-top 锚首行——换皮不夺布局,环/勾做 flex 首子件(绝对定位与官方
+  // flex 打架+官方 ::before 14px 框漏藏出双框叠影,验收轮勘误,记因 dev-notes §12.5)——
+  // 单选:隐数字(裁定项,活体复核备选=数字进方框)+ ::before 12px 环 mask 占 number 位;选中整行反色
   L.push(M.askCard + ' ' + M.askOpts + ' ' + M.askNumber + '{display:none!important}');
-  L.push(M.askCard + ' ' + M.askOpts + ' ' + M.askOptRdo + '::before{content:\'\';position:absolute;left:9px;top:50%;width:12px;height:12px;'
-    + 'margin-top:-6px;background:currentColor;-webkit-mask:' + mRdo + ';mask:' + mRdo + ';color:var(--mc-muted)}');
+  L.push(M.askCard + ' ' + M.askOpts + ' ' + M.askOptRdo + '::before{content:\'\';flex:0 0 12px;width:12px;height:12px;'
+    + 'margin-top:6px;box-sizing:border-box;background:currentColor;-webkit-mask:' + mRdo + ';mask:' + mRdo + ';color:var(--mc-muted)}');
   L.push(M.askCard + ' ' + M.askOpts + ' ' + M.askOptRdo + M.askOptOn + '{background:var(--mc-fg)!important;color:var(--mc-surface)!important}');
   L.push(M.askCard + ' ' + M.askOpts + ' ' + M.askOptRdo + M.askOptOn + ' *{color:inherit!important}');
   L.push(M.askCard + ' ' + M.askOpts + ' ' + M.askOptRdo + M.askOptOn + '::before{color:var(--mc-surface);'
     + '-webkit-mask:' + mRdoOn + ';mask:' + mRdoOn + '}');
-  // 多选:官方勾 svg 藏,_checkbox_ span 化 12px 边框方框;选中整底 i-chk-on mask(边框+勾一体)
-  L.push(M.askCard + ' ' + M.askOpts + ' ' + M.askOptChk + ' ' + M.askCheckbox + '{position:absolute;left:9px;top:50%;width:12px;height:12px;'
-    + 'margin-top:-6px;box-sizing:border-box;border:1px solid currentColor;background:none;color:var(--mc-muted)}');
+  // 多选:官方勾 svg 与官方 ::before 14px 框一律藏,_checkbox_ span 本体化 12px 边框方框(flex 首行位);
+  // 选中整底 i-chk-on mask(边框+勾一体)
+  L.push(M.askCard + ' ' + M.askOpts + ' ' + M.askOptChk + ' ' + M.askCheckbox + '{flex:0 0 12px;width:12px;height:12px;'
+    + 'margin-top:6px;box-sizing:border-box;border:1px solid currentColor;background:none;color:var(--mc-muted);padding:0}');
+  L.push(M.askCard + ' ' + M.askOpts + ' ' + M.askOptChk + ' ' + M.askCheckbox + '::before{content:none!important}');
   L.push(M.askCard + ' ' + M.askOpts + ' ' + M.askOptChk + ' ' + M.askCheckbox + ' *{display:none!important}');
   L.push(M.askCard + ' ' + M.askOpts + ' ' + M.askOptChk + M.askOptOn + ' ' + M.askCheckbox + '{border:none;background:currentColor;color:var(--mc-surface);'
     + '-webkit-mask:' + mChkOn + ';mask:' + mChkOn + '}');

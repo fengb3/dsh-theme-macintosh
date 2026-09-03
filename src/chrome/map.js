@@ -254,7 +254,7 @@ const MC_MAP = {
   askNumber:    '[class*="number"]',      // DRIFT-RISK(序号圆点;裁定项:单选隐数字,活体复核备选=数字进方框)
   askCheckbox:  '[class*="checkbox"]',    // DRIFT-RISK(多选方框 span;官方勾 svg 藏)
   askBadge:     '[class*="badge"]',       // DRIFT-RISK(推荐徽标)
-  askDetail:    '[class*="detail"]',      // DRIFT-RISK(题干补充 md)
+  askDetail:    ':is([class*="detail"], [class*="description"])', // DRIFT-RISK(题干补充 Mbwy4a_detail+选项行描述 Mbwy4a_description;:is() 复合中段纪律)
   askCustomRow: '[class*="customRow"]',   // DRIFT-RISK(自定义回答行)
   askField:     '[class*="field"]',       // DRIFT-RISK(自由输入场)
   askProgress:  '[class*="progress"]',    // DRIFT-RISK(「1 / 1」页码;实形 Mbwy4a_progress,DIAG 实证)
@@ -262,7 +262,7 @@ const MC_MAP = {
   btnOutline:   '[class*="_outline_"]',   // primitives Button(哈希构建 kz6gm,双侧下划线形态=源码 CSS-module 命名 _outline_kz6gm_56,与 Mbwy4a 族异构——此族交接档形态正确;dlgClose/uV2eYG 记因同源)
   btnPrimary:   '[class*="_primary_"]',
   planFrame:    '[data-plan-review-key]', // stable(审批卡 frame 根)
-  planCard:     '[data-plan-review-key] section[aria-label]', // stable 前缀+aria 语义锚
+  planCard:     '[data-plan-review-key] section', // 前缀 stable+结构锚(勘误 2026-09-03:原 section[aria-label] 条件挂载——源码 aria-label=review.question,plan review 无 question 时 React 略掉属性,锚全段死;frame 内 section 唯一,结构位足稳)
   planScroll:   '[data-plan-review-scroll]', // stable(审批卡正文滚动区)
   planStrip:    '[class*="strip"]',       // DRIFT-RISK(审批卡警示条;Mbwy4a 族勘误同 askEyebrow)
   planDot:      '[class*="dot"]',         // DRIFT-RISK(警示条圆点)

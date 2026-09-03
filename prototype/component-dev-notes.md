@@ -770,9 +770,22 @@ subcalls：左 2px 软线缩进 + sc-row（ok=绿 i-check / run=琥珀 clock）�
   3. **复合选择器逗号劈裂**：`askOpts` 初版值 `[role="radiogroup"], [role="group"]` 拼进
      `C OPTS X` 复合规则时逗号把规则劈成两半（后半段脱域、::before/反色全落空）——
      改 `:is([role="radiogroup"], [role="group"])` 单一复合形态。**凡 map 值拟作复合选择器
-     中段者必须 :is() 化**。
-  4. aria 前缀锚（收起/展开问题卡片、放弃整组问题、上一题/下一题）= i18n zh DRIFT-RISK，
+     中段者必须 :is() 化**。验收轮追加实证：旧版第一支裸命中 `[role="radiogroup"]` 容器,
+     `askNumber` 隐藏规则劈裂后即 `radiogroup{display:none}` **整组选项消失**（用户截图 ① 真身）。
+  4. **aria-label 条件挂载 = 锚死**（验收轮 2026-09-03）：`planCard` 原锚
+     `section[aria-label]`——源码 `aria-label={review.question}`,plan review 的 question 为空时
+     React 略掉属性,锚全段死（plan 皮零命中真身）。改结构锚 `[data-plan-review-key] section`
+     （frame 内 section 唯一,源码直读级稳定）。**凡 aria 锚必须核条件挂载面**。
+  5. **换皮不夺布局**（验收轮 2026-09-03）：官方 option 本就 `display:flex;align-items:
+     flex-start`（框件 margin-top:2px 锚首行）——主题的绝对定位环/勾与官方 flex 打架,且官方
+     `_checkbox_::before` 14px 框漏藏出**双框叠影**（用户截图 ② 真身）。改官方 flex 首子件
+     方案：环 = 行 `::before`（flex:0 0 12px + margin-top:6px 对齐 24px 行高首线）,勾 = span
+     本体化（官方 ::before content:none + svg display:none）。**换皮先读官方布局,顺势不逆势**。
+  6. aria 前缀锚（收起/展开问题卡片、放弃整组问题、上一题/下一题）= i18n zh DRIFT-RISK，
      官方换语言即失配（失配 = 回退官方样式不破版）。
+  7. **plan 模式入口未勘定**：composer 访问模式菜单（仅可查看/可写入工作区/完全权限）与
+     agent 预设下拉（标准/PTC/极简/创造/豆包语音/猫娘/Web UI Design）均非 plan 模式入口
+     （probe-ask-diag3/4 实勘）——审批卡活体触发走用户通道,入口锚定留待后续探针。
 - **audit M5 意外碰撞处置先例**：`planCard` 语义锚 `section[aria-label]` 拆出裸 `[aria-label]`
   token，与 sidebar 既存 `:not([aria-label])` 页脚规则同形碰撞——sidebar 照 overlays/dock/
   finder/tool 四段先例改**段扫描 + SIDEBAR_WHITELIST**（`[aria-label]` 存在性判定放行，记因入 audit.mjs）。

@@ -43,13 +43,13 @@ const McKit = {
   background:var(--mc-surface);border:1px solid var(--mc-border);box-shadow:var(--mc-shadow-pop)}
 .kit-ask-cap{font:400 10.5px/1.4 var(--font-ui);color:var(--mc-faint)}
 .kit-ask-tt{margin:0;padding-right:44px;font:600 13px/1.4 var(--font-display);color:var(--mc-fg)}
-.kit-ask-opt{position:relative;display:block;width:100%;text-align:left;padding:6px 8px 6px 30px;border:none;
+.kit-ask-opt{display:flex;align-items:flex-start;gap:7px;width:100%;text-align:left;padding:4px 6px;border:none;
   background:none;cursor:pointer;font:400 12.5px/1.6 var(--font-ui);color:var(--mc-fg)}
-.kit-ask-opt::before{content:'';position:absolute;left:9px;top:50%;width:12px;height:12px;margin-top:-6px;
+.kit-ask-opt.rdo::before{content:'';flex:0 0 12px;width:12px;height:12px;margin-top:4px;box-sizing:border-box;
   background:currentColor;color:var(--mc-muted);-webkit-mask:${MC_KIT_ASK_MASK.rdo};mask:${MC_KIT_ASK_MASK.rdo}}
 .kit-ask-opt.on{background:var(--mc-fg);color:var(--mc-surface)}
-.kit-ask-opt.on::before{color:var(--mc-surface);-webkit-mask:${MC_KIT_ASK_MASK.rdoOn};mask:${MC_KIT_ASK_MASK.rdoOn}}
-.kit-ask-chk{position:absolute;left:9px;top:50%;width:12px;height:12px;margin-top:-6px;box-sizing:border-box;
+.kit-ask-opt.rdo.on::before{color:var(--mc-surface);-webkit-mask:${MC_KIT_ASK_MASK.rdoOn};mask:${MC_KIT_ASK_MASK.rdoOn}}
+.kit-ask-chk{flex:0 0 12px;width:12px;height:12px;margin-top:4px;box-sizing:border-box;
   border:1px solid var(--mc-muted);background:none}
 .kit-ask-opt.on .kit-ask-chk{border:none;background:currentColor;color:var(--mc-surface);
   -webkit-mask:${MC_KIT_ASK_MASK.chkOn};mask:${MC_KIT_ASK_MASK.chkOn}}
@@ -850,8 +850,8 @@ function McKitPage() {
                 h('div', { className: 'kit-ask-card' },
                   h('div', { className: 'kit-ask-cap' }, 'QUESTION'),
                   h('h4', { className: 'kit-ask-tt' }, '探针:主题 ask 卡勘定'),
-                  h('button', { type: 'button', className: 'kit-ask-opt on' }, 'A 勘定正常(推荐)'),
-                  h('button', { type: 'button', className: 'kit-ask-opt' }, 'B 需要重试'),
+                  h('button', { type: 'button', className: 'kit-ask-opt rdo on' }, 'A 勘定正常(推荐)'),
+                  h('button', { type: 'button', className: 'kit-ask-opt rdo' }, 'B 需要重试'),
                   h('button', { type: 'button', className: 'kit-ask-opt on' },
                     h('span', { className: 'kit-ask-chk', 'aria-hidden': 'true' }), '多选:回滚预案'),
                   h('button', { type: 'button', className: 'kit-ask-opt' },
