@@ -714,15 +714,16 @@ const MC_MAP = {
   askNumber:    '[class*="number"]',      // DRIFT-RISK(序号圆点;裁定项:单选隐数字,活体复核备选=数字进方框)
   askCheckbox:  '[class*="checkbox"]',    // DRIFT-RISK(多选方框 span;官方勾 svg 藏)
   askBadge:     '[class*="badge"]',       // DRIFT-RISK(推荐徽标)
-  askDetail:    '[class*="detail"]',      // DRIFT-RISK(题干补充 md)
-  askCustomRow: '[class*="customRow"]',   // DRIFT-RISK(自定义回答行)
-  askField:     '[class*="field"]',       // DRIFT-RISK(自由输入场)
+  askDetail:    ':is([class*="detail"], [class*="description"])', // DRIFT-RISK(题干补充 Mbwy4a_detail+选项行描述 Mbwy4a_description;:is() 复合中段纪律)
+  askCustomRow: '[class*="customRow"]',   // DRIFT-RISK(自定义回答行;field 域撤键 2026-09-03:官方 field>* font:inherit 自足+透明 inline 场,线框退役后零消费者记因)
+  askChkChecked: '[class*="checkboxChecked"]', // DRIFT-RISK(勾选中态 span 本体类;源码 clsx(checkbox, selected&&checkboxChecked),选项行与自定义行勾同款)
+  askCustomOn:  '[class*="customRowActive"]',  // DRIFT-RISK(自定义行激活态;draft.custom!=="" 时挂)
   askProgress:  '[class*="progress"]',    // DRIFT-RISK(「1 / 1」页码;实形 Mbwy4a_progress,DIAG 实证)
   askFeedback:  '[class*="feedback"]',    // DRIFT-RISK(错误行;另有 role=status 冗余锚可用)
   btnOutline:   '[class*="_outline_"]',   // primitives Button(哈希构建 kz6gm,双侧下划线形态=源码 CSS-module 命名 _outline_kz6gm_56,与 Mbwy4a 族异构——此族交接档形态正确;dlgClose/uV2eYG 记因同源)
   btnPrimary:   '[class*="_primary_"]',
   planFrame:    '[data-plan-review-key]', // stable(审批卡 frame 根)
-  planCard:     '[data-plan-review-key] section[aria-label]', // stable 前缀+aria 语义锚
+  planCard:     '[data-plan-review-key] section', // 前缀 stable+结构锚(勘误 2026-09-03:原 section[aria-label] 条件挂载——源码 aria-label=review.question,plan review 无 question 时 React 略掉属性,锚全段死;frame 内 section 唯一,结构位足稳)
   planScroll:   '[data-plan-review-scroll]', // stable(审批卡正文滚动区)
   planStrip:    '[class*="strip"]',       // DRIFT-RISK(审批卡警示条;Mbwy4a 族勘误同 askEyebrow)
   planDot:      '[class*="dot"]',         // DRIFT-RISK(警示条圆点)
@@ -4676,8 +4677,10 @@ if (typeof module !== 'undefined') module.exports = { McResponsive: McResponsive
 // 官方卡仍挂载、自绘坞同框共存（seatContainsFrame=true）→ 藏坞门控纯 CSS :has,作答后坞自动归位。
 // 纪律：本文件在 audit check5 无豁免 → 零宿主选择器字面量,全部经 MC_MAP 键名运行时拼接
 // （mask data-URI 与 [data-mc-dock] 自有命名空间不入 token）;无 :hover、无 transition、无定时器。
-// 皮配方对齐 overlays dialog 窗框（§2 定案,用户口头批准）：surface 底/1px 边/直角/pop 投影 +
-// C * 全域压平;单选选中整行反色（fg 底 surface 字,最 System 7）;状态钩子带引号形态
+// 皮配方（验收轮4 2026-09-03 对齐原型）：卡片语汇 = r-card 圆角+shadow-panel（原型 .ask-card,
+// 与工具卡/composer 同族——非 dialog 窗框的直角+pop）;底部按钮 = 主题通用双内环 push button
+// （.mc-btn 直译,28px/surface-2/600 13px 显示字/:active 反色;primary=accent）;单选选中整行
+// 反色（fg 底 surface 字,最 System 7）;状态钩子带引号形态
 // [aria-checked="true"]（与 dock 段无引号形态 deliberate 区分,避免 DOCK_WHITELIST 纠缠）。
 // —— mask data-URI 帮手（sidebar.js 内联先例函数化;silhouette only,fill 恒黑）——
 function mcAskPath(d, eo) {
@@ -4707,13 +4710,17 @@ function mcAskCss(M) {
   var mRdo = mcAskUri(mcAskPath(ASK_RDO_D, true), 12, 12);
   var mRdoOn = mcAskUri(mcAskPath(ASK_RDO_ON_D, true), 12, 12);
   var mChkOn = mcAskUri("%3Crect x='.5' y='.5' width='11' height='11' fill='none' stroke='black'/%3E" + mcAskPath(ASK_CHK_D), 12, 12);
-  var mPxX = mcAskUri(mcAskPath('M5 5h2v2H5V5zM17 5h2v2h-2V5zM7 7h2v2H7V7zM15 7h2v2h-2V7zM9 9h2v2H9V9zM13 9h2v2h-2V9zM11 11h2v2h-2v-2zM9 13h2v2H9v-2zM13 13h2v2h-2v-2zM7 15h2v2H7v-2zM15 15h2v2h-2v-2zM5 17h2v2H5v-2zM17 17h2v2h-2v-2z'), 24, 24);
+  // 关闭盒 glyph(sprite #i-close 的 silhouette 近形:11×11 方框 2px 环,evenodd 挖孔)——原型 aq-x
+  // 用 #i-close 盒形(非裸 X),与窗框 titlebar 双方块同语言(验收轮4 2026-09-03 勘定)
+  var mClose = mcAskUri(mcAskPath('M11 0H0V11H11V0ZM9 2H2V9H9V2Z', true), 11, 11);
   var L = [];
   // gate（见上;两卡同款）
   L.push(mcAskGateCss(M.composerSeat, M.askFrame, M.planFrame));
   // —— 卡壳(问卡+审批卡共用配方;C * 全域压平)——
+  // 卡片语汇非窗框语汇(验收轮4 2026-09-03 勘误):原型 .ask-card = r-card 圆角 + shadow-panel
+  // 投影(与工具卡/To-Do/Goal/composer 同语言);直角+pop 是 dialog 窗框配方,误用到卡上
   L.push(M.askCard + ',' + M.planCard + '{background:var(--mc-surface)!important;border:1px solid var(--mc-border)!important;'
-    + 'border-radius:0!important;box-shadow:var(--mc-shadow-pop)!important;position:relative;font-family:var(--font-ui)}');
+    + 'border-radius:var(--mc-r-card)!important;box-shadow:var(--mc-shadow-panel)!important;position:relative;font-family:var(--font-ui)}');
   L.push(M.askCard + ' *,' + M.planCard + ' *{font-family:inherit!important;border-radius:0!important}');
   // 卡体滚动区基础 md 皮(问卡题干域+审批卡正文域同语)
   L.push(M.askCard + ' ' + M.askScroll + '{font:400 12.5px/1.7 var(--font-ui)!important;color:var(--mc-fg)!important}');
@@ -4729,21 +4736,29 @@ function mcAskCss(M) {
     + M.askCard + ' ' + M.askCancel + ' svg{display:none!important}');
   L.push(M.askCard + ' ' + M.askFoldOn + '{-webkit-mask:' + mTri + ';mask:' + mTri + ';transform:rotate(90deg)}');
   L.push(M.askCard + ' ' + M.askFoldOff + '{-webkit-mask:' + mTri + ';mask:' + mTri + ';transform:none}');
-  L.push(M.askCard + ' ' + M.askCancel + '{-webkit-mask:' + mPxX + ';mask:' + mPxX + ';color:var(--mc-fg)!important}');
-  // —— 选项行:role 语义锚;行内环/勾自绘,官方序号/勾件一律藏 ——
-  // 单选:隐数字(裁定项,活体复核备选=数字进方框)+ ::before 12px 环 mask;选中整行反色(fg 底 surface 字)
-  L.push(M.askCard + ' ' + M.askOpts + ' ' + M.askOptRdo + ',' + M.askCard + ' ' + M.askOpts + ' ' + M.askOptChk
-    + '{position:relative!important;padding-left:30px!important;text-align:left!important}');
+  L.push(M.askCard + ' ' + M.askCancel + '{width:16px!important;height:16px!important;'
+    + '-webkit-mask:' + mClose + ';mask:' + mClose + ';color:var(--mc-muted)!important}');
+  // —— 选项行:role 语义锚;官方 option 本就 display:flex+align-items:flex-start(源码勘定
+  // 2026-09-03),框件 margin-top 锚首行——换皮不夺布局,环/勾做 flex 首子件(绝对定位与官方
+  // flex 打架+官方 ::before 14px 框漏藏出双框叠影,验收轮勘误,记因 dev-notes §12.5)——
+  // 选项容器与行距对齐原型 .ask-opts(gap:3px)/.ask-opt(padding:4px 6px+r-tag 圆角)——
+  // 仅盒度量,不触行高/字族(环勾 margin-top:6px 锚 24px 行高首线的勘定数学不动)
+  L.push(M.askCard + ' ' + M.askOpts + '{display:flex!important;flex-direction:column!important;gap:3px!important}');
+  L.push(M.askCard + ' ' + M.askOpts + ' ' + M.askOptRdo + ',' + M.askCard + ' ' + M.askOpts + ' ' + M.askOptChk + ','
+    + M.askCard + ' ' + M.askCustomRow + '{padding:4px 6px!important;border-radius:var(--mc-r-tag)!important}');
+  // 单选:隐数字(裁定项,活体复核备选=数字进方框)+ ::before 12px 环 mask 占 number 位;选中整行反色
   L.push(M.askCard + ' ' + M.askOpts + ' ' + M.askNumber + '{display:none!important}');
-  L.push(M.askCard + ' ' + M.askOpts + ' ' + M.askOptRdo + '::before{content:\'\';position:absolute;left:9px;top:50%;width:12px;height:12px;'
-    + 'margin-top:-6px;background:currentColor;-webkit-mask:' + mRdo + ';mask:' + mRdo + ';color:var(--mc-muted)}');
+  L.push(M.askCard + ' ' + M.askOpts + ' ' + M.askOptRdo + '::before{content:\'\';flex:0 0 12px;width:12px;height:12px;'
+    + 'margin-top:6px;box-sizing:border-box;background:currentColor;-webkit-mask:' + mRdo + ';mask:' + mRdo + ';color:var(--mc-muted)}');
   L.push(M.askCard + ' ' + M.askOpts + ' ' + M.askOptRdo + M.askOptOn + '{background:var(--mc-fg)!important;color:var(--mc-surface)!important}');
   L.push(M.askCard + ' ' + M.askOpts + ' ' + M.askOptRdo + M.askOptOn + ' *{color:inherit!important}');
   L.push(M.askCard + ' ' + M.askOpts + ' ' + M.askOptRdo + M.askOptOn + '::before{color:var(--mc-surface);'
     + '-webkit-mask:' + mRdoOn + ';mask:' + mRdoOn + '}');
-  // 多选:官方勾 svg 藏,_checkbox_ span 化 12px 边框方框;选中整底 i-chk-on mask(边框+勾一体)
-  L.push(M.askCard + ' ' + M.askOpts + ' ' + M.askOptChk + ' ' + M.askCheckbox + '{position:absolute;left:9px;top:50%;width:12px;height:12px;'
-    + 'margin-top:-6px;box-sizing:border-box;border:1px solid currentColor;background:none;color:var(--mc-muted)}');
+  // 多选:官方勾 svg 与官方 ::before 14px 框一律藏,_checkbox_ span 本体化 12px 边框方框(flex 首行位);
+  // 选中整底 i-chk-on mask(边框+勾一体)
+  L.push(M.askCard + ' ' + M.askOpts + ' ' + M.askOptChk + ' ' + M.askCheckbox + '{flex:0 0 12px;width:12px;height:12px;'
+    + 'margin-top:6px;box-sizing:border-box;border:1px solid currentColor;background:none;color:var(--mc-muted);padding:0}');
+  L.push(M.askCard + ' ' + M.askOpts + ' ' + M.askOptChk + ' ' + M.askCheckbox + '::before{content:none!important}');
   L.push(M.askCard + ' ' + M.askOpts + ' ' + M.askOptChk + ' ' + M.askCheckbox + ' *{display:none!important}');
   L.push(M.askCard + ' ' + M.askOpts + ' ' + M.askOptChk + M.askOptOn + ' ' + M.askCheckbox + '{border:none;background:currentColor;color:var(--mc-surface);'
     + '-webkit-mask:' + mChkOn + ';mask:' + mChkOn + '}');
@@ -4753,35 +4768,76 @@ function mcAskCss(M) {
   L.push(M.askCard + ' ' + M.askOpts + ' ' + M.askBadge + '{border:1px solid var(--mc-border)!important;background:none!important;'
     + 'font:400 10px var(--font-ui)!important;color:var(--mc-muted)!important;padding:1px 4px!important}');
   L.push(M.askCard + ' ' + M.askDetail + '{font:400 12.5px/1.7 var(--font-ui)!important;color:var(--mc-muted)!important}');
-  // 自定义回答行/自由输入场:1px 边框 + surface-2 底;textarea/input 透明底 12.5px/1.7
-  L.push(M.askCard + ' ' + M.askCustomRow + ',' + M.askCard + ' ' + M.askField
-    + '{border:1px solid var(--mc-border)!important;background:var(--mc-surface-2)!important}');
-  L.push(M.askCard + ' ' + M.askField + ' textarea,' + M.askCard + ' ' + M.askField + ' input'
-    + '{background:transparent!important;border:none!important;font:400 12.5px/1.7 var(--font-ui)!important;color:var(--mc-fg)!important}');
+  // —— 自定义回答行 = 选项之一(用户裁定 2026-09-03 验收轮2:线框退役,不像表单件像选项)——
+  // 单选形态(行内无勾 span,:has 区分):::before 像素环占位,激活(customRowActive)换实心环;
+  // 多选形态:行内官方空 span 勾(源码 Mbwy4a_checkbox 空盒,全靠 ::before 画框)统成 12px 方框,
+  // 选中(checkboxChecked)整底 i-chk-on。field 域零规则=官方透明 inline 场(线框/表面底全退役)。
+  L.push(M.askCard + ' ' + M.askCustomRow + ':not(:has(' + M.askCheckbox + '))::before{content:\'\';flex:0 0 12px;width:12px;height:12px;'
+    + 'margin-top:6px;box-sizing:border-box;background:currentColor;-webkit-mask:' + mRdo + ';mask:' + mRdo + ';color:var(--mc-muted)}');
+  L.push(M.askCard + ' ' + M.askCustomRow + M.askCustomOn + ':not(:has(' + M.askCheckbox + '))::before{color:var(--mc-fg);'
+    + '-webkit-mask:' + mRdoOn + ';mask:' + mRdoOn + '}');
+  L.push(M.askCard + ' ' + M.askCustomRow + ' ' + M.askCheckbox + '{flex:0 0 12px;width:12px;height:12px;'
+    + 'margin-top:6px;box-sizing:border-box;border:1px solid currentColor;background:none;color:var(--mc-muted);padding:0}');
+  L.push(M.askCard + ' ' + M.askCustomRow + ' ' + M.askCheckbox + '::before{content:none!important}');
+  L.push(M.askCard + ' ' + M.askCustomRow + ' ' + M.askCheckbox + M.askChkChecked + '{border:none;background:currentColor;color:var(--mc-fg);'
+    + '-webkit-mask:' + mChkOn + ';mask:' + mChkOn + '}');
   // —— 页脚:progress 页码 faint / feedback 错误 danger / 翻页钮 18×18 caretright mask(prev scaleX(-1),disabled .35)——
   L.push(M.askCard + ' ' + M.askProgress + '{font:400 11px var(--font-ui)!important;color:var(--mc-faint)!important}');
   L.push(M.askCard + ' ' + M.askFeedback + '{font:400 11px var(--font-ui)!important;color:var(--mc-danger)!important}');
+  // 翻页钮 = 原型 .pgbtn 方框小钮(20×20+1px 边+r-tag,内嵌 9px 像素箭头)——非裸三角
+  // (验收轮4 2026-09-03 勘定:prototype L649-653);caret 移 ::before,盒体带边框
   L.push(M.askCard + ' ' + M.askPrev + ',' + M.askCard + ' ' + M.askNext
-    + '{width:18px!important;height:18px!important;padding:0!important;border:none!important;'
-    + 'background:currentColor!important;color:var(--mc-muted)!important;'
-    + '-webkit-mask:' + mTri + ';mask:' + mTri + ';cursor:pointer}');
+    + '{width:20px!important;height:20px!important;padding:0!important;display:grid!important;place-items:center!important;'
+    + 'border:1px solid var(--mc-border)!important;border-radius:var(--mc-r-tag)!important;'
+    + 'background:none!important;color:var(--mc-muted)!important;cursor:pointer!important}');
+  L.push(M.askCard + ' ' + M.askPrev + ' svg,' + M.askCard + ' ' + M.askNext + ' svg{display:none!important}');
+  L.push(M.askCard + ' ' + M.askPrev + '::before,' + M.askCard + ' ' + M.askNext
+    + '::before{content:\'\';width:9px;height:9px;background:currentColor;'
+    + '-webkit-mask:' + mTri + ';mask:' + mTri + '}');
   L.push(M.askCard + ' ' + M.askPrev + '{transform:scaleX(-1)}');
-  L.push(M.askCard + ' ' + M.askPrev + ':disabled,' + M.askCard + ' ' + M.askNext + ':disabled{opacity:.35}');
-  // primitives Button(跳过/提交/下一题/审批三钮):直角化 + field 投影;primary = fg 底 surface 字(kit .btn sm 同语)
-  L.push(M.askCard + ' ' + M.btnOutline + ',' + M.planCard + ' ' + M.btnOutline + ','
-    + M.askCard + ' ' + M.btnPrimary + ',' + M.planCard + ' ' + M.btnPrimary
-    + '{border-radius:0!important;box-shadow:var(--mc-shadow-field)!important;border:1px solid var(--mc-border)!important;'
-    + 'background:var(--mc-surface)!important;color:var(--mc-fg)!important;font:400 12px var(--font-ui)!important}');
+  L.push(M.askCard + ' ' + M.askPrev + ':disabled,' + M.askCard + ' ' + M.askNext + ':disabled{opacity:.35;cursor:default}');
+  // primitives Button(跳过/提交/下一题/审批三钮/去聊天里说)= 主题通用双内环 push button
+  // (.mc-btn 配方直译,tokens.js §5.1 / prototype .btn L205-224):28px 高/72px 最小宽/r-btn
+  // 圆角/外 1px 线+内双环(box-shadow inset×2)/surface-2 底/600 13px 显示字/:active 内外圈
+  // 反色——验收轮4 2026-09-03:此前「直角+field 投影+ui 字」表单件风与通用钮是两个物种,用户
+  // 指认「没有跟随设计稿通用按钮样式」;primary = accent 周紫底+内环 1px accent(勘误3 延伸);
+  // planDiscuss 幽灵化退役——System 7 无幽灵钮,一律 push button(去聊天里说 = 默认钮)
+  L.push(M.askCard + ' ' + M.btnOutline + ',' + M.askCard + ' ' + M.btnPrimary + ','
+    + M.planCard + ' ' + M.btnOutline + ',' + M.planCard + ' ' + M.btnPrimary + ','
+    + M.planCard + ' ' + M.planDiscuss
+    + '{display:inline-flex!important;align-items:center!important;justify-content:center!important;'
+    + 'height:28px!important;min-width:72px!important;padding:0 16px!important;'
+    + 'border-radius:var(--mc-r-btn)!important;border:1px solid var(--mc-border)!important;'
+    + 'box-shadow:inset 0 0 0 1px var(--mc-surface),inset 0 0 0 2px var(--mc-border)!important;'
+    + 'background:var(--mc-surface-2)!important;color:var(--mc-fg)!important;'
+    + 'font:600 13px/1 var(--font-display)!important;letter-spacing:.04em!important;'
+    + 'white-space:nowrap!important;cursor:pointer!important}');
+  L.push(M.askCard + ' ' + M.btnOutline + ' svg,' + M.askCard + ' ' + M.btnPrimary + ' svg,'
+    + M.planCard + ' ' + M.btnOutline + ' svg,' + M.planCard + ' ' + M.btnPrimary + ' svg,'
+    + M.planCard + ' ' + M.planDiscuss + ' svg{width:14px!important;height:14px!important;flex:none!important}');
+  L.push(M.askCard + ' ' + M.btnOutline + ':active,' + M.planCard + ' ' + M.btnOutline + ':active,'
+    + M.planCard + ' ' + M.planDiscuss + ':active'
+    + '{background:var(--mc-border)!important;color:var(--mc-surface)!important;'
+    + 'box-shadow:inset 0 0 0 1px var(--mc-border),inset 0 0 0 2px var(--mc-surface)!important}');
   L.push(M.askCard + ' ' + M.btnPrimary + ',' + M.planCard + ' ' + M.btnPrimary
-    + '{background:var(--mc-fg)!important;color:var(--mc-surface)!important;border-color:var(--mc-fg)!important}');
-  L.push(M.askCard + ' ' + M.btnPrimary + ':disabled,' + M.planCard + ' ' + M.btnPrimary + ':disabled{opacity:.35}');
-  // —— 审批卡:警示条 warn 底 + bg-deep 像素字;圆点直角(* 压平已盖,显式记因);去聊天里说幽灵化——
+    + '{background:var(--mc-accent)!important;color:var(--mc-accent-ink)!important;'
+    + 'box-shadow:inset 0 0 0 1px var(--mc-accent),inset 0 0 0 2px var(--mc-border)!important}');
+  L.push(M.askCard + ' ' + M.btnPrimary + ':active,' + M.planCard + ' ' + M.btnPrimary + ':active'
+    + '{background:var(--mc-border)!important;color:var(--mc-surface)!important;'
+    + 'box-shadow:inset 0 0 0 1px var(--mc-border),inset 0 0 0 2px var(--mc-surface)!important}');
+  L.push(M.askCard + ' ' + M.btnOutline + ':disabled,' + M.askCard + ' ' + M.btnPrimary + ':disabled,'
+    + M.planCard + ' ' + M.btnOutline + ':disabled,' + M.planCard + ' ' + M.btnPrimary + ':disabled'
+    + '{opacity:.4!important;cursor:not-allowed!important}');
+  // —— 审批卡:警示条 warn 底 + bg-deep 像素字;圆点直角(* 压平已盖,显式记因)——
+  // (planDiscuss 已并入上方通用钮组;警示条配 warn 圆点)
   L.push(M.planCard + ' ' + M.planStrip + '{background:var(--mc-warn)!important;color:var(--mc-bg-deep)!important;'
     + 'font:600 11px var(--font-display)!important}');
   L.push(M.planCard + ' ' + M.planStrip + ' *{color:inherit!important}');
   L.push(M.planCard + ' ' + M.planDot + '{border-radius:0!important}');
-  L.push(M.planCard + ' ' + M.planDiscuss + '{background:none!important;border:1px solid var(--mc-border)!important;'
-    + 'box-shadow:none!important;color:var(--mc-muted)!important}');
+  // 页脚分隔线(原型 .aq-chrome border-top 软线+8px 上距):结构位锚 = 卡末子且含 primary 钮
+  // (=页脚行;:has 门控——折叠/无页脚态末子命中他件时不画线,失配静默降级)
+  L.push(M.askCard + ' > *:last-child:has(' + M.btnPrimary + '),' + M.planCard + ' > *:last-child:has(' + M.btnPrimary + ')'
+    + '{border-top:1px solid var(--mc-border-soft)!important;padding-top:8px!important}');
   return L.join('\n');
 }
 // —— 装配出口(typeof MC_MAP 守卫同 dock/responsive:CJS 单测装载无 MC_MAP → 空串,纯函数仍可测)——
@@ -4835,24 +4891,27 @@ const McKit = {
 /* 问题卡分区(ask 批):换皮静态样本(自有演示类 .kit-ask-*;真卡=官方 DOM+McAsk CSS 运行时换皮,
    活体验收)——mask 帮手经装配同域引用 ask.js 出口(MC_HERO_COPY shim 先例,ORDER McAsk 先于 McKit) */
 .kit-ask-card{position:relative;display:flex;flex-direction:column;gap:8px;max-width:430px;padding:14px;
-  background:var(--mc-surface);border:1px solid var(--mc-border);box-shadow:var(--mc-shadow-pop)}
+  background:var(--mc-surface);border:1px solid var(--mc-border);border-radius:var(--mc-r-card);
+  box-shadow:var(--mc-shadow-panel)}
 .kit-ask-cap{font:400 10.5px/1.4 var(--font-ui);color:var(--mc-faint)}
 .kit-ask-tt{margin:0;padding-right:44px;font:600 13px/1.4 var(--font-display);color:var(--mc-fg)}
-.kit-ask-opt{position:relative;display:block;width:100%;text-align:left;padding:6px 8px 6px 30px;border:none;
+.kit-ask-opt{display:flex;align-items:flex-start;gap:7px;width:100%;text-align:left;padding:4px 6px;border:none;
   background:none;cursor:pointer;font:400 12.5px/1.6 var(--font-ui);color:var(--mc-fg)}
-.kit-ask-opt::before{content:'';position:absolute;left:9px;top:50%;width:12px;height:12px;margin-top:-6px;
+.kit-ask-opt.rdo::before{content:'';flex:0 0 12px;width:12px;height:12px;margin-top:4px;box-sizing:border-box;
   background:currentColor;color:var(--mc-muted);-webkit-mask:${MC_KIT_ASK_MASK.rdo};mask:${MC_KIT_ASK_MASK.rdo}}
 .kit-ask-opt.on{background:var(--mc-fg);color:var(--mc-surface)}
-.kit-ask-opt.on::before{color:var(--mc-surface);-webkit-mask:${MC_KIT_ASK_MASK.rdoOn};mask:${MC_KIT_ASK_MASK.rdoOn}}
-.kit-ask-chk{position:absolute;left:9px;top:50%;width:12px;height:12px;margin-top:-6px;box-sizing:border-box;
+.kit-ask-opt.rdo.on::before{color:var(--mc-surface);-webkit-mask:${MC_KIT_ASK_MASK.rdoOn};mask:${MC_KIT_ASK_MASK.rdoOn}}
+.kit-ask-chk{flex:0 0 12px;width:12px;height:12px;margin-top:4px;box-sizing:border-box;
   border:1px solid var(--mc-muted);background:none}
 .kit-ask-opt.on .kit-ask-chk{border:none;background:currentColor;color:var(--mc-surface);
   -webkit-mask:${MC_KIT_ASK_MASK.chkOn};mask:${MC_KIT_ASK_MASK.chkOn}}
-.kit-ask-field{border:1px solid var(--mc-border);background:var(--mc-surface-2);padding:6px 8px}
+.kit-ask-field{flex:1;min-width:0;padding:2px 0}
 .kit-ask-field textarea{display:block;width:100%;box-sizing:border-box;border:none;background:transparent;resize:none;
   font:400 12.5px/1.7 var(--font-ui);color:var(--mc-fg)}
 .kit-ask-foot{display:flex;align-items:center;gap:8px}
-.kit-ask-nav{width:18px;height:18px;padding:0;border:none;background:currentColor;color:var(--mc-muted);cursor:pointer;
+.kit-ask-nav{width:20px;height:20px;padding:0;display:grid;place-items:center;
+  border:1px solid var(--mc-border);border-radius:var(--mc-r-tag);background:none;color:var(--mc-muted);cursor:pointer}
+.kit-ask-nav::before{content:'';width:9px;height:9px;background:currentColor;
   -webkit-mask:${MC_KIT_ASK_MASK.tri};mask:${MC_KIT_ASK_MASK.tri}}
 .kit-ask-nav.prev{transform:scaleX(-1)}
 .kit-ask-nav:disabled{opacity:.35;cursor:default}
@@ -4861,11 +4920,15 @@ const McKit = {
   font:600 11px/1.5 var(--font-display)}
 .kit-ask-dot{width:6px;height:6px;flex:none;background:currentColor}
 .kit-ask-plan{padding:6px 8px;font:400 12.5px/1.7 var(--font-ui);color:var(--mc-fg);background:var(--mc-surface-2);border:1px solid var(--mc-border)}
-.kit-ask-btn{padding:4px 10px;border:1px solid var(--mc-border);background:var(--mc-surface);color:var(--mc-fg);
-  font:400 12px/1.4 var(--font-ui);cursor:pointer;box-shadow:var(--mc-shadow-field)}
-.kit-ask-btn.primary{background:var(--mc-fg);color:var(--mc-surface);border-color:var(--mc-fg)}
-.kit-ask-ghost{padding:4px 10px;border:1px solid var(--mc-border);background:none;color:var(--mc-muted);
-  font:400 12px/1.4 var(--font-ui);cursor:pointer}
+.kit-ask-btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;height:28px;
+  padding:0 16px;min-width:72px;border-radius:var(--mc-r-btn);border:1px solid var(--mc-border);
+  box-shadow:inset 0 0 0 1px var(--mc-surface),inset 0 0 0 2px var(--mc-border);
+  background:var(--mc-surface-2);color:var(--mc-fg);font:600 13px/1 var(--font-display);
+  letter-spacing:.04em;white-space:nowrap;cursor:pointer}
+.kit-ask-btn:active{background:var(--mc-border);color:var(--mc-surface);
+  box-shadow:inset 0 0 0 1px var(--mc-border),inset 0 0 0 2px var(--mc-surface)}
+.kit-ask-btn.primary{background:var(--mc-accent);color:var(--mc-accent-ink);
+  box-shadow:inset 0 0 0 1px var(--mc-accent),inset 0 0 0 2px var(--mc-border)}
 .kit-grid{display:flex;flex-wrap:wrap;gap:10px}
 .kit-chip{display:inline-flex;align-items:center;gap:8px;height:28px;padding:0 10px;
   border:1px solid var(--mc-border);border-radius:var(--mc-r-tag);background:var(--mc-surface-2);
@@ -5639,14 +5702,14 @@ function McKitPage() {
           h('div', { className: 'kit-frames' },
             h('div', { className: 'kit-frame', key: 'ask' },
               h('div', { className: 'kit-frame-tag' },
-                h('span', null, '问题卡 · 窗框直角+pop 投影/单选选中整行反色(fg 底 surface 字,最 System 7)/多选方框整底 i-chk-on/自由输入 surface-2 场/pagination 翻页 18×18——单选隐数字为裁定项(备选:数字进方框,活体拍板)'),
+                h('span', null, '问题卡 · r-card 圆角+panel 投影(卡片语汇)/单选选中整行反色(fg 底 surface 字,最 System 7)/多选方框整底 i-chk-on/自由输入 surface-2 场/pagination 翻页 = 20×20 pgbtn 方框——单选隐数字为裁定项(备选:数字进方框,活体拍板)'),
                 h('em', null, 'ask')),
               h('div', { className: 'kit-frame-body' },
                 h('div', { className: 'kit-ask-card' },
                   h('div', { className: 'kit-ask-cap' }, 'QUESTION'),
                   h('h4', { className: 'kit-ask-tt' }, '探针:主题 ask 卡勘定'),
-                  h('button', { type: 'button', className: 'kit-ask-opt on' }, 'A 勘定正常(推荐)'),
-                  h('button', { type: 'button', className: 'kit-ask-opt' }, 'B 需要重试'),
+                  h('button', { type: 'button', className: 'kit-ask-opt rdo on' }, 'A 勘定正常(推荐)'),
+                  h('button', { type: 'button', className: 'kit-ask-opt rdo' }, 'B 需要重试'),
                   h('button', { type: 'button', className: 'kit-ask-opt on' },
                     h('span', { className: 'kit-ask-chk', 'aria-hidden': 'true' }), '多选:回滚预案'),
                   h('button', { type: 'button', className: 'kit-ask-opt' },
@@ -5659,7 +5722,7 @@ function McKitPage() {
                     h('span', { className: 'kit-ask-progress' }, '1 / 2'))))),
             h('div', { className: 'kit-frame', key: 'plan' },
               h('div', { className: 'kit-frame-tag' },
-                h('span', null, '计划审批卡 · 同槽同包双卡之二——警示条 warn 底 bg-deep 像素字/正文滚动区基础 md 皮/审批三钮走共享 btn 键(primary=fg 底 surface 字)/「去聊天里说」幽灵化'),
+                h('span', null, '计划审批卡 · 同槽同包双卡之二——警示条 warn 底 bg-deep 像素字/正文滚动区基础 md 皮/审批三钮 = 通用双内环 push button(primary=accent 周紫+内环 accent;去聊天里说 = 默认钮,System 7 无幽灵钮)'),
                 h('em', null, 'ask·plan')),
               h('div', { className: 'kit-frame-body' },
                 h('div', { className: 'kit-ask-card' },
@@ -5668,7 +5731,7 @@ function McKitPage() {
                     h('span', { className: 'kit-ask-dot', 'aria-hidden': 'true' }), '计划将改动 3 个文件,退出前请审批'),
                   h('div', { className: 'kit-ask-plan' }, '1. map.js 追加 ask 段键组\n2. 实装 src/conv/ask.js(纯 CSS)\n3. verify-ask 自治门禁'),
                   h('div', { className: 'kit-ask-foot' },
-                    h('button', { type: 'button', className: 'kit-ask-ghost' }, '去聊天里说'),
+                    h('button', { type: 'button', className: 'kit-ask-btn' }, '去聊天里说'),
                     h('button', { type: 'button', className: 'kit-ask-btn' }, '拒绝'),
                     h('button', { type: 'button', className: 'kit-ask-btn primary' }, '批准'))))),
             h('div', { className: 'kit-frame', key: 'gate' },

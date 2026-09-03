@@ -40,7 +40,8 @@ const McKit = {
 /* 问题卡分区(ask 批):换皮静态样本(自有演示类 .kit-ask-*;真卡=官方 DOM+McAsk CSS 运行时换皮,
    活体验收)——mask 帮手经装配同域引用 ask.js 出口(MC_HERO_COPY shim 先例,ORDER McAsk 先于 McKit) */
 .kit-ask-card{position:relative;display:flex;flex-direction:column;gap:8px;max-width:430px;padding:14px;
-  background:var(--mc-surface);border:1px solid var(--mc-border);box-shadow:var(--mc-shadow-pop)}
+  background:var(--mc-surface);border:1px solid var(--mc-border);border-radius:var(--mc-r-card);
+  box-shadow:var(--mc-shadow-panel)}
 .kit-ask-cap{font:400 10.5px/1.4 var(--font-ui);color:var(--mc-faint)}
 .kit-ask-tt{margin:0;padding-right:44px;font:600 13px/1.4 var(--font-display);color:var(--mc-fg)}
 .kit-ask-opt{display:flex;align-items:flex-start;gap:7px;width:100%;text-align:left;padding:4px 6px;border:none;
@@ -57,7 +58,9 @@ const McKit = {
 .kit-ask-field textarea{display:block;width:100%;box-sizing:border-box;border:none;background:transparent;resize:none;
   font:400 12.5px/1.7 var(--font-ui);color:var(--mc-fg)}
 .kit-ask-foot{display:flex;align-items:center;gap:8px}
-.kit-ask-nav{width:18px;height:18px;padding:0;border:none;background:currentColor;color:var(--mc-muted);cursor:pointer;
+.kit-ask-nav{width:20px;height:20px;padding:0;display:grid;place-items:center;
+  border:1px solid var(--mc-border);border-radius:var(--mc-r-tag);background:none;color:var(--mc-muted);cursor:pointer}
+.kit-ask-nav::before{content:'';width:9px;height:9px;background:currentColor;
   -webkit-mask:${MC_KIT_ASK_MASK.tri};mask:${MC_KIT_ASK_MASK.tri}}
 .kit-ask-nav.prev{transform:scaleX(-1)}
 .kit-ask-nav:disabled{opacity:.35;cursor:default}
@@ -66,11 +69,15 @@ const McKit = {
   font:600 11px/1.5 var(--font-display)}
 .kit-ask-dot{width:6px;height:6px;flex:none;background:currentColor}
 .kit-ask-plan{padding:6px 8px;font:400 12.5px/1.7 var(--font-ui);color:var(--mc-fg);background:var(--mc-surface-2);border:1px solid var(--mc-border)}
-.kit-ask-btn{padding:4px 10px;border:1px solid var(--mc-border);background:var(--mc-surface);color:var(--mc-fg);
-  font:400 12px/1.4 var(--font-ui);cursor:pointer;box-shadow:var(--mc-shadow-field)}
-.kit-ask-btn.primary{background:var(--mc-accent);color:var(--mc-accent-ink);border-color:var(--mc-accent)}
-.kit-ask-ghost{padding:4px 10px;border:1px solid var(--mc-border);background:none;color:var(--mc-muted);
-  font:400 12px/1.4 var(--font-ui);cursor:pointer}
+.kit-ask-btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;height:28px;
+  padding:0 16px;min-width:72px;border-radius:var(--mc-r-btn);border:1px solid var(--mc-border);
+  box-shadow:inset 0 0 0 1px var(--mc-surface),inset 0 0 0 2px var(--mc-border);
+  background:var(--mc-surface-2);color:var(--mc-fg);font:600 13px/1 var(--font-display);
+  letter-spacing:.04em;white-space:nowrap;cursor:pointer}
+.kit-ask-btn:active{background:var(--mc-border);color:var(--mc-surface);
+  box-shadow:inset 0 0 0 1px var(--mc-border),inset 0 0 0 2px var(--mc-surface)}
+.kit-ask-btn.primary{background:var(--mc-accent);color:var(--mc-accent-ink);
+  box-shadow:inset 0 0 0 1px var(--mc-accent),inset 0 0 0 2px var(--mc-border)}
 .kit-grid{display:flex;flex-wrap:wrap;gap:10px}
 .kit-chip{display:inline-flex;align-items:center;gap:8px;height:28px;padding:0 10px;
   border:1px solid var(--mc-border);border-radius:var(--mc-r-tag);background:var(--mc-surface-2);
@@ -844,7 +851,7 @@ function McKitPage() {
           h('div', { className: 'kit-frames' },
             h('div', { className: 'kit-frame', key: 'ask' },
               h('div', { className: 'kit-frame-tag' },
-                h('span', null, '问题卡 · 窗框直角+pop 投影/单选选中整行反色(fg 底 surface 字,最 System 7)/多选方框整底 i-chk-on/自由输入 surface-2 场/pagination 翻页 18×18——单选隐数字为裁定项(备选:数字进方框,活体拍板)'),
+                h('span', null, '问题卡 · r-card 圆角+panel 投影(卡片语汇)/单选选中整行反色(fg 底 surface 字,最 System 7)/多选方框整底 i-chk-on/自由输入 surface-2 场/pagination 翻页 = 20×20 pgbtn 方框——单选隐数字为裁定项(备选:数字进方框,活体拍板)'),
                 h('em', null, 'ask')),
               h('div', { className: 'kit-frame-body' },
                 h('div', { className: 'kit-ask-card' },
@@ -864,7 +871,7 @@ function McKitPage() {
                     h('span', { className: 'kit-ask-progress' }, '1 / 2'))))),
             h('div', { className: 'kit-frame', key: 'plan' },
               h('div', { className: 'kit-frame-tag' },
-                h('span', null, '计划审批卡 · 同槽同包双卡之二——警示条 warn 底 bg-deep 像素字/正文滚动区基础 md 皮/审批三钮走共享 btn 键(primary=fg 底 surface 字)/「去聊天里说」幽灵化'),
+                h('span', null, '计划审批卡 · 同槽同包双卡之二——警示条 warn 底 bg-deep 像素字/正文滚动区基础 md 皮/审批三钮 = 通用双内环 push button(primary=accent 周紫+内环 accent;去聊天里说 = 默认钮,System 7 无幽灵钮)'),
                 h('em', null, 'ask·plan')),
               h('div', { className: 'kit-frame-body' },
                 h('div', { className: 'kit-ask-card' },
@@ -873,7 +880,7 @@ function McKitPage() {
                     h('span', { className: 'kit-ask-dot', 'aria-hidden': 'true' }), '计划将改动 3 个文件,退出前请审批'),
                   h('div', { className: 'kit-ask-plan' }, '1. map.js 追加 ask 段键组\n2. 实装 src/conv/ask.js(纯 CSS)\n3. verify-ask 自治门禁'),
                   h('div', { className: 'kit-ask-foot' },
-                    h('button', { type: 'button', className: 'kit-ask-ghost' }, '去聊天里说'),
+                    h('button', { type: 'button', className: 'kit-ask-btn' }, '去聊天里说'),
                     h('button', { type: 'button', className: 'kit-ask-btn' }, '拒绝'),
                     h('button', { type: 'button', className: 'kit-ask-btn primary' }, '批准'))))),
             h('div', { className: 'kit-frame', key: 'gate' },

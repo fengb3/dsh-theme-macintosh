@@ -5,8 +5,10 @@
 // 官方卡仍挂载、自绘坞同框共存（seatContainsFrame=true）→ 藏坞门控纯 CSS :has,作答后坞自动归位。
 // 纪律：本文件在 audit check5 无豁免 → 零宿主选择器字面量,全部经 MC_MAP 键名运行时拼接
 // （mask data-URI 与 [data-mc-dock] 自有命名空间不入 token）;无 :hover、无 transition、无定时器。
-// 皮配方对齐 overlays dialog 窗框（§2 定案,用户口头批准）：surface 底/1px 边/直角/pop 投影 +
-// C * 全域压平;单选选中整行反色（fg 底 surface 字,最 System 7）;状态钩子带引号形态
+// 皮配方（验收轮4 2026-09-03 对齐原型）：卡片语汇 = r-card 圆角+shadow-panel（原型 .ask-card,
+// 与工具卡/composer 同族——非 dialog 窗框的直角+pop）;底部按钮 = 主题通用双内环 push button
+// （.mc-btn 直译,28px/surface-2/600 13px 显示字/:active 反色;primary=accent）;单选选中整行
+// 反色（fg 底 surface 字,最 System 7）;状态钩子带引号形态
 // [aria-checked="true"]（与 dock 段无引号形态 deliberate 区分,避免 DOCK_WHITELIST 纠缠）。
 // —— mask data-URI 帮手（sidebar.js 内联先例函数化;silhouette only,fill 恒黑）——
 function mcAskPath(d, eo) {
@@ -36,13 +38,17 @@ function mcAskCss(M) {
   var mRdo = mcAskUri(mcAskPath(ASK_RDO_D, true), 12, 12);
   var mRdoOn = mcAskUri(mcAskPath(ASK_RDO_ON_D, true), 12, 12);
   var mChkOn = mcAskUri("%3Crect x='.5' y='.5' width='11' height='11' fill='none' stroke='black'/%3E" + mcAskPath(ASK_CHK_D), 12, 12);
-  var mPxX = mcAskUri(mcAskPath('M5 5h2v2H5V5zM17 5h2v2h-2V5zM7 7h2v2H7V7zM15 7h2v2h-2V7zM9 9h2v2H9V9zM13 9h2v2h-2V9zM11 11h2v2h-2v-2zM9 13h2v2H9v-2zM13 13h2v2h-2v-2zM7 15h2v2H7v-2zM15 15h2v2h-2v-2zM5 17h2v2H5v-2zM17 17h2v2h-2v-2z'), 24, 24);
+  // 关闭盒 glyph(sprite #i-close 的 silhouette 近形:11×11 方框 2px 环,evenodd 挖孔)——原型 aq-x
+  // 用 #i-close 盒形(非裸 X),与窗框 titlebar 双方块同语言(验收轮4 2026-09-03 勘定)
+  var mClose = mcAskUri(mcAskPath('M11 0H0V11H11V0ZM9 2H2V9H9V2Z', true), 11, 11);
   var L = [];
   // gate（见上;两卡同款）
   L.push(mcAskGateCss(M.composerSeat, M.askFrame, M.planFrame));
   // —— 卡壳(问卡+审批卡共用配方;C * 全域压平)——
+  // 卡片语汇非窗框语汇(验收轮4 2026-09-03 勘误):原型 .ask-card = r-card 圆角 + shadow-panel
+  // 投影(与工具卡/To-Do/Goal/composer 同语言);直角+pop 是 dialog 窗框配方,误用到卡上
   L.push(M.askCard + ',' + M.planCard + '{background:var(--mc-surface)!important;border:1px solid var(--mc-border)!important;'
-    + 'border-radius:0!important;box-shadow:var(--mc-shadow-pop)!important;position:relative;font-family:var(--font-ui)}');
+    + 'border-radius:var(--mc-r-card)!important;box-shadow:var(--mc-shadow-panel)!important;position:relative;font-family:var(--font-ui)}');
   L.push(M.askCard + ' *,' + M.planCard + ' *{font-family:inherit!important;border-radius:0!important}');
   // 卡体滚动区基础 md 皮(问卡题干域+审批卡正文域同语)
   L.push(M.askCard + ' ' + M.askScroll + '{font:400 12.5px/1.7 var(--font-ui)!important;color:var(--mc-fg)!important}');
@@ -58,10 +64,16 @@ function mcAskCss(M) {
     + M.askCard + ' ' + M.askCancel + ' svg{display:none!important}');
   L.push(M.askCard + ' ' + M.askFoldOn + '{-webkit-mask:' + mTri + ';mask:' + mTri + ';transform:rotate(90deg)}');
   L.push(M.askCard + ' ' + M.askFoldOff + '{-webkit-mask:' + mTri + ';mask:' + mTri + ';transform:none}');
-  L.push(M.askCard + ' ' + M.askCancel + '{-webkit-mask:' + mPxX + ';mask:' + mPxX + ';color:var(--mc-fg)!important}');
+  L.push(M.askCard + ' ' + M.askCancel + '{width:16px!important;height:16px!important;'
+    + '-webkit-mask:' + mClose + ';mask:' + mClose + ';color:var(--mc-muted)!important}');
   // —— 选项行:role 语义锚;官方 option 本就 display:flex+align-items:flex-start(源码勘定
   // 2026-09-03),框件 margin-top 锚首行——换皮不夺布局,环/勾做 flex 首子件(绝对定位与官方
   // flex 打架+官方 ::before 14px 框漏藏出双框叠影,验收轮勘误,记因 dev-notes §12.5)——
+  // 选项容器与行距对齐原型 .ask-opts(gap:3px)/.ask-opt(padding:4px 6px+r-tag 圆角)——
+  // 仅盒度量,不触行高/字族(环勾 margin-top:6px 锚 24px 行高首线的勘定数学不动)
+  L.push(M.askCard + ' ' + M.askOpts + '{display:flex!important;flex-direction:column!important;gap:3px!important}');
+  L.push(M.askCard + ' ' + M.askOpts + ' ' + M.askOptRdo + ',' + M.askCard + ' ' + M.askOpts + ' ' + M.askOptChk + ','
+    + M.askCard + ' ' + M.askCustomRow + '{padding:4px 6px!important;border-radius:var(--mc-r-tag)!important}');
   // 单选:隐数字(裁定项,活体复核备选=数字进方框)+ ::before 12px 环 mask 占 number 位;选中整行反色
   L.push(M.askCard + ' ' + M.askOpts + ' ' + M.askNumber + '{display:none!important}');
   L.push(M.askCard + ' ' + M.askOpts + ' ' + M.askOptRdo + '::before{content:\'\';flex:0 0 12px;width:12px;height:12px;'
@@ -100,29 +112,60 @@ function mcAskCss(M) {
   // —— 页脚:progress 页码 faint / feedback 错误 danger / 翻页钮 18×18 caretright mask(prev scaleX(-1),disabled .35)——
   L.push(M.askCard + ' ' + M.askProgress + '{font:400 11px var(--font-ui)!important;color:var(--mc-faint)!important}');
   L.push(M.askCard + ' ' + M.askFeedback + '{font:400 11px var(--font-ui)!important;color:var(--mc-danger)!important}');
+  // 翻页钮 = 原型 .pgbtn 方框小钮(20×20+1px 边+r-tag,内嵌 9px 像素箭头)——非裸三角
+  // (验收轮4 2026-09-03 勘定:prototype L649-653);caret 移 ::before,盒体带边框
   L.push(M.askCard + ' ' + M.askPrev + ',' + M.askCard + ' ' + M.askNext
-    + '{width:18px!important;height:18px!important;padding:0!important;border:none!important;'
-    + 'background:currentColor!important;color:var(--mc-muted)!important;'
-    + '-webkit-mask:' + mTri + ';mask:' + mTri + ';cursor:pointer}');
+    + '{width:20px!important;height:20px!important;padding:0!important;display:grid!important;place-items:center!important;'
+    + 'border:1px solid var(--mc-border)!important;border-radius:var(--mc-r-tag)!important;'
+    + 'background:none!important;color:var(--mc-muted)!important;cursor:pointer!important}');
+  L.push(M.askCard + ' ' + M.askPrev + ' svg,' + M.askCard + ' ' + M.askNext + ' svg{display:none!important}');
+  L.push(M.askCard + ' ' + M.askPrev + '::before,' + M.askCard + ' ' + M.askNext
+    + '::before{content:\'\';width:9px;height:9px;background:currentColor;'
+    + '-webkit-mask:' + mTri + ';mask:' + mTri + '}');
   L.push(M.askCard + ' ' + M.askPrev + '{transform:scaleX(-1)}');
-  L.push(M.askCard + ' ' + M.askPrev + ':disabled,' + M.askCard + ' ' + M.askNext + ':disabled{opacity:.35}');
-  // primitives Button(跳过/提交/下一题/审批三钮):直角化 + field 投影;primary = accent 周紫底
-  // accent-ink 字(勘误 2026-09-03 验收轮3:初版 fg 反色白钮与官方 primary 观感雷同,用户指认
-  // 「不是我们的通用按钮」——通用 primary = 主题周紫 accent,侧栏新建会话钮同语)
-  L.push(M.askCard + ' ' + M.btnOutline + ',' + M.planCard + ' ' + M.btnOutline + ','
-    + M.askCard + ' ' + M.btnPrimary + ',' + M.planCard + ' ' + M.btnPrimary
-    + '{border-radius:0!important;box-shadow:var(--mc-shadow-field)!important;border:1px solid var(--mc-border)!important;'
-    + 'background:var(--mc-surface)!important;color:var(--mc-fg)!important;font:400 12px var(--font-ui)!important}');
+  L.push(M.askCard + ' ' + M.askPrev + ':disabled,' + M.askCard + ' ' + M.askNext + ':disabled{opacity:.35;cursor:default}');
+  // primitives Button(跳过/提交/下一题/审批三钮/去聊天里说)= 主题通用双内环 push button
+  // (.mc-btn 配方直译,tokens.js §5.1 / prototype .btn L205-224):28px 高/72px 最小宽/r-btn
+  // 圆角/外 1px 线+内双环(box-shadow inset×2)/surface-2 底/600 13px 显示字/:active 内外圈
+  // 反色——验收轮4 2026-09-03:此前「直角+field 投影+ui 字」表单件风与通用钮是两个物种,用户
+  // 指认「没有跟随设计稿通用按钮样式」;primary = accent 周紫底+内环 1px accent(勘误3 延伸);
+  // planDiscuss 幽灵化退役——System 7 无幽灵钮,一律 push button(去聊天里说 = 默认钮)
+  L.push(M.askCard + ' ' + M.btnOutline + ',' + M.askCard + ' ' + M.btnPrimary + ','
+    + M.planCard + ' ' + M.btnOutline + ',' + M.planCard + ' ' + M.btnPrimary + ','
+    + M.planCard + ' ' + M.planDiscuss
+    + '{display:inline-flex!important;align-items:center!important;justify-content:center!important;'
+    + 'height:28px!important;min-width:72px!important;padding:0 16px!important;'
+    + 'border-radius:var(--mc-r-btn)!important;border:1px solid var(--mc-border)!important;'
+    + 'box-shadow:inset 0 0 0 1px var(--mc-surface),inset 0 0 0 2px var(--mc-border)!important;'
+    + 'background:var(--mc-surface-2)!important;color:var(--mc-fg)!important;'
+    + 'font:600 13px/1 var(--font-display)!important;letter-spacing:.04em!important;'
+    + 'white-space:nowrap!important;cursor:pointer!important}');
+  L.push(M.askCard + ' ' + M.btnOutline + ' svg,' + M.askCard + ' ' + M.btnPrimary + ' svg,'
+    + M.planCard + ' ' + M.btnOutline + ' svg,' + M.planCard + ' ' + M.btnPrimary + ' svg,'
+    + M.planCard + ' ' + M.planDiscuss + ' svg{width:14px!important;height:14px!important;flex:none!important}');
+  L.push(M.askCard + ' ' + M.btnOutline + ':active,' + M.planCard + ' ' + M.btnOutline + ':active,'
+    + M.planCard + ' ' + M.planDiscuss + ':active'
+    + '{background:var(--mc-border)!important;color:var(--mc-surface)!important;'
+    + 'box-shadow:inset 0 0 0 1px var(--mc-border),inset 0 0 0 2px var(--mc-surface)!important}');
   L.push(M.askCard + ' ' + M.btnPrimary + ',' + M.planCard + ' ' + M.btnPrimary
-    + '{background:var(--mc-accent)!important;color:var(--mc-accent-ink)!important;border-color:var(--mc-accent)!important}');
-  L.push(M.askCard + ' ' + M.btnPrimary + ':disabled,' + M.planCard + ' ' + M.btnPrimary + ':disabled{opacity:.35}');
-  // —— 审批卡:警示条 warn 底 + bg-deep 像素字;圆点直角(* 压平已盖,显式记因);去聊天里说幽灵化——
+    + '{background:var(--mc-accent)!important;color:var(--mc-accent-ink)!important;'
+    + 'box-shadow:inset 0 0 0 1px var(--mc-accent),inset 0 0 0 2px var(--mc-border)!important}');
+  L.push(M.askCard + ' ' + M.btnPrimary + ':active,' + M.planCard + ' ' + M.btnPrimary + ':active'
+    + '{background:var(--mc-border)!important;color:var(--mc-surface)!important;'
+    + 'box-shadow:inset 0 0 0 1px var(--mc-border),inset 0 0 0 2px var(--mc-surface)!important}');
+  L.push(M.askCard + ' ' + M.btnOutline + ':disabled,' + M.askCard + ' ' + M.btnPrimary + ':disabled,'
+    + M.planCard + ' ' + M.btnOutline + ':disabled,' + M.planCard + ' ' + M.btnPrimary + ':disabled'
+    + '{opacity:.4!important;cursor:not-allowed!important}');
+  // —— 审批卡:警示条 warn 底 + bg-deep 像素字;圆点直角(* 压平已盖,显式记因)——
+  // (planDiscuss 已并入上方通用钮组;警示条配 warn 圆点)
   L.push(M.planCard + ' ' + M.planStrip + '{background:var(--mc-warn)!important;color:var(--mc-bg-deep)!important;'
     + 'font:600 11px var(--font-display)!important}');
   L.push(M.planCard + ' ' + M.planStrip + ' *{color:inherit!important}');
   L.push(M.planCard + ' ' + M.planDot + '{border-radius:0!important}');
-  L.push(M.planCard + ' ' + M.planDiscuss + '{background:none!important;border:1px solid var(--mc-border)!important;'
-    + 'box-shadow:none!important;color:var(--mc-muted)!important}');
+  // 页脚分隔线(原型 .aq-chrome border-top 软线+8px 上距):结构位锚 = 卡末子且含 primary 钮
+  // (=页脚行;:has 门控——折叠/无页脚态末子命中他件时不画线,失配静默降级)
+  L.push(M.askCard + ' > *:last-child:has(' + M.btnPrimary + '),' + M.planCard + ' > *:last-child:has(' + M.btnPrimary + ')'
+    + '{border-top:1px solid var(--mc-border-soft)!important;padding-top:8px!important}');
   return L.join('\n');
 }
 // —— 装配出口(typeof MC_MAP 守卫同 dock/responsive:CJS 单测装载无 MC_MAP → 空串,纯函数仍可测)——

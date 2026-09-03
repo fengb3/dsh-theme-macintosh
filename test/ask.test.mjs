@@ -39,18 +39,25 @@ test('mcAskCss: 全键消费——每枚哨兵出现在产出 CSS 中', () => {
   for (const k of Object.keys(M)) assert.ok(css.includes(M[k]), '缺键 ' + k);
 });
 
-test('mcAskCss: 皮配方落位——窗框直角+pop 投影/选中行反色/环勾 mask/primary 反色钮/strip 警示条', () => {
+test('mcAskCss: 皮配方落位——卡片 r-card+panel 投影/双内环通用钮/pgbtn 方框/选中反色/环勾 mask/strip 警示条', () => {
   const css = mcAskCss(M);
-  assert.match(css, /K-askCard[^{]*\{[^}]*border-radius:0!important/);   // 窗框直角
-  assert.match(css, /K-askCard[^{]*\{[^}]*var\(--mc-shadow-pop\)/);      // pop 投影
+  assert.match(css, /K-askCard[^{]*\{[^}]*border-radius:var\(--mc-r-card\)/); // 卡片语汇圆角(验收轮4:非窗框直角)
+  assert.match(css, /K-askCard[^{]*\{[^}]*var\(--mc-shadow-panel\)/);         // panel 投影(非 pop)
+  assert.match(css, /K-btnOutline[^{]*\{[^}]*height:28px/);                    // 通用钮 28px 高
+  assert.match(css, /K-btnOutline[^{]*\{[^}]*inset 0 0 0 1px var\(--mc-surface\)/); // 双内环外圈(.mc-btn 直译)
+  assert.match(css, /K-btnOutline[^{]*\{[^}]*background:var\(--mc-surface-2\)/);    // surface-2 底
+  assert.match(css, /K-btnPrimary[^{]*\{[^}]*background:var\(--mc-accent\)/);       // primary=accent 周紫底
+  assert.match(css, /K-btnPrimary[^{]*\{[^}]*inset 0 0 0 1px var\(--mc-accent\)/);  // primary 内环 1px accent
+  assert.match(css, /K-askPrev[^{]*\{[^}]*width:20px/);                        // pgbtn 20×20 方框
+  assert.match(css, /K-askPrev[^{]*\{[^}]*border:1px solid var\(--mc-border\)/); // pgbtn 带边框(非裸三角)
   assert.match(css, /K-askOptOn[^{]*\{[^}]*background:var\(--mc-fg\)/);  // 选中行整行反色(System 7)
   assert.match(css, /mask:url\("data:image\/svg\+xml/);                  // 环/勾/三角走 mask data-URI
   assert.match(css, /K-askOptRdo[^{]*::before/);                          // 单选环 ::before mask
   assert.match(css, /K-askNumber[^{]*\{display:none/);                    // 单选隐数字(裁定项,活体复核)
-  assert.match(css, /K-btnPrimary[^{]*\{[^}]*background:var\(--mc-accent\)/); // primary=accent 周紫底(通用钮同语)
   assert.match(css, /K-planStrip[^{]*\{[^}]*var\(--mc-warn\)/);           // 审批卡警示条
   assert.match(css, /K-askFoldOn/); assert.match(css, /K-askFoldOff/);    // 折叠 tri 双态
-  assert.match(css, /K-askCancel/);                                       // 关闭叉(i-px-x)
+  assert.match(css, /K-askCancel/);                                       // 关闭盒 glyph(#i-close 近形)
+  assert.match(css, /K-planDiscuss[^{]*\{[^}]*inset 0 0 0 1px var\(--mc-surface\)/); // 去聊天里说=默认钮(幽灵退役)
 });
 
 test('mcAskCss: 空 map/缺核心锚 → 空串(不产垃圾规则)', () => {

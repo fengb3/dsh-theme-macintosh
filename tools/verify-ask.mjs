@@ -2,9 +2,10 @@
 // 用法: node tools/verify-ask.mjs   (宿主须运行于 127.0.0.1:3080;一次性会话留侧栏,主人可删)
 // 自治链路: GUI 新建会话 → 自绘坞发指令(新会话 agent 调 ask_user_question) → pending 断言 →
 //           折叠态断言 → 选中反色断言 → 自动作答吃卡 → 坞归位断言 → kit 分区(addInitScript+reload)。
-// 断言: 藏坞门控(:has 纯 CSS) / 卡壳直角+1px 边+pop 投影 / radio 环 mask / 选中整行反色 /
-//       折叠 tri 双态旋转(展开 90°/折叠 0°) / prev 镜像+disabled / 作答后卡消坞归位 /
-//       kit 问题卡分区(.kit-ask-* 静态样本:反色/chkOn mask/警示条 warn) / 零页面错误。
+// 断言: 藏坞门控(:has 纯 CSS) / 卡壳 r-card 圆角+1px 边+panel 投影(卡片语汇,验收轮4) /
+//       radio 环 mask / 选中整行反色 / 折叠 tri 双态旋转 / prev pgbtn 方框+镜像+disabled /
+//       底部按钮 = 通用双内环 push button(outline surface-2/primary accent,28px+inset 环) /
+//       作答后卡消坞归位 / kit 问题卡分区(双内环钮/pgbtn/chkOn mask/警示条 warn) / 零页面错误。
 // 方法论(交接档 §1.3): ask 阻塞回合,勿同回合「起探针+发题」——本脚本 v3 自治形态(自问自答)为唯一推荐。
 import { chromium } from 'playwright';
 import { mkdirSync } from 'node:fs';
@@ -82,6 +83,8 @@ const D = await pg.evaluate(() => {
   const eyebrow = document.querySelector('[data-question-key] [class*="eyebrow"]');
   const custom = document.querySelector('[data-question-key] [class*="customRow"]');
   const fieldEl = document.querySelector('[data-question-key] [class*="field"]');
+  const btnO = card ? card.querySelector('[class*="_outline_"]') : null;
+  const btnP = card ? card.querySelector('[class*="_primary_"]') : null;
   // 类名清单转储(常驻 INFO:Mbwy4a 族实形留档,防交接档形态勘误再犯)
   const clsInv = card ? [...new Set([...card.querySelectorAll('*')].map((x) => String(x.className).trim()).filter(Boolean))].slice(0, 40) : [];
   return {
@@ -90,7 +93,9 @@ const D = await pg.evaluate(() => {
     cardBorder: card ? cs(card).borderTopWidth + ' ' + cs(card).borderTopStyle : 'absent',
     cardShadow: card ? cs(card).boxShadow : 'absent',
     rdoMask: rdoBefore ? (cs(radio, '::before').maskImage || rdoBefore.webkitMaskImage || '') : 'absent',
-    prevMask: prev ? (cs(prev).maskImage || cs(prev).webkitMaskImage || '') : 'absent',
+    prevMask: prev ? (cs(prev, '::before').maskImage || cs(prev, '::before').webkitMaskImage || '') : 'absent',
+    prevBorder: prev ? cs(prev).borderTopWidth : 'absent',
+    prevSize: prev ? cs(prev).width + '×' + cs(prev).height : 'absent',
     prevTransform: prev ? cs(prev).transform : 'absent',
     prevOpacity: prev ? cs(prev).opacity : 'absent',
     prevDisabled: prev ? !!prev.disabled : null,
@@ -102,17 +107,28 @@ const D = await pg.evaluate(() => {
     customRing: custom ? (cs(custom, '::before').maskImage || cs(custom, '::before').webkitMaskImage || '') : 'absent',
     customBorder: custom ? cs(custom).borderTopColor : 'absent',
     fieldBg: fieldEl ? cs(fieldEl).backgroundColor : 'absent',
+    btnO: btnO ? { h: cs(btnO).height, sh: cs(btnO).boxShadow, bg: cs(btnO).backgroundColor } : null,
+    btnP: btnP ? { h: cs(btnP).height, sh: cs(btnP).boxShadow, bg: cs(btnP).backgroundColor, ff: cs(btnP).fontFamily } : null,
+    sf2: h2r(rootStyle.getPropertyValue('--mc-surface-2')),
+    acc: h2r(rootStyle.getPropertyValue('--mc-accent')),
     clsInv: clsInv.join(' | ').slice(0, 600),
     fgResolved: fg,
   };
 });
 console.log('INFO 卡内类名清单: ' + D.clsInv);
 ok(D.dockDisplay === 'none', 'D1 藏坞门控: pending 时自绘坞 display:none (' + D.dockDisplay + ')');
-ok(D.cardRadius === '0px', 'D2 卡壳直角 (' + D.cardRadius + ')');
+ok(D.cardRadius === '4px', 'D2 卡壳 r-card 圆角 (' + D.cardRadius + ')');
 ok(D.cardBorder === '1px solid', 'D3 卡壳 1px 实线边 (' + D.cardBorder + ')');
-ok(D.cardShadow !== 'none' && D.cardShadow !== 'absent', 'D4 卡壳 pop 投影在场 (' + String(D.cardShadow).slice(0, 40) + ')');
+ok(D.cardShadow !== 'none' && D.cardShadow !== 'absent', 'D4 卡壳 panel 投影在场 (' + String(D.cardShadow).slice(0, 40) + ')');
 ok(D.rdoMask.indexOf('data:image/svg+xml') >= 0, 'D5 radio 环 ::before mask data-URI (' + D.rdoMask.slice(0, 46) + '…)');
-ok(D.prevMask.indexOf('data:image/svg+xml') >= 0, 'D6 prev 钮 tri mask (' + D.prevMask.slice(0, 46) + '…)');
+ok(D.prevMask.indexOf('data:image/svg+xml') >= 0, 'D6 prev 钮 ::before caret mask (' + D.prevMask.slice(0, 46) + '…)');
+ok(D.prevBorder === '1px' && D.prevSize === '20px×20px', 'D6b prev pgbtn 方框 20×20+1px 边 (' + D.prevSize + '/' + D.prevBorder + ')');
+if (D.btnO) {
+  ok(D.btnO.h === '28px' && D.btnO.sh.indexOf('inset') >= 0 && D.btnO.bg === D.sf2,
+    'D16 outline 钮 = 通用双内环 (h=' + D.btnO.h + ' ring=' + (D.btnO.sh.indexOf('inset') >= 0) + ' bg=' + D.btnO.bg + ')');
+} else { console.log('SKIP D16 (卡内无 outline 钮)'); }
+ok(!!D.btnP && D.btnP.h === '28px' && D.btnP.sh.indexOf('inset') >= 0 && D.btnP.bg === D.acc && D.btnP.ff.indexOf('ChiKareGo') >= 0,
+  'D17 primary 钮 = 通用双内环 accent (h=' + (D.btnP && D.btnP.h) + ' ring=' + (!!D.btnP && D.btnP.sh.indexOf('inset') >= 0) + ' bg=' + (D.btnP && D.btnP.bg) + ')');
 ok(D.prevTransform === 'matrix(-1, 0, 0, 1, 0, 0)', 'D7 prev scaleX(-1) 镜像 (' + D.prevTransform + ')');
 ok(D.prevDisabled === true && D.prevOpacity === '0.35', 'D8 prev disabled+opacity .35 (' + D.prevDisabled + '/' + D.prevOpacity + ')');
 ok(D.foldTransform === 'matrix(0, 1, -1, 0, 0, 0)', 'D9 折叠钮展开态 tri rotate(90deg) (' + D.foldTransform + ')');
@@ -236,7 +252,8 @@ const K = await pg.evaluate(() => {
     fg: h2r(root.getPropertyValue('--mc-fg')),
     onMask: on ? (cs(on, '::before').maskImage || cs(on, '::before').webkitMaskImage || '') : 'absent',
     chkMask: chkOn ? (cs(chkOn).maskImage || cs(chkOn).webkitMaskImage || '') : 'absent',
-    navMask: nav ? (cs(nav).maskImage || cs(nav).webkitMaskImage || '') : 'absent',
+    navMask: nav ? (cs(nav, '::before').maskImage || cs(nav, '::before').webkitMaskImage || '') : 'absent',
+    kbtn: (function () { const b = document.querySelector('.kit-ask-btn'); return b ? { h: cs(b).height, sh: cs(b).boxShadow } : null; })(),
     stripBg: strip ? cs(strip).backgroundColor : 'absent',
     warn: h2r(root.getPropertyValue('--mc-warn')),
     field: !!document.querySelector('.kit-ask-field textarea'),
@@ -247,7 +264,8 @@ ok(K.cards >= 2, 'I1 kit 问题卡分区: 双卡样本在场 (n=' + K.cards + ')
 ok(K.onBg === K.fg, 'I2 kit 单选选中反色 (' + K.onBg + ' = ' + K.fg + ')');
 ok(K.onMask.indexOf('data:image/svg+xml') >= 0, 'I3 kit 选中环 rdo-on mask');
 ok(K.chkMask.indexOf('data:image/svg+xml') >= 0, 'I4 kit 多选勾方框 chk-on mask');
-ok(K.navMask.indexOf('data:image/svg+xml') >= 0, 'I5 kit 翻页钮 tri mask');
+ok(K.navMask.indexOf('data:image/svg+xml') >= 0, 'I5 kit 翻页钮 ::before caret mask');
+ok(K.kbtn && K.kbtn.h === '28px' && K.kbtn.sh.indexOf('inset') >= 0, 'I8 kit 双内环通用钮 (h=' + (K.kbtn && K.kbtn.h) + ')');
 ok(K.field && K.plan, 'I6 kit 自由输入场+审批警示条圆点在场');
 ok(K.stripBg === K.warn, 'I7 kit 警示条 warn 底 (' + K.stripBg + ' = ' + K.warn + ')');
 await pg.screenshot({ path: join(SHOTS, 'ask-verify-kit.png') });

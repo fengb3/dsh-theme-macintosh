@@ -787,11 +787,22 @@ subcalls：左 2px 软线缩进 + sc-row（ok=绿 i-check / run=琥珀 clock）�
      访问模式菜单（仅可查看/可写入工作区/完全权限）与 agent 预设下拉（标准/PTC/极简/创造/豆包
      语音/猫娘/Web UI Design）均非入口（diag3/4 排除法实证）。diag8 全链活体：`/plan` → 发任务 →
      agent 提交计划 → 审批卡入场,planCard 结构锚命中,strip/outline/ghost/primary 皮全生效。
-  9. **primary = accent 周紫,非 fg 反色**（验收轮3 2026-09-03 用户指认）：初版 primary 用 fg 反色
-     （白底深字）与官方 primary 观感雷同,用户看图判定「不是我们的通用按钮」——通用 primary =
-     主题周紫 `--mc-accent` 底 + `--mc-accent-ink` 字（侧栏「+ 新会话」/prototype `.btn.primary`
-     同语）。**换皮钮的「像不像换了」以主题通用控件为基准,不以反色技巧为基准**;选中行整行反色
-     （fg 底）是另一条独立裁定,不随之改动。
+  9. **按钮 = 通用双内环 push button 全配方直译**（验收轮3→4 递进 2026-09-03 用户两轮指认）：轮3
+     只把 primary 换成 accent 周紫仍不够——「直角+field 投影+ui 字」的表单件风与通用钮是两个
+     物种。**通用钮 = `.mc-btn` 配方逐项直译**（tokens.js §5.1/prototype `.btn` L205）：28px 高/
+     min-width 72px/`--mc-r-btn` 圆角/外 1px 线+内双环 `box-shadow:inset 0 0 0 1px var(--mc-surface),
+     inset 0 0 0 2px var(--mc-border)`/`surface-2` 底（非 surface）/`600 13px var(--font-display)`
+     显示字+`.04em`/`:active` 内外圈反色;primary = accent 底+accent-ink 字+**内环 1px 换 accent**。
+     planDiscuss（去聊天里说）幽灵化退役——System 7 无幽灵钮,一律 push button。**换皮钮的「像
+     不像换了」以主题通用控件全配方为基准,不以换底色/反色技巧为基准**;选中行整行反色（fg 底）
+     是另一条独立裁定,不随之改动。
+  10. **卡片语汇 ≠ 窗框语汇**（验收轮4 2026-09-03）：问卡/审批卡 = `r-card` 4px 圆角 +
+     `shadow-panel` 投影（原型 `.ask-card` L616,与工具卡/composer/To-Do/Goal 同族卡片语言）;
+     直角+`shadow-pop` 是 dialog 窗框配方（§C 换皮定案）,误套到卡上即「样式不太对」的观感来源。
+     同批勘定三件：翻页钮 = 原型 `.pgbtn` 20×20 带边框方框+内嵌 9px 像素箭头（caret 移 `::before`,
+     非裸三角 mask）;关闭钮 = `#i-close` 盒形 glyph 近形（11×11 方框 2px 环 evenodd mask,非裸 X,
+     与窗框双方块同语言）;选项行盒度量对齐原型（padding 4px 6px+r-tag,容器 gap 3px——不触行高,
+     环勾 margin-top:6px 锚 24px 行高的勘定数学不动）。
   8. **自定义行 = 选项之一**（验收轮2 2026-09-03 用户裁定）：线框/surface-2 场退役（field 域
      零规则,官方 field>* font:inherit 自足;askField 键撤,无死键纪律）——单选形态给 ::before
      像素环（:not(:has(checkbox)) 区分单/多形态,多选行内已有官方空 span 勾）、激活态
