@@ -783,9 +783,15 @@ subcalls：左 2px 软线缩进 + sc-row（ok=绿 i-check / run=琥珀 clock）�
      本体化（官方 ::before content:none + svg display:none）。**换皮先读官方布局,顺势不逆势**。
   6. aria 前缀锚（收起/展开问题卡片、放弃整组问题、上一题/下一题）= i18n zh DRIFT-RISK，
      官方换语言即失配（失配 = 回退官方样式不破版）。
-  7. **plan 模式入口未勘定**：composer 访问模式菜单（仅可查看/可写入工作区/完全权限）与
-     agent 预设下拉（标准/PTC/极简/创造/豆包语音/猫娘/Web UI Design）均非 plan 模式入口
-     （probe-ask-diag3/4 实勘）——审批卡活体触发走用户通道,入口锚定留待后续探针。
+  7. **plan 模式入口勘定（diag7/8）**：`/plan` 斜杠命令（"Enter or leave plan mode"）——composer
+     访问模式菜单（仅可查看/可写入工作区/完全权限）与 agent 预设下拉（标准/PTC/极简/创造/豆包
+     语音/猫娘/Web UI Design）均非入口（diag3/4 排除法实证）。diag8 全链活体：`/plan` → 发任务 →
+     agent 提交计划 → 审批卡入场,planCard 结构锚命中,strip/outline/ghost/primary 皮全生效。
+  9. **primary = accent 周紫,非 fg 反色**（验收轮3 2026-09-03 用户指认）：初版 primary 用 fg 反色
+     （白底深字）与官方 primary 观感雷同,用户看图判定「不是我们的通用按钮」——通用 primary =
+     主题周紫 `--mc-accent` 底 + `--mc-accent-ink` 字（侧栏「+ 新会话」/prototype `.btn.primary`
+     同语）。**换皮钮的「像不像换了」以主题通用控件为基准,不以反色技巧为基准**;选中行整行反色
+     （fg 底）是另一条独立裁定,不随之改动。
   8. **自定义行 = 选项之一**（验收轮2 2026-09-03 用户裁定）：线框/surface-2 场退役（field 域
      零规则,官方 field>* font:inherit 自足;askField 键撤,无死键纪律）——单选形态给 ::before
      像素环（:not(:has(checkbox)) 区分单/多形态,多选行内已有官方空 span 勾）、激活态

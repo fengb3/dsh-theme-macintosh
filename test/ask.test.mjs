@@ -47,7 +47,7 @@ test('mcAskCss: 皮配方落位——窗框直角+pop 投影/选中行反色/环
   assert.match(css, /mask:url\("data:image\/svg\+xml/);                  // 环/勾/三角走 mask data-URI
   assert.match(css, /K-askOptRdo[^{]*::before/);                          // 单选环 ::before mask
   assert.match(css, /K-askNumber[^{]*\{display:none/);                    // 单选隐数字(裁定项,活体复核)
-  assert.match(css, /K-btnPrimary[^{]*\{[^}]*background:var\(--mc-fg\)/); // primary=fg 底 surface 字
+  assert.match(css, /K-btnPrimary[^{]*\{[^}]*background:var\(--mc-accent\)/); // primary=accent 周紫底(通用钮同语)
   assert.match(css, /K-planStrip[^{]*\{[^}]*var\(--mc-warn\)/);           // 审批卡警示条
   assert.match(css, /K-askFoldOn/); assert.match(css, /K-askFoldOff/);    // 折叠 tri 双态
   assert.match(css, /K-askCancel/);                                       // 关闭叉(i-px-x)

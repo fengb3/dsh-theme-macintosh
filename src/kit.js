@@ -68,7 +68,7 @@ const McKit = {
 .kit-ask-plan{padding:6px 8px;font:400 12.5px/1.7 var(--font-ui);color:var(--mc-fg);background:var(--mc-surface-2);border:1px solid var(--mc-border)}
 .kit-ask-btn{padding:4px 10px;border:1px solid var(--mc-border);background:var(--mc-surface);color:var(--mc-fg);
   font:400 12px/1.4 var(--font-ui);cursor:pointer;box-shadow:var(--mc-shadow-field)}
-.kit-ask-btn.primary{background:var(--mc-fg);color:var(--mc-surface);border-color:var(--mc-fg)}
+.kit-ask-btn.primary{background:var(--mc-accent);color:var(--mc-accent-ink);border-color:var(--mc-accent)}
 .kit-ask-ghost{padding:4px 10px;border:1px solid var(--mc-border);background:none;color:var(--mc-muted);
   font:400 12px/1.4 var(--font-ui);cursor:pointer}
 .kit-grid{display:flex;flex-wrap:wrap;gap:10px}

@@ -106,13 +106,15 @@ function mcAskCss(M) {
     + '-webkit-mask:' + mTri + ';mask:' + mTri + ';cursor:pointer}');
   L.push(M.askCard + ' ' + M.askPrev + '{transform:scaleX(-1)}');
   L.push(M.askCard + ' ' + M.askPrev + ':disabled,' + M.askCard + ' ' + M.askNext + ':disabled{opacity:.35}');
-  // primitives Button(跳过/提交/下一题/审批三钮):直角化 + field 投影;primary = fg 底 surface 字(kit .btn sm 同语)
+  // primitives Button(跳过/提交/下一题/审批三钮):直角化 + field 投影;primary = accent 周紫底
+  // accent-ink 字(勘误 2026-09-03 验收轮3:初版 fg 反色白钮与官方 primary 观感雷同,用户指认
+  // 「不是我们的通用按钮」——通用 primary = 主题周紫 accent,侧栏新建会话钮同语)
   L.push(M.askCard + ' ' + M.btnOutline + ',' + M.planCard + ' ' + M.btnOutline + ','
     + M.askCard + ' ' + M.btnPrimary + ',' + M.planCard + ' ' + M.btnPrimary
     + '{border-radius:0!important;box-shadow:var(--mc-shadow-field)!important;border:1px solid var(--mc-border)!important;'
     + 'background:var(--mc-surface)!important;color:var(--mc-fg)!important;font:400 12px var(--font-ui)!important}');
   L.push(M.askCard + ' ' + M.btnPrimary + ',' + M.planCard + ' ' + M.btnPrimary
-    + '{background:var(--mc-fg)!important;color:var(--mc-surface)!important;border-color:var(--mc-fg)!important}');
+    + '{background:var(--mc-accent)!important;color:var(--mc-accent-ink)!important;border-color:var(--mc-accent)!important}');
   L.push(M.askCard + ' ' + M.btnPrimary + ':disabled,' + M.planCard + ' ' + M.btnPrimary + ':disabled{opacity:.35}');
   // —— 审批卡:警示条 warn 底 + bg-deep 像素字;圆点直角(* 压平已盖,显式记因);去聊天里说幽灵化——
   L.push(M.planCard + ' ' + M.planStrip + '{background:var(--mc-warn)!important;color:var(--mc-bg-deep)!important;'
