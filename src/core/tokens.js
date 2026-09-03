@@ -12,10 +12,12 @@ const McTokens = {
   --mc-desktop-pattern:url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAYAAADED76LAAAACXBIWXMAAAWJAAAFiQFtaJ36AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAA2SURBVHgB1Y+xDQAgDMNacURvykVZ+SprPitiYYIDmDxYsuQk2QBCUtyYtvslN0dVzV8LZ30Buytmvd+9eVsAAAAASUVORK5CYII=");
   /* titlebar close/zoom box 多色位（sprite 引用原型名 --box-line/--box-face，别名见下） */
   --mc-box-line:#9d9dcf; --mc-box-face:#31314f;
-  /* 硬投影——原型 §4：深 .85 / 浅 .72（此前两处装反） */
-  --mc-shadow-panel:3px 3px 0 0 rgba(0,0,0,.85);
-  --mc-shadow-pop:3px 3px 0 0 rgba(0,0,0,.7);
-  --mc-shadow-field:2px 2px 0 0 rgba(0,0,0,.35);
+  /* 硬投影——全员实心纯黑（panel/pop/field/win 四位一律不透明，裁定 2026-09-03） */
+  --mc-shadow-panel:3px 3px 0 0 #000;
+  --mc-shadow-pop:3px 3px 0 0 #000;
+  --mc-shadow-field:2px 2px 0 0 #000;
+  /* 主窗实心硬投影——不透明纯黑，偏移与面板投影同规 3px，深浅共用 */
+  --mc-shadow-win:3px 3px 0 0 #000;
   /* 标题栏条纹 / 滚动条 */
   --mc-title-stripe:rgba(255,255,255,.26);
   --mc-scroll-track:#4a4a4a; --mc-scroll-box:#717171;
@@ -42,9 +44,9 @@ html[data-theme="light"]{
   --mc-spark:#a8720e; --mc-success:#2e7d32; --mc-danger:#c23a34; --mc-danger-ink:#ffffff;
   --mc-border-soft:rgba(10,10,10,.5);
   --mc-box-line:#545487; --mc-box-face:#dadaff;
-  --mc-shadow-panel:3px 3px 0 0 rgba(0,0,0,.72);
+  --mc-shadow-panel:3px 3px 0 0 #000;
   --mc-shadow-pop:3px 3px 0 0 #000;
-  --mc-shadow-field:2px 2px 0 0 rgba(0,0,0,.5);
+  --mc-shadow-field:2px 2px 0 0 #000;
   --mc-title-stripe:rgba(0,0,0,.5);
   --mc-scroll-track:#e0e0e0; --mc-scroll-box:#c0c0c0;
   /* --mc-desktop-pattern 刻意不覆盖：浅色沿用同一噪点瓦片，靠 --mc-bg 底色区分 */

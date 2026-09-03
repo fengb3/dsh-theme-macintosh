@@ -25,9 +25,13 @@ const McChrome = {
     // 缝隙做在 grid 容器上（padding 四周 12px + 列间 gap 12px）——官方 grid 行高固定 100vh，
     // 给列加 margin 只会溢出屏幕（实测 bottom=914>900），容器 padding 才能真正收进视口。
     `${MC_MAP.appRoot}{background:transparent;box-sizing:border-box;padding:12px;gap:12px}`,
-    // 主列 = 会话窗（.win 语汇）：surface 底 + 1px 边 + 3px 硬投影；桌面两大窗 = 直角（原型 .desk > .win）。
+    // 主列 = 会话窗（.win 语汇）：surface 底 + 1px 边；桌面两大窗 = 直角（原型 .desk > .win）。
     // 刻意不收 overflow —— 宿主自管滚动（centerCol overflow:hidden + data-conversation-scroll）
-    `${MC_MAP.mainColumn}{background:var(--mc-surface);border:1px solid var(--mc-border);border-radius:0;box-shadow:var(--mc-shadow-panel)}`,
+    `${MC_MAP.mainColumn}{background:var(--mc-surface);border:1px solid var(--mc-border);border-radius:0}`,
+    // 主窗实心硬投影落在网格格位（centerCol）上：会话根与格位矩形完全重合，投影画在会话根上
+    // 会被格位 overflow:hidden 裁得不可见（对照侧栏列——同层才可见，实测 2026-09-03）。
+    // 纯黑不透明、偏移同规 3px（与侧栏/面板投影等距），深浅共用。
+    `${MC_MAP.mainColumnCell}{box-shadow:var(--mc-shadow-win)}`,
     // 会话头部条 = 装饰 titlebar（pinstripe 条纹面 + 顶缘 accent 高亮线，原型 §3 .titlebar 语汇；
     // close/zoom 方块与交互属三期结构级，此处只做 CSS 染色）。浅色条纹加深、深色条纹提亮。
     `${MC_MAP.sessionHeader}{background:repeating-linear-gradient(180deg,rgba(255,255,255,.10) 0 1px,transparent 1px 3px),var(--mc-surface-2);border-bottom:1px solid var(--mc-border);box-shadow:inset 0 1px 0 var(--mc-accent)}`,
@@ -41,8 +45,14 @@ const McChrome = {
       `border-bottom:1px solid var(--mc-border);box-shadow:inset 0 1px 0 var(--mc-accent)}`,
     `html[data-theme="light"] div[data-phase="hero"]::before,html[data-theme="light"] div[data-phase="inert"]::before{background:` +
       MC_TBOX.bg(MC_TBOX.closeLight, MC_TBOX.zoomLight, 'rgba(0,0,0,.20)') + '}',
-    // 滚动口：最小干预 —— 只给深一档底色（窗内"文档区"），滚动条走 tokens 已有的全局 15px 经典款
-    `${MC_MAP.scrollport}{background:var(--mc-bg-deep)}`,
+    // 滚动口：窗内"文档区"与侧栏同底（用户裁定 2026-09-03：flow 底色=侧栏底色 rail-1，
+    // 深 #383838/浅 #fff，勿再用更深档）。滚动条走 tokens 已有的全局 15px 经典款
+    `${MC_MAP.scrollport}{background:var(--mc-rail-1)}`,
+    // 输入坞席位：宿主自带 36px 透明→bg-base 淡入渐变（终点色与文档区不同色=深色脏带）——
+    // 铲平为文档区同色实底（像素风硬切语汇，用户裁定 2026-09-03 删渐变）。
+    // 宿主规则 .root[data-phase=active] .composerSeat=(0,3,0) → 复用 appRoot(#root 前缀,ID 列)
+    // 拼后代选择器压杀；两段选择器均经 MC_MAP 插值（管制纪律）。
+    `${MC_MAP.appRoot} div${MC_MAP.composerSeat}{background:var(--mc-rail-1)}`,
     // composer 卡：surface 底 + 1px 边 + 小一级硬投影（方角，.mc-field 语汇）
     `${MC_MAP.composerCard}{background:var(--mc-surface);border:1px solid var(--mc-border);box-shadow:var(--mc-shadow-field);border-radius:0}`,
     // 15px 经典滚动条：只染会话滚动口（宿主侧栏刻意隐藏滚动条，勿全局强推）

@@ -67,7 +67,7 @@ test('assemble 产出含 tokens/primitives 全集与 kit 检视页', () => {
   execFileSync(process.execPath, [path.join(ROOT, 'tools', 'assemble.mjs')], { cwd: ROOT });
   const out = require('node:fs').readFileSync(path.join(ROOT, 'dist', 'client-body.js'), 'utf8');
   // §4.1 补全 token
-  for (const tok of ['--mc-desktop-pattern', '--mc-shadow-panel', '--mc-shadow-pop', '--mc-shadow-field',
+  for (const tok of ['--mc-desktop-pattern', '--mc-shadow-panel', '--mc-shadow-pop', '--mc-shadow-field', '--mc-shadow-win',
     '--mc-title-stripe', '--mc-scroll-track', '--mc-scroll-box', '--mc-rail-w', '--mc-menubar-h',
     '--mc-titlebar-h', '--mc-r-window', '--mc-r-card', '--mc-r-btn', '--mc-r-tag', '--mc-bw',
     '--mc-t-fast', '--mc-t-mid', '--mc-ease', '--mc-ease-sweep', '--mc-box-line', '--mc-box-face']) {
@@ -87,10 +87,11 @@ test('assemble 产出含 tokens/primitives 全集与 kit 检视页', () => {
   // chrome：选择器管制 + 桌面画布
   assert.ok(out.includes('MC_MAP'), '应内联 MC_MAP 宿主选择器表');
   assert.ok(out.includes('data-mc-desk'), 'chrome.mount 应注入 data-mc-desk 桌面画布');
-  assert.ok(out.includes('--mc-shadow-panel'), '主列应套 .win 硬投影');
+  assert.ok(out.includes('MC_MAP.mainColumnCell'), '主窗投影应落在网格格位(MC_MAP.mainColumnCell 插值)');
+  assert.ok(out.includes('var(--mc-shadow-win)'), '主窗格位应套实心硬投影 --mc-shadow-win');
   // 插值是运行期的：静态产物只需证明接线（模板引用 MC_MAP.scrollport + 目标底色存在）
   assert.ok(out.includes('MC_MAP.scrollport'), 'chrome css 应经 MC_MAP.scrollport 插值');
-  assert.ok(out.includes('var(--mc-bg-deep)'), '滚动口应染 --mc-bg-deep');
+  assert.ok(out.includes('var(--mc-rail-1)'), '滚动口应染侧栏同底 --mc-rail-1');
   // 动画纪律：全 css 无 hover 态、无 transition 声明（豁免媒体查询里的 transition-duration 除外）
   // 切片须覆盖全部模块 CSS：从模块区真正开始（const McTokens = {）到 apply 样板（return (function(){）之前
   const cssStart = out.indexOf('const McTokens = {');

@@ -42,6 +42,11 @@ const MC_MAP = {
   appRootRail: '#root > div > div[data-sidebar-collapsed]', /* stable: official data-attr */
   // mainColumn = 会话根（header + 滚动口 + composer 都在其内，正好是"主窗"区域）
   mainColumn: 'div[data-phase]',
+  // mainColumnCell = 主列所在网格格位 centerCol（AppFrame grid 第二列，宿主 overflow:hidden）。
+  // 实测（2026-09-03）：会话根与该格矩形完全重合，box-shadow 画在会话根上外溢即被格位裁掉
+  // → 主窗投影必须落在格位上（同侧栏列先例：投影画在列元素上、缝隙里可见）。
+  // :has 核锚 data-phase（全页唯一 data-*）：宿主若改列序，投影仍跟随真实主窗列。
+  mainColumnCell: '#root > div > div > div:has(> div > div[data-phase])', /* DRIFT-RISK: structural 前缀;:has 核锚 data-phase stable */
   // sessionHeader = ConversationSessionHeader 的 <header>；无 data-* → 会话根内结构位
   sessionHeader: 'div[data-phase] > header', /* DRIFT-RISK: structural */
   scrollport: '[data-conversation-scroll]',
@@ -120,7 +125,16 @@ const MC_MAP = {
   // data-active 锚、折叠图标 span 锚全部无消费者;重绘卡自有 .mc-* 类零宿主锚)
   turnTailBar: '[data-turn-tail]',                            // stable(L9715-9752)
   // —— 终审 F2 收编（2026-08-31）：此前 flow 规则里直写的宿主选择器一律进管制表（spec §1 唯一管制点）——
-  pendingSteering: '[data-pending-steering]',  // stable(steering 待定态虚线廓，spec §4 行3)
+  pendingSteering: '[data-pending-steering]',  // stable(busy 追加消息嫁接锚；样式与正式用户消息一致，裁定 2026-09-03)
+  // —— pending 嫁接细分键(2026-09-03 live 勘误:host PendingSteeringBubble 实构 = userRow >
+  //    userStack[图集包装 div(无图常空) → *_bubble 正文 → *_referenceSummary 引用行] + 行末
+  //    *_actions 图标行(p-xYUq_actions,内含宿主复制图标钮);旧嫁接按「首子即气泡」落位全错——
+  //    空 wrapper 误穿 .mc-user-bubble、真气泡误穿 .mc-user-ref、图标钮行漏网)——
+  pendingBubble: '[class*="_bubble"]',               // DRIFT-RISK: hashed-substring(gdEzaW_bubble;JS 定位正文气泡,嫁 .mc-user-bubble)
+  pendingRefSummary: '[class*="_referenceSummary"]', // DRIFT-RISK: hashed-substring(gdEzaW_referenceSummary;JS 定位引用行,嫁 .mc-user-ref)
+  pendingActions: '[class*="_actions"]',             // DRIFT-RISK: hashed-substring(p-xYUq_actions;CSS 藏宿主图标操作行=复制图标钮)
+  pendingRefChip: '[data-ref-chip]',                 // stable(宿主 chip 语义锚;pending 内对齐 .mc-user-chip 语汇)
+  pendingSkillChip: '[data-ref-chip="skill"]',       // stable(/命令 chip;pending 内拍平为正文——正式消息已不 chip 化,裁定 2026-09-03)
   statusRow: '[role="status"]',                // stable(TurnStatus 宿主状态行；使用时限定 flowColumn 内，spec §4 行10)
   commandCard: '[data-variant="others"]',      // stable(command 卡壳锚，spec §4 行9「[data-variant="others"][data-state]」)
   dataState: '[data-state=',                   // 属性前缀键（任意取值形态；command 三态）
