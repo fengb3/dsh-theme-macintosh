@@ -33,7 +33,7 @@ DSH（DeepSeek Harness Web GUI）的 Classic Macintosh 像素风主题插件。�
 
 ## 开发
 
-- 源码：`src/`（模块化：core 四件 + chrome/sidebar + conv/flow + kit），`tools/assemble.mjs` 装配；
+- 源码：`src/`（模块化：core 四件 + chrome/sidebar + conv/flow/dock/think/syscard/tool/overlays/responsive + kit），`tools/assemble.mjs` 装配；
   `client.js` 为常驻浏览器半（loader 格式），`index.js` 为宿主半（静态资源路由）。
 - **改 `client.js` 刷新页面即生效**（link 安装实测 2026-08-31：profile 里 `link:` 指向本仓库，
   页面每次加载都取当前工作树——开发循环 = 改文件 → 刷新浏览器，无需动宿主）。
@@ -62,6 +62,7 @@ DSH（DeepSeek Harness Web GUI）的 Classic Macintosh 像素风主题插件。�
   node tools/verify-dock.mjs         # 输入坞门禁：镜像发送/守护重插/拔桥降级深浅两轮（--dry-run 只验注入）
   node tools/verify-toolcard.mjs    # 工具卡门禁：卡壳样式/开合/深浅两遍/kit 分区（只读，不发消息）
   node tools/verify-overlays.mjs    # 浮层门禁：hero 相变/dialog 换皮/深浅两遍/失配演练（不发消息；每跑留一个空会话）
+  node tools/verify-responsive.mjs  # 响应式门禁：汉堡断点/抽屉三通道/层级/密度两档/溢出修复/深浅两遍（resize 驱动，只读）
   ```
 
   **注意：`verify-flow` / `verify-dock` 每次运行都会发送一条真实模型消息**（经 composer 驱动真实回合，

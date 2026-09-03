@@ -25,6 +25,10 @@ const McKit = {
 .kit-body{padding:20px 24px 28px;display:flex;flex-direction:column;gap:26px;
   color:var(--mc-fg);font:400 13px/1.7 var(--font-ui)}
 .kit-h{font:600 15px/1 var(--font-display);letter-spacing:.03em;margin:0 0 10px}
+/* 响应式分区(responsive 批):抽屉形态静态样本(自有演示类,真门控在窄窗活体) */
+.kit-resp-drawer{width:220px;border:1px solid var(--mc-border);background:var(--mc-surface);box-shadow:var(--mc-shadow-win,2px 2px 0 0 #000)}
+.kit-resp-drawer-tb{height:20px;display:flex;align-items:center;justify-content:center;font:600 11px/1 var(--font-display);letter-spacing:.04em;color:var(--mc-fg);background:var(--mc-surface-2);border-bottom:1px solid var(--mc-border)}
+.kit-resp-drawer-row{padding:5px 9px;font:400 12px/1.6 var(--font-ui);color:var(--mc-muted);border-bottom:1px solid var(--mc-border-soft)}
 .kit-grid{display:flex;flex-wrap:wrap;gap:10px}
 .kit-chip{display:inline-flex;align-items:center;gap:8px;height:28px;padding:0 10px;
   border:1px solid var(--mc-border);border-radius:var(--mc-r-tag);background:var(--mc-surface-2);
@@ -757,6 +761,40 @@ function McKitPage() {
                   h('span', { className: 'kit-note' }, 'toast 不做裁定(spec §0 范围外);switch 样本随 Task 3 勘定裁除(官方面板 0 switch)'))))),
           h('div', { className: 'kit-row' },
             h('span', { className: 'kit-note' }, '门控差异注记:dialog/scrim 皮 = head 常驻 style 标签纯 CSS 存在门控(官方自开自关,JS 门控不可靠);hero = body observer 相位同步 + 自有门控属性置/撤;dock = JS 置撤属性门控 — 存在门控与 JS 门控异构,不混用。'))),
+        // (h2) 响应式分区（responsive 批）：汉堡/遮罩/抽屉静态样本（真显隐门控在窄窗活体验）。
+        h('section', null,
+          h('h3', { className: 'kit-h' }, '响应式'),
+          h('div', { className: 'kit-frames' },
+            h('div', { className: 'kit-frame', key: 'burger' },
+              h('div', { className: 'kit-frame-tag' },
+                h('span', null, '汉堡方块 · 窗框左端首子（hero/main 两态共用 #i-px-menu）—— ≤1023 显形（对齐宿主折叠断点，实测 1024 展/1000 收）'),
+                h('em', null, 'resp')),
+              h('div', { className: 'kit-frame-body' },
+                h('button', { type: 'button', className: 'mc-tbx mc-burger', 'aria-label': '汉堡（样本）', style: { display: 'flex' } },
+                  h('svg', { 'aria-hidden': true }, h('use', { href: '#i-px-menu' }))))),
+            h('div', { className: 'kit-frame', key: 'mask' },
+              h('div', { className: 'kit-frame-tag' },
+                h('span', null, '抽屉遮罩 · 点阵幕 z:75 压抽屉 60、窗框 76 盖之；显隐全 CSS（:has 官方 data-sidebar-collapsed 派生，零 JS 状态）；浅色反转'),
+                h('em', null, 'resp')),
+              h('div', { className: 'kit-frame-body' },
+                h('div', { style: { position: 'relative', height: '64px' } },
+                  h('div', { className: 'mc-mask', style: { display: 'block', position: 'absolute', top: '0', right: '0', bottom: '0', left: '0' } })))),
+            h('div', { className: 'kit-frame', key: 'drawer' },
+              h('div', { className: 'kit-frame-tag' },
+                h('span', null, '抽屉形态 · 官方侧栏展开态挤占式在场（壳提层 z:60，遮罩 z:50 盖主列，窗框 76 恒可点；不脱流不压轨——grid 自动放置实证 fixed 化会错位）—— 树 DOM 宿主挂载、Finder 皮自动生效，零克隆'),
+                h('em', null, 'resp')),
+              h('div', { className: 'kit-frame-body' },
+                h('div', { className: 'kit-resp-drawer' },
+                  h('div', { className: 'kit-resp-drawer-tb' }, 'Sessions'),
+                  ['dsh-theme-macintosh', 'dsh-theme-aurum', 'dsh-plugins'].map(function (n) {
+                    return h('div', { className: 'kit-resp-drawer-row', key: n }, n);
+                  })))),
+            h('div', { className: 'kit-frame', key: 'bp' },
+              h('div', { className: 'kit-frame-tag' },
+                h('span', null, '断点表 · ≤1023 结构（汉堡+抽屉+遮罩）/ ≤640 密度（flow 12 + 气泡满宽）/ ≤480 极窄（dock 8 + 设置 nav 52px 图标列）；mode 钮/统计条隐藏无 DSH 对应物记因不做；safe-area 不做（桌面 GUI）'),
+                h('em', null, 'resp')),
+              h('div', { className: 'kit-frame-body' },
+                h('div', { className: 'kit-note' }, '原型 §12 转译：结构档断点 820 → 1023（宿主折叠实测）；硬切无 transition；抽屉=官方展开通道 overlay 化（tclose 同通道，零克隆）'))))),
         // (g) 工具卡分区（toolcard 批）：MC_TOOL_DEMO 桥真卡渲染（primitives 缺席 → 降级说明）
         h('section', null,
           h('h3', { className: 'kit-h' }, '工具卡'),

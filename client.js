@@ -402,6 +402,7 @@ const McSprite = {
   <symbol id="i-px-ext" viewBox="0 0 24 24"><path d="M21 11V3h-8v2h4v2h-2v2h-2v2h-2v2H9v2h2v-2h2v-2h2V9h2V7h2v4h2zM11 5H3v16h16v-8h-2v6H5V7h6V5z" fill="currentColor"/></symbol>
   <symbol id="i-px-goal" viewBox="0 0 24 24"><path d="M3 2h10v2h8v14H11v-2H5v6H3V2zm2 12h8v2h6V6h-8V4H5v10z" fill="currentColor"/></symbol>
   <symbol id="i-px-list" viewBox="0 0 24 24"><path d="M2 5h20v14H2V5zm2 2v2h16V7H4zm16 4H4v2h16v-2zm0 4H4v2h16v-2z" fill="currentColor"/></symbol>
+  <symbol id="i-px-menu" viewBox="0 0 24 24"><path d="M3 6h18v2H3V6zm0 5h18v2H3v-2zm0 5h18v2H3v-2z" fill="currentColor"/></symbol>
   <symbol id="i-px-warning" viewBox="0 0 24 24"><path d="M3 3h16v2H5v14h14v2H3V3zm18 0h-2v18h2V3zM11 15h2v2h-2v-2zm2-8h-2v6h2V7z" fill="currentColor"/></symbol>
   <symbol id="i-moon" viewBox="0 0 24 24"><path d="M6 2h2v2H6V2zM4 4h4v2H4V4zM2 6h6v2H2V6zM2 8h6v2H2V8zM2 10h6v2H2v-2zM2 12h8v2H2v-2zM2 14h10v2H2v-2zM2 16h20v2H2v-2zM4 18h16v2H4v-2zM6 20h12v2H6v-2z" fill="currentColor"/></symbol>
   <symbol id="i-cl-HappyMac" viewBox="0 0 2000 2000">
@@ -498,6 +499,11 @@ const MC_MAP = {
   // appRootRail = 折叠态的 frame（官方 AppFrame 折叠时挂 data-sidebar-collapsed 属性，
   // 稳定 data-* 锚；供折叠态专属样式/检测引用）
   appRootRail: '#root > div > div[data-sidebar-collapsed]', /* stable: official data-attr */
+  // appRootWide/sidebarShell = 展开态对形（appRootRail 同族 :not 反形；responsive 抽屉批
+  // 2026-09-03 勘定：窄窗抽屉门控/抽屉壳提层锚——sidebarShell = 展开态 sidebarCol 内
+  // 内容壳（hHd-*_root，哈希前缀随构建漂移故走结构位；v2 裁定提层不脱流））
+  appRootWide: '#root > div > div:not([data-sidebar-collapsed])', /* DRIFT-RISK: structural */
+  sidebarShell: '#root > div > div:not([data-sidebar-collapsed]) > div:first-child > div > div', /* DRIFT-RISK: structural */
   // mainColumn = 会话根（header + 滚动口 + composer 都在其内，正好是"主窗"区域）
   mainColumn: 'div[data-phase]',
   // mainColumnCell = 主列所在网格格位 centerCol（AppFrame grid 第二列，宿主 overflow:hidden）。
@@ -2981,7 +2987,7 @@ const MC_DOCK_CSS = [
   '[data-mc-dock] .composer{display:flex;flex-direction:column;gap:8px;background:var(--mc-surface);',
   ' border:1px solid var(--mc-border);border-radius:var(--mc-r-card);',
   ' box-shadow:var(--mc-shadow-panel);padding:8px}',
-  '[data-mc-dock] .composer .mc-field{height:auto;min-height:44px;padding:6px 8px}',
+  '[data-mc-dock] .composer .mc-field{height:auto;min-height:44px;padding:6px 8px;width:auto}', // width:auto 压基础 .mc-field{width:100%}——composer content-box 下 100% 解析成 border-box 宽,右缘溢出 9px 白块(伪影勘定 2026-09-03;stretch 语义由 flex column 默认兜住)
   '[data-mc-dock] .composer.busy .mc-field{background:color-mix(in oklab,var(--mc-fg) 4%,var(--mc-surface))}',
   '[data-mc-dock] .composer textarea{flex:1;background:transparent;border:none;resize:none;outline:none;',
   ' font:inherit;color:inherit;min-height:32px;overflow-y:auto}', // 验收轮1 自增高:超 40vh 封顶后容器内滚动(瞬切,无 transition)
@@ -4487,6 +4493,148 @@ var McMenus = {
 };
 if (typeof module !== 'undefined') module.exports = { McMenus: McMenus, mcMenuItems: mcMenuItems, mcMenuAlign: mcMenuAlign, mcMenuTop: mcMenuTop, mcMenuState: mcMenuState, mcMenuWsId: mcMenuWsId, mcHeroAction: mcHeroAction, mcHeroTitle: mcHeroTitle, MC_HERO_COPY: MC_HERO_COPY };
 
+// src/conv/responsive.js —— 层3 模块10：响应式（结构档抽屉 + 密度两档）
+// 规范源：prototype 笔记 §12（三档断点 + 坑表）；DSH 转译裁定（2026-09-03 recon 实测）：
+//  - 结构档 ≤820（原型）→ **对齐宿主折叠断点 ≤1023**（实测 1024 展开/1000 收叠）：宿主
+//    窄窗强制收轨卸树（.mc-sb-tree 全无），824~1023 是今天树不可达的尴尬带，一并治理。
+//  - 抽屉 = 程序化展开官方侧栏（tclose 同通道：sidebarCollapseBtn 程序化 click + accToggle
+//    五拍），展开态侧栏本就完整显示在左侧 = 挤占式抽屉。**不脱流不压轨**（v2 裁定：
+//    fixed 化 sidebarCol 令 grid 自动放置把 centerCol 掉进 0px 首轨全盘错位，实测
+//    2026-09-03）。只做层级：抽屉壳 60 > 遮罩 50 > 主列其余(auto)；窗框 76 盖遮罩
+//    （汉堡常可点）。遮罩/壳提层全 CSS（:has 官方 data-sidebar-collapsed 稳定锚派生，
+//    零 JS 状态）；JS 只管：汉堡注入（hero/main 两态窗框左端，observer 自愈）、开合
+//    通道、Esc 让路规则。
+//  - 硬切纪律：transform 无 transition（坑表 §12.3）；遮罩点阵幕语汇同 kit/hero，浅色反转。
+//  - 密度两档照原型映射：≤640 flow padding 12 + 用户气泡满宽；≤480 dock padding 8 +
+//    dlgNav 收 52px 图标列（官方 nav 文字裁切为已知限制，活体复验）。mode 钮/统计条中段
+//    隐藏无 DSH 对应物，记因不做（官方没有的结构不强造，spec §2 硬前提）。
+//  - safe-area-inset 不做（桌面 GUI 无刘海，YAGNI 记因）；原型 app 壳规则（desk 转 block/
+//    主窗 height calc）不适用——宿主 grid 自管布局。
+var MC_RESPONSIVE_CSS = (typeof MC_MAP === 'undefined' ? '' : [ // 守卫同 dock.js：单测 CJS 装载无 MC_MAP，纯函数仍可测
+  // —— 汉堡：窗框左端方块（hero/main 两态共用 i-px-menu）；宽窗隐藏（rail 展开钮通道已可用）——
+  '.mc-burger{display:none;flex:none;cursor:pointer}',
+  '@media (min-width:1024px){.mc-burger{display:none!important}}',
+  '@media (max-width:1023px){',
+  '  .mc-hero-tb .mc-burger,.mc-main-tb .mc-burger{display:flex}',
+  // 抽屉 = 官方展开态侧栏**原样挤占式在场**（它本来就在左侧完整显示；v2 裁定：不脱流、
+  // 不压轨——fixed 化 sidebarCol 会令 grid 自动放置把 centerCol 掉进 0px 首轨,全盘错位,
+  // 实测 2026-09-03）。只做层级提升：抽屉壳 60 > 遮罩 50 > 主列其余；窗框 76 恒可点。
+  '  html:has(' + MC_MAP.appRootWide + ') ' + MC_MAP.sidebarShell + '{position:relative;z-index:60}',
+  // 窗框盖遮罩（汉堡常可点 = 开合切换钮）
+  '  html:has(' + MC_MAP.appRootWide + ') .mc-hero-tb,html:has(' + MC_MAP.appRootWide + ') .mc-main-tb{z-index:76}',
+  // 遮罩显形（唯一显隐开关，零 JS 状态）
+  '  html:has(' + MC_MAP.appRootWide + ') .mc-mask{display:block}',
+  '}',
+  // 遮罩：点阵幕语汇（同 kit/hero 幕）；z:50 压主列(auto)不压抽屉壳 60；浅色反转（遮罩三处反转纪律）
+  '.mc-mask{position:fixed;inset:0;z-index:50;display:none;cursor:pointer;',
+  '  background-color:var(--mc-bg);',
+  '  background-image:radial-gradient(rgba(0,0,0,.55) 1px,transparent 1px);background-size:8px 8px}',
+  'html[data-theme="light"] .mc-mask{',
+  '  background-image:radial-gradient(rgba(255,255,255,.55) 1px,transparent 1px)}',
+  // —— 密度两档（纯 CSS，零 JS）——
+  '@media (max-width:640px){',
+  '  ' + MC_MAP.flowScroll + '{padding:12px}',                       // 原型 §10 密度档 flow padding 12
+  '  ' + MC_MAP.bubbleUser + '{max-width:100%}',                     // 用户气泡满宽（待活体：官方帽位在 userRow 时为无害空转）
+  '}',
+  '@media (max-width:480px){',
+  '  [data-mc-dock]{padding:8px}',                                   // 原型 §10 极窄档 dock padding 8（dock 根即 [data-mc-dock] 本体,勘定 2026-09-03）
+  '  ' + MC_MAP.dlgNav + '{width:52px!important;overflow:hidden!important}', // 设置 nav 收图标列（文字裁切=已知限制）
+  '}',
+].join('\n'));
+// —— 纯函数（CJS 出口供单测；mount 消费，非装饰）——
+// 开合动作裁定：官方折叠态为唯一真相源（frame[data-sidebar-collapsed]）
+function mcDrawerAction(collapsed) { return collapsed ? 'expand' : 'collapse'; }
+// 遮罩在场判定：窄窗且展开（宽窗桌面态/窄窗 rail 态都无遮罩）——与 :has CSS 同一语义的 JS 面
+function mcDrawerMaskOn(narrow, collapsed) { return !!(narrow && !collapsed); }
+// Esc 让路规则：官方弹层（模型菜单/命令 listbox 等）或设置面板在场时不抢 Esc
+function mcDrawerEscAllowed(popOpen, dlgOpen) { return !popOpen && !dlgOpen; }
+var McResponsive = {
+  css: MC_RESPONSIVE_CSS,
+  mount: function (ctx) {
+    var dead = false;
+    // —— 遮罩 DOM：一次性挂 body；显隐全 CSS（:has 门控），这里零状态 ——
+    var mask = document.createElement('div');
+    mask.className = 'mc-mask';
+    mask.setAttribute('data-mc-resp-mask', '');
+    document.body.appendChild(mask);
+    // —— 汉堡注入：窗框（hero/main 两态）左端首子；observer 自愈（sidebar.js watch 同款）——
+    function burgerHtml() { // innerHTML 全静态字面量（零动态插值，esc 纪律同 sidebar.js build）
+      return '<svg aria-hidden="true"><use href="#i-px-menu"/></svg>';
+    }
+    function injectBurger() {
+      if (dead) return;
+      var tb = document.querySelector('.mc-main-tb') || document.querySelector('.mc-hero-tb');
+      if (!tb) return;
+      var old = tb.querySelector('.mc-burger');
+      if (old && old.isConnected) return;
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'mc-tbx mc-burger';
+      b.setAttribute('aria-label', '打开或关闭导航');
+      b.setAttribute('title', '导航');
+      b.innerHTML = burgerHtml(); // 静态字面量
+      b.addEventListener('click', onBurger);
+      tb.insertBefore(b, tb.firstChild);
+    }
+    // —— 开合通道：tclose 同款（官方钮程序化 click；accToggle 五拍闪过场）——
+    function collapsedNow() {
+      try { return !!document.querySelector(MC_MAP.appRootRail); } catch (e) { return false; }
+    }
+    function narrowNow() {
+      try { return window.matchMedia('(max-width:1023px)').matches; } catch (e) { return false; }
+    }
+    function toggleDrawer() {
+      var btn = null;
+      try { btn = document.querySelector(MC_MAP.sidebarCollapseBtn); } catch (e) {}
+      if (!btn) return; // 官方锚漂移 → 汉堡 no-op 优雅降级（官方行为为准）
+      var col = null;
+      try { col = document.querySelector(MC_MAP.sidebar); } catch (e) {}
+      if (col) accToggle(col, function () { btn.click(); });
+      else btn.click();
+    }
+    function onBurger() {
+      toggleDrawer(); // 动作由 mcDrawerAction(折叠态) 裁定：折叠→展开 / 展开→收起
+    }
+    function onMask() {
+      if (!mcDrawerMaskOn(narrowNow(), collapsedNow())) return; // 显隐虽全 CSS，点击面再校验一次
+      toggleDrawer(); // 遮罩只在展开态可见 → 必为收起
+    }
+    function onKey(e) { // Esc 收抽屉：窄窗 + 展开态 + 无官方弹层/设置面板（让路规则）
+      try {
+        if (e.key !== 'Escape' || dead) return;
+        if (!narrowNow() || collapsedNow()) return;
+        var popOpen = !!document.querySelector('[role=menu],[role=listbox]');
+        var dlgOpen = !!(MC_MAP.dlgCard && document.querySelector(MC_MAP.dlgCard));
+        if (!mcDrawerEscAllowed(popOpen, dlgOpen)) return;
+        toggleDrawer();
+      } catch (er) {}
+    }
+    mask.addEventListener('click', onMask);
+    document.addEventListener('keydown', onKey, true);
+    // 汉堡自愈观察：heroRoot 在场则域定观察（省全局拍），缺席退 body 观察（overlays heroObs 先例）
+    var io = null;
+    function armObserver() {
+      var root = null;
+      try { root = document.querySelector(MC_MAP.heroRoot); } catch (e) {}
+      io = new MutationObserver(function () { injectBurger(); });
+      io.observe(root && root.isConnected ? root : document.body, { childList: true, subtree: true });
+    }
+    armObserver();
+    injectBurger(); // 首拍（active 态刷新直达）
+    return function teardown() {
+      dead = true;
+      try { if (io) io.disconnect(); } catch (e) {}
+      try { document.removeEventListener('keydown', onKey, true); } catch (e) {}
+      try { mask.remove(); } catch (e) {}
+      try { // 汉堡随窗框归属摘除（窗框本体归 overlays 管）
+        var b = document.querySelector('.mc-burger');
+        if (b) b.remove();
+      } catch (e) {}
+    };
+  },
+};
+if (typeof module !== 'undefined') module.exports = { McResponsive: McResponsive, mcDrawerAction: mcDrawerAction, mcDrawerMaskOn: mcDrawerMaskOn, mcDrawerEscAllowed: mcDrawerEscAllowed };
+
 // src/kit.js —— 检视页骨架（默认关闭零足迹；控制台 window.__MC_KIT_OPEN__ = true 打开）
 // 布局类全部 kit- 前缀，样式不外泄 kit 根之外；组件类直接复用 mc- 原语
 // 会话流分区（T8）：原型 §5 类定义 scoped 到 .kit-panel（Ruling 3，非宿主选择器不进
@@ -4514,6 +4662,10 @@ const McKit = {
 .kit-body{padding:20px 24px 28px;display:flex;flex-direction:column;gap:26px;
   color:var(--mc-fg);font:400 13px/1.7 var(--font-ui)}
 .kit-h{font:600 15px/1 var(--font-display);letter-spacing:.03em;margin:0 0 10px}
+/* 响应式分区(responsive 批):抽屉形态静态样本(自有演示类,真门控在窄窗活体) */
+.kit-resp-drawer{width:220px;border:1px solid var(--mc-border);background:var(--mc-surface);box-shadow:var(--mc-shadow-win,2px 2px 0 0 #000)}
+.kit-resp-drawer-tb{height:20px;display:flex;align-items:center;justify-content:center;font:600 11px/1 var(--font-display);letter-spacing:.04em;color:var(--mc-fg);background:var(--mc-surface-2);border-bottom:1px solid var(--mc-border)}
+.kit-resp-drawer-row{padding:5px 9px;font:400 12px/1.6 var(--font-ui);color:var(--mc-muted);border-bottom:1px solid var(--mc-border-soft)}
 .kit-grid{display:flex;flex-wrap:wrap;gap:10px}
 .kit-chip{display:inline-flex;align-items:center;gap:8px;height:28px;padding:0 10px;
   border:1px solid var(--mc-border);border-radius:var(--mc-r-tag);background:var(--mc-surface-2);
@@ -5246,6 +5398,40 @@ function McKitPage() {
                   h('span', { className: 'kit-note' }, 'toast 不做裁定(spec §0 范围外);switch 样本随 Task 3 勘定裁除(官方面板 0 switch)'))))),
           h('div', { className: 'kit-row' },
             h('span', { className: 'kit-note' }, '门控差异注记:dialog/scrim 皮 = head 常驻 style 标签纯 CSS 存在门控(官方自开自关,JS 门控不可靠);hero = body observer 相位同步 + 自有门控属性置/撤;dock = JS 置撤属性门控 — 存在门控与 JS 门控异构,不混用。'))),
+        // (h2) 响应式分区（responsive 批）：汉堡/遮罩/抽屉静态样本（真显隐门控在窄窗活体验）。
+        h('section', null,
+          h('h3', { className: 'kit-h' }, '响应式'),
+          h('div', { className: 'kit-frames' },
+            h('div', { className: 'kit-frame', key: 'burger' },
+              h('div', { className: 'kit-frame-tag' },
+                h('span', null, '汉堡方块 · 窗框左端首子（hero/main 两态共用 #i-px-menu）—— ≤1023 显形（对齐宿主折叠断点，实测 1024 展/1000 收）'),
+                h('em', null, 'resp')),
+              h('div', { className: 'kit-frame-body' },
+                h('button', { type: 'button', className: 'mc-tbx mc-burger', 'aria-label': '汉堡（样本）', style: { display: 'flex' } },
+                  h('svg', { 'aria-hidden': true }, h('use', { href: '#i-px-menu' }))))),
+            h('div', { className: 'kit-frame', key: 'mask' },
+              h('div', { className: 'kit-frame-tag' },
+                h('span', null, '抽屉遮罩 · 点阵幕 z:75 压抽屉 60、窗框 76 盖之；显隐全 CSS（:has 官方 data-sidebar-collapsed 派生，零 JS 状态）；浅色反转'),
+                h('em', null, 'resp')),
+              h('div', { className: 'kit-frame-body' },
+                h('div', { style: { position: 'relative', height: '64px' } },
+                  h('div', { className: 'mc-mask', style: { display: 'block', position: 'absolute', top: '0', right: '0', bottom: '0', left: '0' } })))),
+            h('div', { className: 'kit-frame', key: 'drawer' },
+              h('div', { className: 'kit-frame-tag' },
+                h('span', null, '抽屉形态 · 官方侧栏展开态挤占式在场（壳提层 z:60，遮罩 z:50 盖主列，窗框 76 恒可点；不脱流不压轨——grid 自动放置实证 fixed 化会错位）—— 树 DOM 宿主挂载、Finder 皮自动生效，零克隆'),
+                h('em', null, 'resp')),
+              h('div', { className: 'kit-frame-body' },
+                h('div', { className: 'kit-resp-drawer' },
+                  h('div', { className: 'kit-resp-drawer-tb' }, 'Sessions'),
+                  ['dsh-theme-macintosh', 'dsh-theme-aurum', 'dsh-plugins'].map(function (n) {
+                    return h('div', { className: 'kit-resp-drawer-row', key: n }, n);
+                  })))),
+            h('div', { className: 'kit-frame', key: 'bp' },
+              h('div', { className: 'kit-frame-tag' },
+                h('span', null, '断点表 · ≤1023 结构（汉堡+抽屉+遮罩）/ ≤640 密度（flow 12 + 气泡满宽）/ ≤480 极窄（dock 8 + 设置 nav 52px 图标列）；mode 钮/统计条隐藏无 DSH 对应物记因不做；safe-area 不做（桌面 GUI）'),
+                h('em', null, 'resp')),
+              h('div', { className: 'kit-frame-body' },
+                h('div', { className: 'kit-note' }, '原型 §12 转译：结构档断点 820 → 1023（宿主折叠实测）；硬切无 transition；抽屉=官方展开通道 overlay 化（tclose 同通道，零克隆）'))))),
         // (g) 工具卡分区（toolcard 批）：MC_TOOL_DEMO 桥真卡渲染（primitives 缺席 → 降级说明）
         h('section', null,
           h('h3', { className: 'kit-h' }, '工具卡'),
@@ -5439,9 +5625,10 @@ const mods = {
   McTool: McTool,
   McDock: McDock,
   McMenus: McMenus,
+  McResponsive: McResponsive,
   McKit: McKit,
 };
-const order = ["McTokens","McClock","McMcfx","McSprite","MC_MAP","McChrome","McSidebar","McFinder","McFlow","McThink","McSysCard","McTool","McDock","McMenus","McKit"];
+const order = ["McTokens","McClock","McMcfx","McSprite","MC_MAP","McChrome","McSidebar","McFinder","McFlow","McThink","McSysCard","McTool","McDock","McMenus","McResponsive","McKit"];
 
 return {
   inject: ["slots", "theme", "sessions", "workspaces"],

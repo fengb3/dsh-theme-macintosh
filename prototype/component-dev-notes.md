@@ -730,6 +730,24 @@ subcalls：左 2px 软线缩进 + sc-row（ok=绿 i-check / run=琥珀 clock）�
 - calc 公式中 24px = desk 上下 padding 之和，改 padding 同步改
 - `viewport-fit=cover` 已设，safe-area-inset 实现侧建议补
 
+### 12.4 DSH 落地差异注记（responsive 批 2026-09-03）
+- **结构档断点 820 → 1023**：对齐宿主折叠断点（实测 1024 展开/1000 强制收叠卸树）——824~1023
+  宿主收轨后树不可达带一并治理；汉堡方块嵌主列窗框（hero/main 两态共用 i-px-menu），
+  不造 48px app-bar（DSH 窗框常驻，双栏冗余）。
+- **抽屉 = 官方展开通道挤占式**：汉堡/Mask/Esc 三通道全走 tclose 同款程序化 click
+  （sidebarCollapseBtn + accToggle 五拍）——树 DOM 宿主挂载、Finder 皮自动生效，零克隆。
+  **不脱流不压轨**（v2 裁定）：sidebarCol fixed 化会令 grid 自动放置把 centerCol 掉进
+  0px 首轨全盘错位（实测）；改为层级方案——抽屉壳(relative z:60) > 遮罩(z:50) > 主列
+  (auto)，窗框 z:76 盖遮罩保汉堡常可点。原型「遮罩 75 压抽屉 60」序不适用（会盖死抽屉）。
+- **遮罩/壳提层显隐全 CSS**：`:has(appRootWide)` 派生自官方 data-sidebar-collapsed 稳定
+  data-* 锚，零 JS 状态；硬切无 transition（§12.3 坑表照守）。
+- **密度两档**：≤640 flow padding 12 + 气泡满宽（bubbleUser 键）；≤480 dock padding 8
+  （dock 根即 [data-mc-dock] 本体）+ 设置 nav 收 52px 图标列（官方 nav 文字裁切=已知限制）。
+  mode 钮/统计条中段隐藏无 DSH 对应物，记因不做；safe-area-inset 不做（桌面 GUI）。
+- **白块伪影修复顺带**：`.mc-field{width:100%}` 在 content-box composer 下解析成 border-box
+  宽溢出右缘 9px（各宽度恒在，窄窗最显眼）——dock 皮 width:auto 压掉（stretch 由 flex column 兜）。
+- 门禁：`node tools/verify-responsive.mjs`（resize 驱动 20 断言，只读不发消息）。
+
 ---
 
 ## 13 · 移植核对清单（正式页开发收尾用）

@@ -40,6 +40,11 @@ const MC_MAP = {
   // appRootRail = 折叠态的 frame（官方 AppFrame 折叠时挂 data-sidebar-collapsed 属性，
   // 稳定 data-* 锚；供折叠态专属样式/检测引用）
   appRootRail: '#root > div > div[data-sidebar-collapsed]', /* stable: official data-attr */
+  // appRootWide/sidebarShell = 展开态对形（appRootRail 同族 :not 反形；responsive 抽屉批
+  // 2026-09-03 勘定：窄窗抽屉门控/抽屉壳提层锚——sidebarShell = 展开态 sidebarCol 内
+  // 内容壳（hHd-*_root，哈希前缀随构建漂移故走结构位；v2 裁定提层不脱流））
+  appRootWide: '#root > div > div:not([data-sidebar-collapsed])', /* DRIFT-RISK: structural */
+  sidebarShell: '#root > div > div:not([data-sidebar-collapsed]) > div:first-child > div > div', /* DRIFT-RISK: structural */
   // mainColumn = 会话根（header + 滚动口 + composer 都在其内，正好是"主窗"区域）
   mainColumn: 'div[data-phase]',
   // mainColumnCell = 主列所在网格格位 centerCol（AppFrame grid 第二列，宿主 overflow:hidden）。

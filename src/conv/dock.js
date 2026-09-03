@@ -61,7 +61,7 @@ const MC_DOCK_CSS = [
   '[data-mc-dock] .composer{display:flex;flex-direction:column;gap:8px;background:var(--mc-surface);',
   ' border:1px solid var(--mc-border);border-radius:var(--mc-r-card);',
   ' box-shadow:var(--mc-shadow-panel);padding:8px}',
-  '[data-mc-dock] .composer .mc-field{height:auto;min-height:44px;padding:6px 8px}',
+  '[data-mc-dock] .composer .mc-field{height:auto;min-height:44px;padding:6px 8px;width:auto}', // width:auto 压基础 .mc-field{width:100%}——composer content-box 下 100% 解析成 border-box 宽,右缘溢出 9px 白块(伪影勘定 2026-09-03;stretch 语义由 flex column 默认兜住)
   '[data-mc-dock] .composer.busy .mc-field{background:color-mix(in oklab,var(--mc-fg) 4%,var(--mc-surface))}',
   '[data-mc-dock] .composer textarea{flex:1;background:transparent;border:none;resize:none;outline:none;',
   ' font:inherit;color:inherit;min-height:32px;overflow-y:auto}', // 验收轮1 自增高:超 40vh 封顶后容器内滚动(瞬切,无 transition)
