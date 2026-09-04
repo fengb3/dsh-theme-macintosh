@@ -22,6 +22,21 @@ Classic Macintosh 主题插件：把整个界面换回 System 7 的像素语汇�
 
 ## 安装
 
+### 一键安装（推荐）
+
+```sh
+dsh plugin --profile web add github:fengb3/dsh-theme-macintosh
+dsh web   # 然后刷新 http://127.0.0.1:3080
+```
+
+安装后重启 Web UI 即常驻生效（持久化组合插件，无需任何 Run 操作）。卸载：
+
+```sh
+dsh plugin --profile web remove dsh-theme-macintosh
+```
+
+### 本地 / npm 安装
+
 以 DSH web profile 的持久化插件形式安装，三步：
 
 1. 在 profile 目录（`~/.dsh/profiles/web/`）里安装本包：
@@ -120,3 +135,7 @@ Classic Macintosh 主题插件：把整个界面换回 System 7 的像素语汇�
 | 状态三帧 · running（琥珀扫掠） | ![](shots/showcase/tool-running-dark.png) | ![](shots/showcase/tool-running-light.png) |
 | 状态三帧 · done | ![](shots/showcase/tool-done-dark.png) | ![](shots/showcase/tool-done-light.png) |
 | 状态三帧 · fail（红边 + warning） | ![](shots/showcase/tool-fail-dark.png) | ![](shots/showcase/tool-fail-light.png) |
+
+## License
+
+[MIT](LICENSE)
