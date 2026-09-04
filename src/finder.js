@@ -149,7 +149,21 @@ function mcFinderGroups(list, wsState) {
   return groups;
 }
 
-// 滚动区标题栏：左「工作区」标签 + 紧邻右侧三个 18px 小钮（搜索/视图选项/添加）——
+// —— 搜索过滤（内嵌搜索行批）：分组名命中=整组保留；否则按会话标题子串过滤（大小写不敏感）；
+// 空组滤除；命中行 xtra 摘除（过滤态全量展示匹配行，不进「展开其余」折叠）。空词恒等返回。 ——
+function mcFinderFilter(groups, q) {
+  const query = String(q === undefined || q === null ? '' : q).trim().toLowerCase();
+  if (query === '') return groups;
+  return groups.map(function (g) {
+    const gMatch = g.name.toLowerCase().indexOf(query) !== -1;
+    const hit = g.sessions.filter(function (s) {
+      return gMatch || s.title.toLowerCase().indexOf(query) !== -1;
+    }).map(function (s) { return Object.assign({}, s, { xtra: false }); });
+    return Object.assign({}, g, { sessions: hit });
+  }).filter(function (g) { return g.sessions.length > 0; });
+}
+
+// 滚动区标题栏：左「工作区」标签 + 紧邻右侧三个 18px 小钮（搜索/视图选项/添加工作区）——
 // 按钮跟标签走（flex:none），不顶到侧栏右缘（原型 §4 .sb-listbar 语汇）。
 // 搜索钮：本地标题过滤（输入暂用 window.prompt 顶替，TODO 二期内嵌输入行）；
 // 视图选项/添加：no-op（title 注明二期）。
@@ -160,15 +174,21 @@ function McFinderListbar(props) {
     if (onClick) p.onClick = onClick;
     return h('button', p, h('svg', { viewBox: '0 0 24 24', 'aria-hidden': true }, h('use', { href: icon })));
   };
-  const onSearch = function () {
-    // TODO(二期)：内嵌搜索输入行（aurum au-ws-search 同款）；暂用系统 prompt 顶替
-    if (typeof window === 'undefined' || typeof window.prompt !== 'function') return;
-    const v = window.prompt('搜索会话（按标题过滤，留空清除）', '');
-    if (v === null) return;
-    props.onQuery(v);
+  // —— 内嵌搜索行（prompt 退役）：列表栏下方展开输入行，输入即过滤（词走 McFinderTree 的
+  // qState 经 onQuery 上行）；过滤词非空时行强制展开（折叠轨 prompt 接力的词也可见可清）。
+  // Esc / × 钮 = 清词收行；点搜索钮开行，行开且无词时再点收行。 ——
+  const openState = React.useState(false);
+  const q = typeof props.q === 'string' ? props.q : '';
+  const open = openState[0] || q.trim() !== '';
+  const onQuery = props.onQuery;
+  const closeSearch = function () { openState[1](false); onQuery(''); };
+  const onSearchBtn = function () {
+    if (open && q.trim() === '') { openState[1](false); return; } // 开行无词再点=收行
+    openState[1](true);
   };
-  // 验收轮5:视图选项/添加改走官方代理(用户裁定)——程序化点官方侧栏钮,弹层=官方 portal
-  // + CSS 注入皮肤(见 overlays.js [data-mc-menuskin]);官方加号=直建会话(宿主无加号弹层)
+  const onAddWs = function () { if (MC_MENU_FIRE) MC_MENU_FIRE('addWs', null); };
+  // 验收轮5:视图选项走官方代理(用户裁定)——程序化点官方侧栏钮,弹层=官方 portal
+  // + CSS 注入皮肤(见 overlays.js [data-mc-menuskin])
   var mcProxyOfficial = function (sel) {
     return function () {
       try {
@@ -181,12 +201,22 @@ function McFinderListbar(props) {
       } catch (e) {}
     };
   };
-  return h('div', { className: 'mc-sb-listbar' },
-    h('span', { className: 'mc-sb-lb' }, (function () { try { var pf = mcViewPrefs(); return pf && pf.groupBy === 'flat' ? '会话' : '工作区'; } catch (e) { return '工作区'; } })()),
-    h('span', { className: 'mc-sb-la' },
-      btn('搜索会话', '#i-px-search', onSearch),
-      btn('视图选项', '#i-px-sliders', mcViewSwapOfficial, 'mc-lb-view'),
-      btn('添加', '#i-px-plus', mcProxyOfficial('sidebarNewSess'))));
+  const qRow = !open ? null : h('div', { className: 'mc-sb-qrow', key: 'mc-qrow' },
+    h('input', { className: 'mc-sb-q', type: 'text', value: q, placeholder: '搜索会话',
+      'aria-label': '搜索会话', autoFocus: true,
+      onChange: function (e) { onQuery(e.target.value); },
+      onKeyDown: function (e) { if (e.key === 'Escape') { e.preventDefault(); closeSearch(); } } }),
+    h('button', { className: 'mc-sb-qx', type: 'button', title: '清除搜索', 'aria-label': '清除搜索',
+      'data-mc-finder': '', onClick: closeSearch },
+      h('svg', { viewBox: '0 0 24 24', 'aria-hidden': true }, h('use', { href: '#i-close' }))));
+  return h(React.Fragment, null,
+    h('div', { className: 'mc-sb-listbar', key: 'mc-lb' },
+      h('span', { className: 'mc-sb-lb' }, (function () { try { var pf = mcViewPrefs(); return pf && pf.groupBy === 'flat' ? '会话' : '工作区'; } catch (e) { return '工作区'; } })()),
+      h('span', { className: 'mc-sb-la' },
+        btn('搜索会话', '#i-px-search', onSearchBtn),
+        btn('视图选项', '#i-px-sliders', mcViewSwapOfficial, 'mc-lb-view'),
+        btn('添加工作区', '#i-px-plus', onAddWs))),
+    qRow);
 }
 
 // —— 折叠态迷你条（原型 .sb-mini）：官方 sidebar.workspaces 席位在折叠轨（wide:false）时的形态。
@@ -322,7 +352,7 @@ function McFinderMini(props) {
   };
   return h('div', { className: 'mc-sb-mini' },
     btn('mc-mini-btn mc-mini-new', '新建会话', '#i-px-plus', onNew),
-    btn('mc-mini-btn', '添加工作区（二期）', '#i-folder'),
+    btn('mc-mini-btn', '添加工作区', '#i-folder', function () { if (MC_MENU_FIRE) MC_MENU_FIRE('addWs', null); }),
     btn('mc-mini-btn', '搜索会话', '#i-px-search', onSearch));
 }
 
@@ -512,16 +542,13 @@ function McFinderTree(props) {
     if (!live) selState[1](sid); // 假数据降级：本地选中
   };
   // 搜索过滤：命中标题（或分组名）的会话保留；过滤态不折叠 xtra（全量展示匹配行）
-  const shown = q === '' ? groups : groups.map(function (g) {
-    const gMatch = g.name.toLowerCase().indexOf(q) !== -1;
-    const hit = g.sessions.filter(function (s) {
-      return gMatch || s.title.toLowerCase().indexOf(q) !== -1;
-    }).map(function (s) { return Object.assign({}, s, { xtra: false }); });
-    return Object.assign({}, g, { sessions: hit });
-  }).filter(function (g) { return g.sessions.length > 0; });
+  // （内嵌搜索行批：过滤逻辑提取为纯函数 mcFinderFilter 供单元测试；空命中出「无匹配」占位）
+  const shown = mcFinderFilter(groups, q);
   return h('div', { className: 'mc-sb-find', ref: root },
-    h(McFinderListbar, { onQuery: qState[1] }),
+    h(McFinderListbar, { q: qState[0], onQuery: qState[1] }),
     h('nav', { className: 'mc-sb-tree' },
+      // 过滤态零命中:「无匹配会话」占位行(否则树区静默空白,搜索像失灵)
+      q !== '' && shown.length === 0 ? h('div', { className: 'mc-sb-none' }, '无匹配会话') : null,
       // 单列表:平铺直列(无折叠面板壳、无分组头);行首带工作区名前缀(见 McFinderSess)
       shown.length === 1 && shown[0].id === '__flat__'
         ? h('div', { className: 'mc-flat-body' },
@@ -608,6 +635,18 @@ const McFinder = {
 .mc-sb-find .mc-flat-body{display:flex;flex-direction:column}
 .mc-sb-find .mc-s-ws{flex:none;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
   font:500 12px/1.6 var(--font-mono);color:var(--mc-muted)}
+/* 内嵌搜索行(搜索批:prompt 退役):列表栏下展开,输入即过滤;× 清词收行;无匹配占位行 */
+.mc-sb-qrow{display:flex;align-items:center;gap:4px;flex:none;
+  padding:5px 8px;border-bottom:1px solid var(--mc-border-soft)}
+.mc-sb-qrow .mc-sb-q{flex:1;min-width:0;box-sizing:border-box;height:22px;padding:0 5px;
+  background:var(--mc-surface);border:1px solid var(--mc-border);border-radius:0;outline:none;
+  font:400 12px/20px var(--font-sb);color:var(--mc-fg)}
+.mc-sb-qrow .mc-sb-q::placeholder{color:var(--mc-faint)}
+.mc-sb-qx{display:grid;place-items:center;width:18px;height:18px;flex:none;padding:0;
+  background:none;border:none;cursor:pointer;color:var(--mc-faint);border-radius:var(--mc-r-tag)}
+.mc-sb-qx:active{color:var(--mc-fg)}
+.mc-sb-find .mc-sb-qx svg{width:11px;height:11px}
+.mc-sb-none{padding:10px 12px;font:400 12px/1.5 var(--font-sb);color:var(--mc-faint)}
 /* ===== 折叠态迷你条（原型 .sb-mini；56px 官方轨内一列 26px 图标钮）===== */
 .mc-sb-mini{display:flex;flex-direction:column;align-items:center;gap:6px;flex:1;min-height:0;padding:8px 0}
 .mc-mini-btn{display:grid;place-items:center;width:34px;height:30px;flex:none;
@@ -656,7 +695,7 @@ html[data-mc-viewswap] [data-mc-sbregion]{visibility:hidden!important}
 };
 
 // CJS shim(测试 loadSrc 消费):视图纯函数出口
-if (typeof module !== 'undefined') module.exports = { mcViewPrefs: mcViewPrefs, mcViewSortSessions: mcViewSortSessions, mcFinderGroups: mcFinderGroups };
+if (typeof module !== 'undefined') module.exports = { mcViewPrefs: mcViewPrefs, mcViewSortSessions: mcViewSortSessions, mcFinderGroups: mcFinderGroups, mcFinderFilter: mcFinderFilter };
 
 // src/kit.js —— 检视页骨架（默认关闭零足迹；控制台 window.__MC_KIT_OPEN__ = true 打开）// 布局类全部 kit- 前缀，样式不外泄 kit 根之外；组件类直接复用 mc- 原语
 // 纯顶层声明，无模块系统语法；与 tokens/clock/mcfx/sprite 拼进同一作用域

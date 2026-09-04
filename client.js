@@ -1223,7 +1223,21 @@ function mcFinderGroups(list, wsState) {
   return groups;
 }
 
-// 滚动区标题栏：左「工作区」标签 + 紧邻右侧三个 18px 小钮（搜索/视图选项/添加）——
+// —— 搜索过滤（内嵌搜索行批）：分组名命中=整组保留；否则按会话标题子串过滤（大小写不敏感）；
+// 空组滤除；命中行 xtra 摘除（过滤态全量展示匹配行，不进「展开其余」折叠）。空词恒等返回。 ——
+function mcFinderFilter(groups, q) {
+  const query = String(q === undefined || q === null ? '' : q).trim().toLowerCase();
+  if (query === '') return groups;
+  return groups.map(function (g) {
+    const gMatch = g.name.toLowerCase().indexOf(query) !== -1;
+    const hit = g.sessions.filter(function (s) {
+      return gMatch || s.title.toLowerCase().indexOf(query) !== -1;
+    }).map(function (s) { return Object.assign({}, s, { xtra: false }); });
+    return Object.assign({}, g, { sessions: hit });
+  }).filter(function (g) { return g.sessions.length > 0; });
+}
+
+// 滚动区标题栏：左「工作区」标签 + 紧邻右侧三个 18px 小钮（搜索/视图选项/添加工作区）——
 // 按钮跟标签走（flex:none），不顶到侧栏右缘（原型 §4 .sb-listbar 语汇）。
 // 搜索钮：本地标题过滤（输入暂用 window.prompt 顶替，TODO 二期内嵌输入行）；
 // 视图选项/添加：no-op（title 注明二期）。
@@ -1234,15 +1248,21 @@ function McFinderListbar(props) {
     if (onClick) p.onClick = onClick;
     return h('button', p, h('svg', { viewBox: '0 0 24 24', 'aria-hidden': true }, h('use', { href: icon })));
   };
-  const onSearch = function () {
-    // TODO(二期)：内嵌搜索输入行（aurum au-ws-search 同款）；暂用系统 prompt 顶替
-    if (typeof window === 'undefined' || typeof window.prompt !== 'function') return;
-    const v = window.prompt('搜索会话（按标题过滤，留空清除）', '');
-    if (v === null) return;
-    props.onQuery(v);
+  // —— 内嵌搜索行（prompt 退役）：列表栏下方展开输入行，输入即过滤（词走 McFinderTree 的
+  // qState 经 onQuery 上行）；过滤词非空时行强制展开（折叠轨 prompt 接力的词也可见可清）。
+  // Esc / × 钮 = 清词收行；点搜索钮开行，行开且无词时再点收行。 ——
+  const openState = React.useState(false);
+  const q = typeof props.q === 'string' ? props.q : '';
+  const open = openState[0] || q.trim() !== '';
+  const onQuery = props.onQuery;
+  const closeSearch = function () { openState[1](false); onQuery(''); };
+  const onSearchBtn = function () {
+    if (open && q.trim() === '') { openState[1](false); return; } // 开行无词再点=收行
+    openState[1](true);
   };
-  // 验收轮5:视图选项/添加改走官方代理(用户裁定)——程序化点官方侧栏钮,弹层=官方 portal
-  // + CSS 注入皮肤(见 overlays.js [data-mc-menuskin]);官方加号=直建会话(宿主无加号弹层)
+  const onAddWs = function () { if (MC_MENU_FIRE) MC_MENU_FIRE('addWs', null); };
+  // 验收轮5:视图选项走官方代理(用户裁定)——程序化点官方侧栏钮,弹层=官方 portal
+  // + CSS 注入皮肤(见 overlays.js [data-mc-menuskin])
   var mcProxyOfficial = function (sel) {
     return function () {
       try {
@@ -1255,12 +1275,22 @@ function McFinderListbar(props) {
       } catch (e) {}
     };
   };
-  return h('div', { className: 'mc-sb-listbar' },
-    h('span', { className: 'mc-sb-lb' }, (function () { try { var pf = mcViewPrefs(); return pf && pf.groupBy === 'flat' ? '会话' : '工作区'; } catch (e) { return '工作区'; } })()),
-    h('span', { className: 'mc-sb-la' },
-      btn('搜索会话', '#i-px-search', onSearch),
-      btn('视图选项', '#i-px-sliders', mcViewSwapOfficial, 'mc-lb-view'),
-      btn('添加', '#i-px-plus', mcProxyOfficial('sidebarNewSess'))));
+  const qRow = !open ? null : h('div', { className: 'mc-sb-qrow', key: 'mc-qrow' },
+    h('input', { className: 'mc-sb-q', type: 'text', value: q, placeholder: '搜索会话',
+      'aria-label': '搜索会话', autoFocus: true,
+      onChange: function (e) { onQuery(e.target.value); },
+      onKeyDown: function (e) { if (e.key === 'Escape') { e.preventDefault(); closeSearch(); } } }),
+    h('button', { className: 'mc-sb-qx', type: 'button', title: '清除搜索', 'aria-label': '清除搜索',
+      'data-mc-finder': '', onClick: closeSearch },
+      h('svg', { viewBox: '0 0 24 24', 'aria-hidden': true }, h('use', { href: '#i-close' }))));
+  return h(React.Fragment, null,
+    h('div', { className: 'mc-sb-listbar', key: 'mc-lb' },
+      h('span', { className: 'mc-sb-lb' }, (function () { try { var pf = mcViewPrefs(); return pf && pf.groupBy === 'flat' ? '会话' : '工作区'; } catch (e) { return '工作区'; } })()),
+      h('span', { className: 'mc-sb-la' },
+        btn('搜索会话', '#i-px-search', onSearchBtn),
+        btn('视图选项', '#i-px-sliders', mcViewSwapOfficial, 'mc-lb-view'),
+        btn('添加工作区', '#i-px-plus', onAddWs))),
+    qRow);
 }
 
 // —— 折叠态迷你条（原型 .sb-mini）：官方 sidebar.workspaces 席位在折叠轨（wide:false）时的形态。
@@ -1396,7 +1426,7 @@ function McFinderMini(props) {
   };
   return h('div', { className: 'mc-sb-mini' },
     btn('mc-mini-btn mc-mini-new', '新建会话', '#i-px-plus', onNew),
-    btn('mc-mini-btn', '添加工作区（二期）', '#i-folder'),
+    btn('mc-mini-btn', '添加工作区', '#i-folder', function () { if (MC_MENU_FIRE) MC_MENU_FIRE('addWs', null); }),
     btn('mc-mini-btn', '搜索会话', '#i-px-search', onSearch));
 }
 
@@ -1586,16 +1616,13 @@ function McFinderTree(props) {
     if (!live) selState[1](sid); // 假数据降级：本地选中
   };
   // 搜索过滤：命中标题（或分组名）的会话保留；过滤态不折叠 xtra（全量展示匹配行）
-  const shown = q === '' ? groups : groups.map(function (g) {
-    const gMatch = g.name.toLowerCase().indexOf(q) !== -1;
-    const hit = g.sessions.filter(function (s) {
-      return gMatch || s.title.toLowerCase().indexOf(q) !== -1;
-    }).map(function (s) { return Object.assign({}, s, { xtra: false }); });
-    return Object.assign({}, g, { sessions: hit });
-  }).filter(function (g) { return g.sessions.length > 0; });
+  // （内嵌搜索行批：过滤逻辑提取为纯函数 mcFinderFilter 供单元测试；空命中出「无匹配」占位）
+  const shown = mcFinderFilter(groups, q);
   return h('div', { className: 'mc-sb-find', ref: root },
-    h(McFinderListbar, { onQuery: qState[1] }),
+    h(McFinderListbar, { q: qState[0], onQuery: qState[1] }),
     h('nav', { className: 'mc-sb-tree' },
+      // 过滤态零命中:「无匹配会话」占位行(否则树区静默空白,搜索像失灵)
+      q !== '' && shown.length === 0 ? h('div', { className: 'mc-sb-none' }, '无匹配会话') : null,
       // 单列表:平铺直列(无折叠面板壳、无分组头);行首带工作区名前缀(见 McFinderSess)
       shown.length === 1 && shown[0].id === '__flat__'
         ? h('div', { className: 'mc-flat-body' },
@@ -1682,6 +1709,18 @@ const McFinder = {
 .mc-sb-find .mc-flat-body{display:flex;flex-direction:column}
 .mc-sb-find .mc-s-ws{flex:none;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
   font:500 12px/1.6 var(--font-mono);color:var(--mc-muted)}
+/* 内嵌搜索行(搜索批:prompt 退役):列表栏下展开,输入即过滤;× 清词收行;无匹配占位行 */
+.mc-sb-qrow{display:flex;align-items:center;gap:4px;flex:none;
+  padding:5px 8px;border-bottom:1px solid var(--mc-border-soft)}
+.mc-sb-qrow .mc-sb-q{flex:1;min-width:0;box-sizing:border-box;height:22px;padding:0 5px;
+  background:var(--mc-surface);border:1px solid var(--mc-border);border-radius:0;outline:none;
+  font:400 12px/20px var(--font-sb);color:var(--mc-fg)}
+.mc-sb-qrow .mc-sb-q::placeholder{color:var(--mc-faint)}
+.mc-sb-qx{display:grid;place-items:center;width:18px;height:18px;flex:none;padding:0;
+  background:none;border:none;cursor:pointer;color:var(--mc-faint);border-radius:var(--mc-r-tag)}
+.mc-sb-qx:active{color:var(--mc-fg)}
+.mc-sb-find .mc-sb-qx svg{width:11px;height:11px}
+.mc-sb-none{padding:10px 12px;font:400 12px/1.5 var(--font-sb);color:var(--mc-faint)}
 /* ===== 折叠态迷你条（原型 .sb-mini；56px 官方轨内一列 26px 图标钮）===== */
 .mc-sb-mini{display:flex;flex-direction:column;align-items:center;gap:6px;flex:1;min-height:0;padding:8px 0}
 .mc-mini-btn{display:grid;place-items:center;width:34px;height:30px;flex:none;
@@ -1730,7 +1769,7 @@ html[data-mc-viewswap] [data-mc-sbregion]{visibility:hidden!important}
 };
 
 // CJS shim(测试 loadSrc 消费):视图纯函数出口
-if (typeof module !== 'undefined') module.exports = { mcViewPrefs: mcViewPrefs, mcViewSortSessions: mcViewSortSessions, mcFinderGroups: mcFinderGroups };
+if (typeof module !== 'undefined') module.exports = { mcViewPrefs: mcViewPrefs, mcViewSortSessions: mcViewSortSessions, mcFinderGroups: mcFinderGroups, mcFinderFilter: mcFinderFilter };
 
 // src/kit.js —— 检视页骨架（默认关闭零足迹；控制台 window.__MC_KIT_OPEN__ = true 打开）// 布局类全部 kit- 前缀，样式不外泄 kit 根之外；组件类直接复用 mc- 原语
 // 纯顶层声明，无模块系统语法；与 tokens/clock/mcfx/sprite 拼进同一作用域
@@ -4139,7 +4178,8 @@ function mcMenuWsId(id) {
   return id && id !== '__ungrouped__' ? id : null;
 }
 // 二批 A1：新建会话 = 官方 workspaces.startSession（建+连+打开；无 wsId 自动落当前/最近工作区）。
-// 旧 sessions.create({}) 语义不符（只建不开）——退役。
+// 旧 sessions.create({}) 语义不符（只建不开）——退役。注意 startSession 会复用工作区已有
+// blank 会话（官方 New Session 共享语义）——分组头加号要求「每次必真新建」，走 mcMenuNewSessFresh。
 function mcMenuNewSess(w, wsId) {
   var c = w && w.ctx;
   var id = mcMenuWsId(wsId);
@@ -4147,13 +4187,59 @@ function mcMenuNewSess(w, wsId) {
     try { c.workspaces.startSession(id || undefined); } catch (e) {} // 吞错纪律：官方状态为准
   }
 }
-function mcMenuNewWs(w) { // 二批 A3：官方 create(input) 需目录路径（local Workspace 须 materializable）
-  var ws = mcMenuWsSvc(w);
+// —— 新建类路由纯函数（目录选择器批）：真工作区 id → create 定向直建；
+// 空值/未分组兜底假分组 → start 官方语义（落当前/最近工作区）。 ——
+function mcMenuSessPlan(wsId) {
+  var id = mcMenuWsId(wsId);
+  return id ? { mode: 'create', workspaceId: id } : { mode: 'start' };
+}
+// 分组头加号直建：sessions.create({workspaceId})→open，每次必出新会话。startSession 的 blank
+// 复用语义在工作区已有空白会话时原地打开旧 blank——第二次起点击零反馈（用户报「加号不能
+// 工作」的直接根因）。create 被宿主拒绝（目录不可写等）时静默，官方状态为准（吞错纪律）。
+function mcMenuNewSessFresh(w, wsId) {
+  var plan = mcMenuSessPlan(wsId);
+  var c = w && w.ctx;
+  var s = c && c.sessions;
+  if (plan.mode === 'create' && s && typeof s.create === 'function' && typeof s.open === 'function') {
+    try {
+      Promise.resolve(s.create({ workspaceId: plan.workspaceId })).then(function (sid) {
+        if (sid) { try { s.open(sid); } catch (e) {} }
+      }).catch(function () {});
+    } catch (e) {}
+    return;
+  }
+  mcMenuNewSess(w, wsId); // start 路由：官方语义兜底
+}
+// 路径规整纯函数：picker/prompt 结果 → null（取消/空白）或去首尾空白绝对路径。
+function mcMenuWsPath(p) {
+  if (p === null || p === undefined) return null;
+  var t = String(p).trim();
+  return t === '' ? null : t;
+}
+function mcMenuNewWsPrompt(w, ws) { // 手输回退：prompt 输入目录绝对路径（二批 A3 原流）
+  ws = ws || mcMenuWsSvc(w);
   if (!ws || typeof ws.create !== 'function') return;
   if (typeof window === 'undefined' || typeof window.prompt !== 'function') return;
   var p = window.prompt('新建工作区 — 输入目录绝对路径', '');
-  if (!p || !p.trim()) return;
-  try { ws.create({ path: p.trim() }); } catch (e) {} // 路径无效时官方返回 error——静默（吞错纪律）
+  var path = mcMenuWsPath(p);
+  if (path === null) return;
+  try { ws.create({ path: path }); } catch (e) {} // 路径无效时官方返回 error——静默（吞错纪律）
+}
+function mcMenuNewWs(w) { // 目录选择器批：host 原生 pickDirectory 优先（系统文件夹选择框，本机
+  // 127.0.0.1 即用户眼前弹出），选中即以绝对路径 create 入列表；null=取消静默；
+  // native capability 缺席（SSH/远程 directory-picker-unavailable）回退 prompt 手输。
+  // 浏览器自带 picker 不可行：沙箱不暴露所选目录绝对路径，host create 需 realpath 可解析
+  // 的真实路径（aurum P19 同勘定）。
+  var ws = mcMenuWsSvc(w);
+  if (!ws || typeof ws.create !== 'function') return;
+  if (typeof ws.pickDirectory !== 'function') { mcMenuNewWsPrompt(w, ws); return; }
+  try {
+    Promise.resolve(ws.pickDirectory()).then(function (p) {
+      var path = mcMenuWsPath(p);
+      if (path === null) return; // 用户取消：静默无操作
+      try { Promise.resolve(ws.create({ path: path })).catch(function () {}); } catch (e) {}
+    }).catch(function () { mcMenuNewWsPrompt(w, ws); }); // picker 不可用 → 手输回退
+  } catch (e) { mcMenuNewWsPrompt(w, ws); }
 }
 var MC_MENU_WIRING = {
   // —— sess（会话行 dots）——
@@ -4205,11 +4291,13 @@ var MC_MENU_WIRING = {
     var ws = mcMenuWsSvc(w);
     if (ws) ws.delete(id);
   },
-  // —— 新建类（二批 A1/A2：startSession 官方语义；「在此」=定向到触发分组的工作区）——
-  groupNew: function (w) { mcMenuNewSess(w, w.ctxData && w.ctxData.ws); },
-  groupNewSess: function (w) { mcMenuNewSess(w, w.ctxData && w.ctxData.ws); },
+  // —— 新建类（二批 A1/A2；「在此」=定向到触发分组的工作区）——
+  // 目录选择器批：groupNew/groupNewSess 改「每次必真新建」（create→open，不复用 blank）；
+  // addWs 走 host 原生目录选择器（mcMenuNewWs 内部 pickDirectory 优先）。
+  groupNew: function (w) { mcMenuNewSessFresh(w, w.ctxData && w.ctxData.ws); },
+  groupNewSess: function (w) { mcMenuNewSessFresh(w, w.ctxData && w.ctxData.ws); },
   groupNewWs: mcMenuNewWs,
-  addSess: function (w) { mcMenuNewSess(w, null); }, // listbar 添加：无定向 → 官方自动落当前/最近
+  addSess: function (w) { mcMenuNewSess(w, null); }, // 无定向 → 官方自动落当前/最近
   addWs: mcMenuNewWs,
   // viewGroup/viewSortTime：勘不通 → 不写键（菜单项自动不出现）
 };
@@ -4526,7 +4614,7 @@ var McMenus = {
     };
   },
 };
-if (typeof module !== 'undefined') module.exports = { McMenus: McMenus, mcMenuItems: mcMenuItems, mcMenuAlign: mcMenuAlign, mcMenuTop: mcMenuTop, mcMenuState: mcMenuState, mcMenuWsId: mcMenuWsId, mcHeroAction: mcHeroAction, mcHeroTitle: mcHeroTitle, MC_HERO_COPY: MC_HERO_COPY };
+if (typeof module !== 'undefined') module.exports = { McMenus: McMenus, mcMenuItems: mcMenuItems, mcMenuAlign: mcMenuAlign, mcMenuTop: mcMenuTop, mcMenuState: mcMenuState, mcMenuWsId: mcMenuWsId, mcMenuWsPath: mcMenuWsPath, mcMenuSessPlan: mcMenuSessPlan, mcHeroAction: mcHeroAction, mcHeroTitle: mcHeroTitle, MC_HERO_COPY: MC_HERO_COPY };
 
 // src/conv/responsive.js —— 层3 模块10：响应式（结构档抽屉 + 密度两档）
 // 规范源：prototype 笔记 §12（三档断点 + 坑表）；DSH 转译裁定（2026-09-03 recon 实测）：

@@ -1,7 +1,7 @@
 // test/menus.test.mjs
 import { test } from 'node:test'; import assert from 'node:assert/strict';
 import { loadSrc } from './load-src.mjs';
-const { mcMenuItems, mcMenuAlign, mcMenuState, mcMenuTop, mcMenuWsId } = loadSrc('src/conv/overlays.js');
+const { mcMenuItems, mcMenuAlign, mcMenuState, mcMenuTop, mcMenuWsId, mcMenuWsPath, mcMenuSessPlan } = loadSrc('src/conv/overlays.js');
 
 const DEF = { items: [
   { id: 'rename', label: '重命名' },
@@ -41,6 +41,22 @@ test('mcMenuWsId: 真工作区 id 放行;空值/__ungrouped__ 兜底假分组拒
   assert.equal(mcMenuWsId(null), null);
   assert.equal(mcMenuWsId(undefined), null);
   assert.equal(mcMenuWsId('__ungrouped__'), null); // McFinder 兜底假分组不可下传官方服务
+});
+
+// —— 新建类接线（目录选择器批）：picker/prompt 结果规整 + 会话新建路由 ——
+test('mcMenuWsPath: null/空串/全空白→null(取消);其余去首尾空白', () => {
+  assert.equal(mcMenuWsPath(null), null);
+  assert.equal(mcMenuWsPath(undefined), null);
+  assert.equal(mcMenuWsPath(''), null);
+  assert.equal(mcMenuWsPath('   '), null);
+  assert.equal(mcMenuWsPath('  C:\\prj  '), 'C:\\prj');
+});
+
+test('mcMenuSessPlan: 真工作区 id→create 定向;空值/未分组兜底→start 官方语义', () => {
+  assert.deepEqual(mcMenuSessPlan('ws-abc'), { mode: 'create', workspaceId: 'ws-abc' });
+  assert.deepEqual(mcMenuSessPlan('__ungrouped__'), { mode: 'start' });
+  assert.deepEqual(mcMenuSessPlan(null), { mode: 'start' });
+  assert.deepEqual(mcMenuSessPlan(undefined), { mode: 'start' });
 });
 
 test('mcMenuState: 单例互斥 + esc/外点/pick 关闭', () => {

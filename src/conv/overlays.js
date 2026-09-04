@@ -159,7 +159,8 @@ function mcMenuWsId(id) {
   return id && id !== '__ungrouped__' ? id : null;
 }
 // 二批 A1：新建会话 = 官方 workspaces.startSession（建+连+打开；无 wsId 自动落当前/最近工作区）。
-// 旧 sessions.create({}) 语义不符（只建不开）——退役。
+// 旧 sessions.create({}) 语义不符（只建不开）——退役。注意 startSession 会复用工作区已有
+// blank 会话（官方 New Session 共享语义）——分组头加号要求「每次必真新建」，走 mcMenuNewSessFresh。
 function mcMenuNewSess(w, wsId) {
   var c = w && w.ctx;
   var id = mcMenuWsId(wsId);
@@ -167,13 +168,59 @@ function mcMenuNewSess(w, wsId) {
     try { c.workspaces.startSession(id || undefined); } catch (e) {} // 吞错纪律：官方状态为准
   }
 }
-function mcMenuNewWs(w) { // 二批 A3：官方 create(input) 需目录路径（local Workspace 须 materializable）
-  var ws = mcMenuWsSvc(w);
+// —— 新建类路由纯函数（目录选择器批）：真工作区 id → create 定向直建；
+// 空值/未分组兜底假分组 → start 官方语义（落当前/最近工作区）。 ——
+function mcMenuSessPlan(wsId) {
+  var id = mcMenuWsId(wsId);
+  return id ? { mode: 'create', workspaceId: id } : { mode: 'start' };
+}
+// 分组头加号直建：sessions.create({workspaceId})→open，每次必出新会话。startSession 的 blank
+// 复用语义在工作区已有空白会话时原地打开旧 blank——第二次起点击零反馈（用户报「加号不能
+// 工作」的直接根因）。create 被宿主拒绝（目录不可写等）时静默，官方状态为准（吞错纪律）。
+function mcMenuNewSessFresh(w, wsId) {
+  var plan = mcMenuSessPlan(wsId);
+  var c = w && w.ctx;
+  var s = c && c.sessions;
+  if (plan.mode === 'create' && s && typeof s.create === 'function' && typeof s.open === 'function') {
+    try {
+      Promise.resolve(s.create({ workspaceId: plan.workspaceId })).then(function (sid) {
+        if (sid) { try { s.open(sid); } catch (e) {} }
+      }).catch(function () {});
+    } catch (e) {}
+    return;
+  }
+  mcMenuNewSess(w, wsId); // start 路由：官方语义兜底
+}
+// 路径规整纯函数：picker/prompt 结果 → null（取消/空白）或去首尾空白绝对路径。
+function mcMenuWsPath(p) {
+  if (p === null || p === undefined) return null;
+  var t = String(p).trim();
+  return t === '' ? null : t;
+}
+function mcMenuNewWsPrompt(w, ws) { // 手输回退：prompt 输入目录绝对路径（二批 A3 原流）
+  ws = ws || mcMenuWsSvc(w);
   if (!ws || typeof ws.create !== 'function') return;
   if (typeof window === 'undefined' || typeof window.prompt !== 'function') return;
   var p = window.prompt('新建工作区 — 输入目录绝对路径', '');
-  if (!p || !p.trim()) return;
-  try { ws.create({ path: p.trim() }); } catch (e) {} // 路径无效时官方返回 error——静默（吞错纪律）
+  var path = mcMenuWsPath(p);
+  if (path === null) return;
+  try { ws.create({ path: path }); } catch (e) {} // 路径无效时官方返回 error——静默（吞错纪律）
+}
+function mcMenuNewWs(w) { // 目录选择器批：host 原生 pickDirectory 优先（系统文件夹选择框，本机
+  // 127.0.0.1 即用户眼前弹出），选中即以绝对路径 create 入列表；null=取消静默；
+  // native capability 缺席（SSH/远程 directory-picker-unavailable）回退 prompt 手输。
+  // 浏览器自带 picker 不可行：沙箱不暴露所选目录绝对路径，host create 需 realpath 可解析
+  // 的真实路径（aurum P19 同勘定）。
+  var ws = mcMenuWsSvc(w);
+  if (!ws || typeof ws.create !== 'function') return;
+  if (typeof ws.pickDirectory !== 'function') { mcMenuNewWsPrompt(w, ws); return; }
+  try {
+    Promise.resolve(ws.pickDirectory()).then(function (p) {
+      var path = mcMenuWsPath(p);
+      if (path === null) return; // 用户取消：静默无操作
+      try { Promise.resolve(ws.create({ path: path })).catch(function () {}); } catch (e) {}
+    }).catch(function () { mcMenuNewWsPrompt(w, ws); }); // picker 不可用 → 手输回退
+  } catch (e) { mcMenuNewWsPrompt(w, ws); }
 }
 var MC_MENU_WIRING = {
   // —— sess（会话行 dots）——
@@ -225,11 +272,13 @@ var MC_MENU_WIRING = {
     var ws = mcMenuWsSvc(w);
     if (ws) ws.delete(id);
   },
-  // —— 新建类（二批 A1/A2：startSession 官方语义；「在此」=定向到触发分组的工作区）——
-  groupNew: function (w) { mcMenuNewSess(w, w.ctxData && w.ctxData.ws); },
-  groupNewSess: function (w) { mcMenuNewSess(w, w.ctxData && w.ctxData.ws); },
+  // —— 新建类（二批 A1/A2；「在此」=定向到触发分组的工作区）——
+  // 目录选择器批：groupNew/groupNewSess 改「每次必真新建」（create→open，不复用 blank）；
+  // addWs 走 host 原生目录选择器（mcMenuNewWs 内部 pickDirectory 优先）。
+  groupNew: function (w) { mcMenuNewSessFresh(w, w.ctxData && w.ctxData.ws); },
+  groupNewSess: function (w) { mcMenuNewSessFresh(w, w.ctxData && w.ctxData.ws); },
   groupNewWs: mcMenuNewWs,
-  addSess: function (w) { mcMenuNewSess(w, null); }, // listbar 添加：无定向 → 官方自动落当前/最近
+  addSess: function (w) { mcMenuNewSess(w, null); }, // 无定向 → 官方自动落当前/最近
   addWs: mcMenuNewWs,
   // viewGroup/viewSortTime：勘不通 → 不写键（菜单项自动不出现）
 };
@@ -546,4 +595,4 @@ var McMenus = {
     };
   },
 };
-if (typeof module !== 'undefined') module.exports = { McMenus: McMenus, mcMenuItems: mcMenuItems, mcMenuAlign: mcMenuAlign, mcMenuTop: mcMenuTop, mcMenuState: mcMenuState, mcMenuWsId: mcMenuWsId, mcHeroAction: mcHeroAction, mcHeroTitle: mcHeroTitle, MC_HERO_COPY: MC_HERO_COPY };
+if (typeof module !== 'undefined') module.exports = { McMenus: McMenus, mcMenuItems: mcMenuItems, mcMenuAlign: mcMenuAlign, mcMenuTop: mcMenuTop, mcMenuState: mcMenuState, mcMenuWsId: mcMenuWsId, mcMenuWsPath: mcMenuWsPath, mcMenuSessPlan: mcMenuSessPlan, mcHeroAction: mcHeroAction, mcHeroTitle: mcHeroTitle, MC_HERO_COPY: MC_HERO_COPY };
