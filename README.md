@@ -4,15 +4,41 @@
   <img src="shots/banner.png" alt="dsh-theme-macintosh banner — HappyMac + Seek Different + 主界面级联双窗(深浅活体截图 4px 抖动溶解)" width="100%">
 </p>
 
-DSH（DeepSeek Harness Web GUI）的 Classic Macintosh 像素风主题插件。详见
-`docs/superpowers/specs/2026-08-30-macintosh-theme-design.md`（设计）与
-`docs/superpowers/plans/2026-08-30-macintosh-theme-phase1.md`（一期计划 + 收尾实录 + 二期待办）。
+<p align="center">
+  <a href="https://www.npmjs.com/package/dsh-theme-macintosh"><img src="https://img.shields.io/npm/v/dsh-theme-macintosh.svg" alt="npm version"></a>
+</p>
+
+**dsh-theme-macintosh** 是 DSH（DeepSeek Harness Web GUI）的
+Classic Macintosh 主题插件：把整个界面换回 System 7 的像素语汇——ChiKareGo / Fusion Pixel 像素字体、
+桌面噪点画布、Finder 式会话侧栏、方角按钮与月牙深浅切换，零构建、安装即常驻生效。
+
+## 特性
+
+- **全套像素换皮**：会话流 md 渲染、推理卡流式揭开、工具卡三态、问题卡 / 计划审批卡、弹出菜单、输入坞、设置弹窗、浮层
+- **像素字体随包分发**：经宿主静态路由提供，无外部服务依赖
+- **深浅双色**：跟随官方 设置 → 外观 的浅色 / 深色切换，两套 token 全程适配
+- **kit 检视页**：devtools 控制台执行 `__MC_KIT_OPEN__ = true`，在线翻全部组件的活体形态
+- **常驻插件**：安装后刷新页面即生效，无需任何 Run 操作
+
+## 安装
+
+以 DSH web profile 的持久化插件形式安装，三步：
+
+1. 在 profile 目录（`~/.dsh/profiles/web/`）里安装本包：
+
+   ```
+   pnpm add dsh-theme-macintosh
+   ```
+
+2. 在该 profile 的 `package.json` 的 `dsh.profile.bundles` 数组中加入 `"dsh-theme-macintosh"`。
+
+3. 重启 web 宿主（仅安装 / 清单级变更需要），然后刷新页面 —— Macintosh 主题常驻生效。
+
+**卸载**：从 bundles 数组移除本包并重启宿主。
 
 ## 组件 Showcase
 
-全部截图均为**活体截取**（Playwright 直连运行中的宿主；组件镜头把 kit 检视页的真组件陈列在
-桌面网点背景 `--mc-bg` + `--mc-desktop-pattern` 上，活体镜头整窗直拍），深浅两套 token 各跑一遍（重拍方式见 [AGENTS.md](AGENTS.md)）。
-想在线翻全部组件的活体形态，devtools 控制台执行 `__MC_KIT_OPEN__ = true`。
+以下截图全部为**深浅两套配色在运行中的宿主里实拍**。
 
 ### 主界面 · 开机空态 · 弹窗 · 抽屉
 
@@ -83,8 +109,7 @@ DSH（DeepSeek Harness Web GUI）的 Classic Macintosh 像素风主题插件。�
 
 ### 工具卡
 
-**样本五张**（read 文本体 / edit diff 体 / bash fail 红边 / web_search 引用体 / 未知工具兜底；
-图标 = DSH 默认工具图标像素渲染）：
+**样本五张**（read 文本体 / edit diff 体 / bash fail 红边 / web_search 引用体 / 未知工具兜底）：
 
 | 深色 | 浅色 |
 | --- | --- |
@@ -95,32 +120,3 @@ DSH（DeepSeek Harness Web GUI）的 Classic Macintosh 像素风主题插件。�
 | 状态三帧 · running（琥珀扫掠） | ![](shots/showcase/tool-running-dark.png) | ![](shots/showcase/tool-running-light.png) |
 | 状态三帧 · done | ![](shots/showcase/tool-done-dark.png) | ![](shots/showcase/tool-done-light.png) |
 | 状态三帧 · fail（红边 + warning） | ![](shots/showcase/tool-fail-dark.png) | ![](shots/showcase/tool-fail-light.png) |
-
-## 安装（常驻插件形态，一期最终形态）
-
-本包以**持久化组合插件**形式安装（同 dsh-theme-aurum 的机制），页面刷新即生效，无需任何 Run 操作：
-
-1. 在 DSH web profile 里链接本包（`~/.dsh/profiles/web/`）：
-
-   ```
-   pnpm add link:<本仓库绝对路径>
-   ```
-
-   并在 `package.json` 的 `dsh.profile.bundles` 数组中加入 `"dsh-theme-macintosh"`。
-
-2. 重启 web 宿主（**仅安装/清单级变更需要**——插件集扫描为进程内缓存，重启才再生）：
-
-   ```
-   & $env:USERPROFILE\.dsh\restart-web.ps1
-   ```
-
-3. 刷新页面 —— Macintosh 主题常驻生效。
-
-- **字体**：经宿主半 `index.js` 挂载的 `/mcx-assets/` 静态路由提供（本包 `assets/fonts/`），无外部服务依赖。
-- **kit 检视页**：devtools 控制台执行 `__MC_KIT_OPEN__ = true`（含「会话流」分区：md 全要素 / 用户气泡 /
-  注入条四型 / 推理卡**五帧流式演示** / 重试·上限·turn-tail 细长条）。
-- **深浅切换**：官方 设置 → 外观（浅色/深色）；token 经 `theme.overrideTokens` 常驻叠层跟随
-  `html[data-theme]`（月牙钮已在一期轮6移除，官方通道是唯一入口）。
-- **卸载**：从 bundles 数组移除本包并重启宿主。
-
-> 开发相关（源码结构、开发循环、镜像纪律、测试与验收门禁、历史工具）见 [AGENTS.md](AGENTS.md)。
