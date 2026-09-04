@@ -29,7 +29,8 @@ jobs:
             exit 1
           fi
           VERSION="${TAG#v}"
-          npm version "$VERSION" --no-git-tag-version
+          # --allow-same-version:package.json 与 tag 同版本时不算错(如首发 v0.1.0)
+          npm version "$VERSION" --no-git-tag-version --allow-same-version
           echo "Publishing ${VERSION} (from tag ${TAG})"
 
       # 单测 + audit 纪律走查;纯 node:test/内置模块,无需安装依赖
